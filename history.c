@@ -11,18 +11,12 @@
 #include "history.h"
 #include "layers.h"
 #include "tools/selection_tool.h"
-#include "tools.h"
-#include "tools/pen_tool.h"
-#include "tools/crayon_tool.h"
-#include "tools/highlighter_tool.h"
-#include "tools/freehand_tools.h"
 
 // Forward declarations for panel sync functions - avoids circular include
 // These are defined in the respective panel .c files
 extern void LayersPanelSync(void);
 extern void HistoryPanelSync(void);
 extern void InvalidateCanvas(void);
-#include <string.h>
 
 #define MAX_HISTORY_ENTRIES 100
 
@@ -67,6 +61,11 @@ static HistoryEntry *CreateEntryFromCurrentState(const char *description) {
 static void TrimRedoBranch(void) {
   if (!s_currentEntry || !s_currentEntry->next)
     return;
+  if (entry->snapshot)
+    LayersDestroySnapshot(entry->snapshot);
+  free(entry->description);
+  free(entry);
+}
 
   HistoryEntry *entry = s_currentEntry->next;
   while (entry) {
@@ -201,14 +200,7 @@ void HistoryClear(void) {
 }
 
 void HistoryJumpTo(int index) {
-  if (index < 0 || index >= s_historyCount)
-    return;
-
-  // Find entry at index
-  HistoryEntry *entry = s_historyHead;
-  for (int i = 0; i < index && entry; i++) {
-    entry = entry->next;
-  }
+  HistoryEntry *entry = FindEntryAtIndex(index);
 
   if (entry && entry != s_currentEntry) {
     s_currentEntry = entry;
@@ -221,13 +213,7 @@ void HistoryJumpTo(int index) {
 int HistoryGetCount(void) { return s_historyCount; }
 
 const char *HistoryGetDescription(int index) {
-  if (index < 0 || index >= s_historyCount)
-    return NULL;
-
-  HistoryEntry *entry = s_historyHead;
-  for (int i = 0; i < index && entry; i++) {
-    entry = entry->next;
-  }
+  HistoryEntry *entry = FindEntryAtIndex(index);
   return entry ? entry->description : NULL;
 }
 
