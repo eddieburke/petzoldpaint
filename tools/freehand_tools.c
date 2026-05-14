@@ -12,6 +12,7 @@
 #include "../geom.h"       /* <-- Added for RectBmpToScr */
 #include "../helpers.h"
 #include "../history.h"
+#include "../palette.h"
 #include "../layers.h"
 #include "../ui/widgets/colorbox.h"
 #include "drawing_primitives.h"
@@ -96,8 +97,8 @@ static const StrokePolicy *GetStrokePolicy(int tool) {
       [TOOL_AIRBRUSH] = {NULL, NULL, GetSprayRadiusSize,
                          STROKE_COLOR_FROM_BUTTON, STROKE_COMPOSITE_NORMAL, FALSE, FALSE, TRUE},
   };
-  _Static_assert(TOOL_AIRBRUSH < (sizeof(policies) / sizeof(policies[0])),
-                 "All freehand tools must provide StrokePolicy presets.");
+  typedef char StrokePolicyCoverage[(TOOL_AIRBRUSH < (int)(sizeof(policies) / sizeof(policies[0]))) ? 1 : -1];
+  (void)sizeof(StrokePolicyCoverage);
 
   if (tool < 0 || tool >= (int)(sizeof(policies) / sizeof(policies[0]))) return NULL;
   if (!policies[tool].pfnGetSize) return NULL;
@@ -107,7 +108,7 @@ static const StrokePolicy *GetStrokePolicy(int tool) {
 static COLORREF ResolveStrokeColor(const StrokePolicy *policy, int button) {
   if (policy->composite == STROKE_COMPOSITE_ERASE ||
       policy->colorSource == STROKE_COLOR_BACKGROUND) {
-    return g_crBgColor;
+    return Palette_GetSecondaryColor();
   }
   return GetColorForButton(button);
 }
