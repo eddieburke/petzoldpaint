@@ -11,18 +11,12 @@
 #include "history.h"
 #include "layers.h"
 #include "tools/selection_tool.h"
-#include "tools.h"
-#include "tools/pen_tool.h"
-#include "tools/crayon_tool.h"
-#include "tools/highlighter_tool.h"
-#include "tools/freehand_tools.h"
 
 // Forward declarations for panel sync functions - avoids circular include
 // These are defined in the respective panel .c files
 extern void LayersPanelSync(void);
 extern void HistoryPanelSync(void);
 extern void InvalidateCanvas(void);
-#include <string.h>
 
 #define MAX_HISTORY_ENTRIES 100
 
@@ -79,9 +73,9 @@ static void TrimRedoBranch(void) {
   s_historyTail = s_currentEntry;
 }
 
-static void AppendEntry(HistoryEntry *entry) {
+static BOOL AppendEntry(HistoryEntry *entry) {
   if (!entry)
-    return;
+    return FALSE;
 
   if (s_historyTail) {
     s_historyTail->next = entry;
@@ -94,6 +88,7 @@ static void AppendEntry(HistoryEntry *entry) {
   s_currentEntry = entry;
   s_historyCount++;
   s_currentPosition = s_historyCount - 1;
+  return TRUE;
 }
 
 static void PruneHeadIfNeeded(void) {
@@ -116,9 +111,22 @@ static void PruneHeadIfNeeded(void) {
   }
 }
 
+static HistoryEntry *FindEntryAtIndex(int index) {
+  if (index < 0 || index >= s_historyCount)
+    return NULL;
+
+  HistoryEntry *entry = s_historyHead;
+  for (int i = 0; i < index && entry; i++) {
+    entry = entry->next;
+  }
+  return entry;
+}
+
 void HistoryInit(void) {
   HistoryDestroy();
-  AppendEntry(CreateEntryFromCurrentState("Initial State"));
+  if (!AppendEntry(CreateEntryFromCurrentState("Initial State"))) {
+    s_currentPosition = -1;
+  }
 }
 
 void HistoryDestroy(void) {
@@ -140,7 +148,8 @@ void HistoryPush(const char *description) {
     description = "Action";
 
   TrimRedoBranch();
-  AppendEntry(CreateEntryFromCurrentState(description));
+  if (!AppendEntry(CreateEntryFromCurrentState(description)))
+    return;
   PruneHeadIfNeeded();
 
   // Notify panels of history change
@@ -201,14 +210,7 @@ void HistoryClear(void) {
 }
 
 void HistoryJumpTo(int index) {
-  if (index < 0 || index >= s_historyCount)
-    return;
-
-  // Find entry at index
-  HistoryEntry *entry = s_historyHead;
-  for (int i = 0; i < index && entry; i++) {
-    entry = entry->next;
-  }
+  HistoryEntry *entry = FindEntryAtIndex(index);
 
   if (entry && entry != s_currentEntry) {
     s_currentEntry = entry;
@@ -221,13 +223,7 @@ void HistoryJumpTo(int index) {
 int HistoryGetCount(void) { return s_historyCount; }
 
 const char *HistoryGetDescription(int index) {
-  if (index < 0 || index >= s_historyCount)
-    return NULL;
-
-  HistoryEntry *entry = s_historyHead;
-  for (int i = 0; i < index && entry; i++) {
-    entry = entry->next;
-  }
+  HistoryEntry *entry = FindEntryAtIndex(index);
   return entry ? entry->description : NULL;
 }
 
