@@ -20,6 +20,7 @@
 
 static IWICImagingFactory* g_wicFactory = NULL;
 static BOOL g_comInitialized = FALSE;
+static BOOL g_comInitializedByUs = FALSE;
 
 static float g_jpegQuality = 0.9f;
 static BYTE g_jpegSubsampling = 0x01; // 4:2:0
@@ -37,6 +38,7 @@ static BOOL EnsureWicFactory(void)
             return FALSE;
         }
         g_comInitialized = TRUE;
+        g_comInitializedByUs = (hrInit == S_OK || hrInit == S_FALSE);
     }
 
     if (!g_wicFactory) {
@@ -63,10 +65,11 @@ void FileIO_ShutdownCom(void)
         g_wicFactory->lpVtbl->Release(g_wicFactory);
         g_wicFactory = NULL;
     }
-    if (g_comInitialized) {
+    if (g_comInitializedByUs) {
         CoUninitialize();
-        g_comInitialized = FALSE;
     }
+    g_comInitialized = FALSE;
+    g_comInitializedByUs = FALSE;
 }
 
 /*------------------------------------------------------------

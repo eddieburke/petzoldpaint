@@ -102,6 +102,17 @@ void DocumentOpen(HWND hwnd, const char *path) {
   }
 }
 
+BOOL DocumentConfirmDiscardOrSave(HWND hwnd) {
+  if (!Doc_IsDirty())
+    return TRUE;
+  int r = MessageBox(hwnd, "Save changes?", "Paint", MB_YESNOCANCEL);
+  if (r == IDYES)
+    return FileSave(hwnd);
+  if (r == IDCANCEL)
+    return FALSE;
+  return TRUE;
+}
+
 /*------------------------------------------------------------
    WM_COMMAND Handler
 ------------------------------------------------------------*/
@@ -118,10 +129,14 @@ BOOL AppCommands_OnCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     return TRUE;
 
   case IDM_NEW:
+    if (!DocumentConfirmDiscardOrSave(hwnd))
+      return TRUE;
     DocumentNew(hwnd);
     return TRUE;
 
   case IDM_OPEN:
+    if (!DocumentConfirmDiscardOrSave(hwnd))
+      return TRUE;
     DocumentOpen(hwnd, NULL);
     return TRUE;
 

@@ -3,7 +3,7 @@
 #include "peztold_core.h"
 
 BOOL CreateCanvas(int width, int height);
-void ResizeCanvas(int newWidth, int newHeight);
+BOOL ResizeCanvas(int newWidth, int newHeight);
 void DestroyCanvas(void);
 void UpdateCanvas(HDC hdc, int x, int y, int w, int h);
 void ClearCanvas(COLORREF color);

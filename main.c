@@ -255,19 +255,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
             HDROP hDrop = (HDROP)wParam;
             char szPath[MAX_PATH];
             if (DragQueryFile(hDrop, 0, szPath, sizeof(szPath))) {
-                if (Doc_IsDirty()) {
-                    int r = MessageBox(hwnd, "Save changes?", "Paint", MB_YESNOCANCEL);
-                    if (r == IDYES) {
-                        if (!FileSave(hwnd)) {
-                            DragFinish(hDrop);
-                            return 0;
-                        }
-                    } else if (r == IDCANCEL) {
-                        DragFinish(hDrop);
-                        return 0;
-                    }
-                }
-                DocumentOpen(hwnd, szPath);
+                if (DocumentConfirmDiscardOrSave(hwnd))
+                    DocumentOpen(hwnd, szPath);
             }
             DragFinish(hDrop);
         }
@@ -278,14 +267,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_CLOSE:
-        if (Doc_IsDirty()) {
-            int r = MessageBox(hwnd, "Save changes?", "Paint", MB_YESNOCANCEL);
-            if (r == IDYES) {
-                if (!FileSave(hwnd)) return 0;
-            } else if (r == IDCANCEL) {
-                return 0;
-            }
-        }
+        if (!DocumentConfirmDiscardOrSave(hwnd))
+            return 0;
         DestroyWindow(hwnd);
         return 0;
 

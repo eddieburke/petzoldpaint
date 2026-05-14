@@ -139,6 +139,7 @@ void HistoryPush(const char *description) {
 
   s_currentEntry = newEntry;
   s_historyCount++;
+  s_currentPosition = s_historyCount - 1;
 
     // Prune history if it exceeds the maximum allowed entries
     int prunedCount = 0;

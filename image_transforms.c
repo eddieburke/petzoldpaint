@@ -335,8 +335,9 @@ static BOOL CALLBACK AttributesDlgProc(HWND hDlg, UINT message, WPARAM wParam,
       int w = GetDlgItemInt(hDlg, IDC_WIDTH, NULL, FALSE);
       int h = GetDlgItemInt(hDlg, IDC_HEIGHT, NULL, FALSE);
       if (w > 0 && h > 0) {
-        ResizeCanvas(w, h);
-        EndDialog(hDlg, 1);
+        if (ResizeCanvas(w, h)) {
+          EndDialog(hDlg, 1);
+        }
       }
       return TRUE;
     } else if (LOWORD(wParam) == IDCANCEL) {
