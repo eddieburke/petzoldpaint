@@ -147,13 +147,17 @@ static void FreehandDrawInterpolated(BYTE *bits, int width, int height,
  *----------------------------------------------------------------------------*/
 
 static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy *sp) {
-  int tool = sp ? sp->toolId : s_activeFreehandTool;
+  int tool = s_activeFreehandTool;
   if (s_bDrawing && nButton != s_nDrawButton) {
     CancelFreehandDrawing();
     return;
   }
 
-  if (!sp) sp = GetStrokePolicy(tool);
+  if (sp) {
+    tool = sp->toolId;
+  } else {
+    sp = GetStrokePolicy(tool);
+  }
   if (!sp || !sp->pfnPoint)
     return;
 
@@ -188,13 +192,11 @@ static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy
 }
 
 static void AppendPoint(HWND hWnd, int x, int y, int nButton) {
-  int tool = s_activeFreehandTool;
+  (void)hWnd;
   if (!s_bDrawing || !(nButton & (MK_LBUTTON | MK_RBUTTON)))
     return;
-  if (s_activeFreehandTool != tool)
-    return;
 
-  const StrokePolicy *sp = GetStrokePolicy(tool);
+  const StrokePolicy *sp = GetStrokePolicy(s_activeFreehandTool);
   if (!sp || !sp->pfnPoint)
     return;
 
@@ -227,7 +229,10 @@ static void AppendPoint(HWND hWnd, int x, int y, int nButton) {
 }
 
 static void EndStroke(HWND hWnd, int x, int y, int nButton) {
-  (void)hWnd; (void)x; (void)y; (void)nButton;
+  (void)hWnd;
+  (void)x;
+  (void)y;
+  (void)nButton;
   if (s_bDrawing && s_bPixelsModified) {
     HistoryPushToolActionById(s_activeFreehandTool, "Draw");
   }
@@ -323,4 +328,3 @@ BOOL CancelFreehandDrawing(void) {
 }
 
 int GetActiveFreehandTool(void) { return s_activeFreehandTool; }
-

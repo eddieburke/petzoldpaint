@@ -2,6 +2,17 @@
 #include "../helpers.h"
 #include "../history.h"
 
+static void StrokeSession_Stop(StrokeSession *s, BOOL invalidateCanvas) {
+  if (!s || !s->isDrawing) return;
+  s->isDrawing = FALSE;
+  ReleaseCapture();
+  if (invalidateCanvas) {
+    InvalidateCanvas();
+  } else {
+    SetDocumentDirty();
+  }
+}
+
 void StrokeSession_Begin(StrokeSession *s, HWND hWnd, int x, int y, int nButton, int toolId) {
   if (!s) return;
   s->isDrawing = TRUE;
@@ -33,17 +44,11 @@ void StrokeSession_CommitIfNeeded(StrokeSession *s, const char *actionName) {
 }
 
 void StrokeSession_End(StrokeSession *s) {
-  if (!s || !s->isDrawing) return;
-  s->isDrawing = FALSE;
-  ReleaseCapture();
-  SetDocumentDirty();
+  StrokeSession_Stop(s, FALSE);
 }
 
 void StrokeSession_Cancel(StrokeSession *s) {
-  if (!s || !s->isDrawing) return;
-  s->isDrawing = FALSE;
-  ReleaseCapture();
-  InvalidateCanvas();
+  StrokeSession_Stop(s, TRUE);
 }
 
 void StrokeSession_OnCaptureLost(StrokeSession *s, const char *actionName) {
