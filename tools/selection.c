@@ -731,7 +731,7 @@ int SelectionGetCursorId(int x, int y) {
 }
 
 BOOL IsPointInSelection(int x, int y) {
-    if (s_sel.mode == SEL_NONE) return FALSE;
+    if (s_sel.mode == SEL_NONE) return TRUE;
     double fx = x, fy = y;
     if (fabs(s_sel.rot.fAngle) > 0.01) {
         double rad = -s_sel.rot.fAngle * M_PI / 180.0;
