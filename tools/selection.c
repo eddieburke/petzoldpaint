@@ -78,6 +78,7 @@ typedef struct {
 
 static SelectionState s_sel = {0};
 static SelectionMode s_modeAtDragStart = SEL_NONE;
+static BOOL s_dragMoved = FALSE;
 
 // Forward declarations
 static void UpdateSelectionDraftLayer(void);
@@ -626,6 +627,7 @@ static int HitTestRotationHandles(RECT *rc, int x, int y) {
 void SelectionToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
     if (nButton == MK_RBUTTON) return;
     s_modeAtDragStart = s_sel.mode;
+    s_dragMoved = FALSE;
     if (s_sel.mode != SEL_NONE) {
         RECT rcFrame;
         Selection_GetOverlayFrameRect(&rcFrame);
@@ -664,9 +666,11 @@ void SelectionToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
 void SelectionToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
     if (GetCapture() != hWnd) return;
     if (s_sel.nDragMode >= HT_ROTATE_TL && s_sel.nDragMode <= HT_ROTATE_BL) {
+        s_dragMoved = TRUE;
         double cur = atan2(y - s_sel.rot.ptCenter.y, x - s_sel.rot.ptCenter.x) * 180.0 / M_PI;
         s_sel.rot.fAngle = s_sel.rot.fLastAngle + (cur - s_sel.rot.fStartAngle);
     } else if (s_sel.nDragMode == HT_BODY && s_modeAtDragStart == SEL_NONE) {
+        s_dragMoved = TRUE;
         if (Tool_GetCurrent() == TOOL_FREEFORM) {
             Poly_Add(&s_sel.freeformPts, x, y);
             s_sel.rcBounds = Poly_GetBounds(&s_sel.freeformPts);
@@ -676,9 +680,11 @@ void SelectionToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
         }
         s_sel.mode = SEL_REGION_ONLY;
     } else if (s_sel.nDragMode == HT_BODY) {
+        s_dragMoved = TRUE;
         int dx = x - s_sel.ptDragStart.x, dy = y - s_sel.ptDragStart.y;
         s_sel.rcBounds = s_sel.rcDragOrig; OffsetRect(&s_sel.rcBounds, dx, dy);
 } else if (s_sel.nDragMode != HT_NONE) {
+         s_dragMoved = TRUE;
          s_sel.rcBounds = s_sel.rcDragOrig;
          ResizeRect(&s_sel.rcBounds, s_sel.nDragMode, x - s_sel.ptDragStart.x, y - s_sel.ptDragStart.y, 2, IsShiftDown());
         NormalizeRect(&s_sel.rcBounds);
@@ -688,11 +694,29 @@ void SelectionToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
 }
 
 void SelectionToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+    (void)x; (void)y; (void)nButton;
     if (GetCapture() == hWnd) ReleaseCapture();
-    if (Tool_GetCurrent() == TOOL_FREEFORM && s_sel.freeformPts.count > 2) {
+
+    if (s_modeAtDragStart == SEL_NONE && !s_dragMoved) {
+        SelectionClearState();
+        LayersClearDraft();
+        InvalidateCanvas();
+    } else if (Tool_GetCurrent() == TOOL_FREEFORM && s_sel.freeformPts.count > 2) {
         s_sel.hRegion = Poly_CreateRegion(&s_sel.freeformPts);
     }
+
     s_sel.nDragMode = HT_NONE;
+    s_dragMoved = FALSE;
+}
+
+void SelectionTool_OnCaptureLost(void) {
+    s_sel.nDragMode = HT_NONE;
+    s_dragMoved = FALSE;
+    if (s_modeAtDragStart == SEL_NONE && s_sel.mode == SEL_REGION_ONLY) {
+        SelectionClearState();
+        LayersClearDraft();
+        InvalidateCanvas();
+    }
 }
 
 int SelectionGetCursorId(int x, int y) {
