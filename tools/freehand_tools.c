@@ -247,7 +247,9 @@ void FreehandTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
 
 void AirbrushToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   BeginStroke(hWnd, x, y, nButton, GetStrokePolicy(TOOL_AIRBRUSH));
-  SetTimer(hWnd, 101, 30, NULL);
+  if (s_session.isDrawing && hWnd) {
+    SetTimer(hWnd, TIMER_AIRBRUSH, 30, NULL);
+  }
 }
 
 void AirbrushToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
@@ -255,7 +257,9 @@ void AirbrushToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
 }
 
 void AirbrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  KillTimer(hWnd, 101);
+  if (hWnd) {
+    KillTimer(hWnd, TIMER_AIRBRUSH);
+  }
   EndStroke(hWnd, x, y, nButton);
 }
 
@@ -278,9 +282,9 @@ void FreehandTool_OnTimerTick(void) {
   *----------------------------------------------------------------------------*/
 
 static void KillAirbrushTimerIfNeeded(HWND hWnd) {
-    if (GetActiveFreehandTool() == TOOL_AIRBRUSH && hWnd) {
-        KillTimer(hWnd, 101);
-    }
+  if (GetActiveFreehandTool() == TOOL_AIRBRUSH && hWnd) {
+    KillTimer(hWnd, TIMER_AIRBRUSH);
+  }
 }
 
 BOOL IsFreehandDrawing(void) { return s_session.isDrawing; }
