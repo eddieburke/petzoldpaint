@@ -4,7 +4,6 @@
 #include "../floodfill.h"
 #include "../helpers.h"
 #include "../history.h"
-#include "../layers.h"
 
 typedef struct FillRequest {
   int x;
