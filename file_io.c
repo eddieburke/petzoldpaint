@@ -95,7 +95,7 @@ static void EnsureExtensionForSave(char* path, size_t maxLen, const char* ext)
         size_t len = strlen(path);
         size_t extLen = strlen(ext);
         if (len + extLen + 1 < maxLen) {
-            strcat(path, ext);
+            StringCchCat(path, maxLen, ext);
         }
     }
 }
@@ -291,14 +291,16 @@ static BOOL SaveWicImage(const char* lpszFileName, REFGUID containerFormat)
             VariantInit(&var);
             var.vt = VT_R4;
             var.fltVal = g_jpegQuality;
-            props->lpVtbl->Write(props, 1, &prop, &var);
+            hr = props->lpVtbl->Write(props, 1, &prop, &var);
+            if (FAILED(hr)) goto cleanup;
 
             // Subsampling
             prop.pstrName = L"JpegYCrCbSubsampling";
             VariantInit(&var);
             var.vt = VT_UI1;
             var.bVal = g_jpegSubsampling;
-            props->lpVtbl->Write(props, 1, &prop, &var);
+            hr = props->lpVtbl->Write(props, 1, &prop, &var);
+            if (FAILED(hr)) goto cleanup;
         }
         if (SUCCEEDED(hr)) {
             hr = frame->lpVtbl->Initialize(frame, props);
@@ -346,6 +348,7 @@ static BOOL SaveWicImage(const char* lpszFileName, REFGUID containerFormat)
         ok = SUCCEEDED(hr);
     }
 
+cleanup:
     if (props)
         props->lpVtbl->Release(props);
     if (frame)
@@ -395,6 +398,14 @@ BOOL FileLoad(HWND hWnd)
             return TRUE;
         }
     }
+
+    DWORD dlgErr = CommDlgExtendedError();
+    if (dlgErr != 0) {
+        char msg[128];
+        StringCchPrintf(msg, sizeof(msg), "Open dialog failed (0x%08lX).", dlgErr);
+        MessageBox(hWnd, msg, "File Open Error", MB_ICONERROR);
+    }
+
     return FALSE;
 }
 
@@ -520,12 +531,13 @@ BOOL SaveBitmapToFile(HBITMAP hBmp, LPCSTR lpszFileName)
     DWORD dwTmp;
     BOOL bSuccess = TRUE;
 
-    bSuccess = bSuccess && WriteFile(hf, &hdr, sizeof(hdr), &dwTmp, NULL);
-    bSuccess = bSuccess && WriteFile(hf, pbmi,
-                                     sizeof(BITMAPINFOHEADER) +
-                                     colorCount * sizeof(RGBQUAD),
-                                     &dwTmp, NULL);
-    bSuccess = bSuccess && WriteFile(hf, lpBits, imageSize, &dwTmp, NULL);
+    bSuccess = bSuccess && WriteFile(hf, &hdr, sizeof(hdr), &dwTmp, NULL) &&
+               dwTmp == sizeof(hdr);
+    DWORD bmiSize = sizeof(BITMAPINFOHEADER) + colorCount * sizeof(RGBQUAD);
+    bSuccess = bSuccess && WriteFile(hf, pbmi, bmiSize, &dwTmp, NULL) &&
+               dwTmp == bmiSize;
+    bSuccess = bSuccess && WriteFile(hf, lpBits, imageSize, &dwTmp, NULL) &&
+               dwTmp == imageSize;
 
     CloseHandle(hf);
     GlobalFree(lpBits);
@@ -625,6 +637,12 @@ BOOL FileSaveAs(HWND hWnd)
         }
         if (hFlat)
             DeleteObject(hFlat);
+    }
+    DWORD dlgErr = CommDlgExtendedError();
+    if (dlgErr != 0) {
+        char msg[128];
+        StringCchPrintf(msg, sizeof(msg), "Save dialog failed (0x%08lX).", dlgErr);
+        MessageBox(hWnd, msg, "File Save Error", MB_ICONERROR);
     }
     return FALSE;
 }
