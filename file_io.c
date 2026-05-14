@@ -10,7 +10,9 @@
 #include "file_io.h"
 #include "layers.h"
 #include <commdlg.h>
+#include <limits.h>
 #include <objbase.h>
+#include <stdint.h>
 #include <wincodec.h>
 
 
@@ -25,6 +27,8 @@ static BOOL g_comInitializedByUs = FALSE;
 static float g_jpegQuality = 0.9f;
 static BYTE g_jpegSubsampling = 0x01; // 4:2:0
 static BOOL g_jpegFlattenBg = TRUE;
+
+#define MAX_CANVAS_DIM 16384U
 
 /*------------------------------------------------------------
    WIC Factory Management
@@ -155,17 +159,62 @@ static BOOL LoadWicImage(const char* szPath)
         hr = frame->lpVtbl->GetSize(frame, &width, &height);
     }
 
-    if (SUCCEEDED(hr) && width > 0 && height > 0) {
-        int stride = (int)width * 4;
-        BYTE* pixels = (BYTE*)malloc(stride * height);
-        if (pixels) {
-            hr = converter->lpVtbl->CopyPixels(converter, NULL, stride,
-                                              stride * height, pixels);
-            if (SUCCEEDED(hr)) {
-                ok = LayersLoadFromPixels((int)width, (int)height, pixels,
-                                         stride, TRUE);
+    if (SUCCEEDED(hr)) {
+        if (width == 0 || height == 0 ||
+            width > MAX_CANVAS_DIM || height > MAX_CANVAS_DIM) {
+            hr = E_INVALIDARG;
+        } else {
+            size_t rowBytes = 0;
+            size_t totalBytes = 0;
+            UINT copyStride = 0;
+            UINT copyBufferSize = 0;
+            int layerWidth = 0;
+            int layerHeight = 0;
+            int layerStride = 0;
+
+            if ((size_t)width > (SIZE_MAX / 4u)) {
+                hr = E_INVALIDARG;
+            } else {
+                rowBytes = (size_t)width * 4u;
             }
-            free(pixels);
+
+            if (SUCCEEDED(hr) && rowBytes > SIZE_MAX / (size_t)height) {
+                hr = E_INVALIDARG;
+            }
+            if (SUCCEEDED(hr)) {
+                totalBytes = rowBytes * (size_t)height;
+            }
+
+            if (SUCCEEDED(hr) && (rowBytes > (size_t)UINT_MAX ||
+                                  totalBytes > (size_t)UINT_MAX ||
+                                  width > (UINT)INT_MAX ||
+                                  height > (UINT)INT_MAX ||
+                                  rowBytes > (size_t)INT_MAX)) {
+                hr = E_INVALIDARG;
+            }
+
+            if (SUCCEEDED(hr)) {
+                copyStride = (UINT)rowBytes;
+                copyBufferSize = (UINT)totalBytes;
+                layerWidth = (int)width;
+                layerHeight = (int)height;
+                layerStride = (int)rowBytes;
+            }
+
+            if (SUCCEEDED(hr)) {
+                BYTE* pixels = (BYTE*)malloc(totalBytes);
+                if (!pixels) {
+                    hr = E_OUTOFMEMORY;
+                } else {
+                    hr = converter->lpVtbl->CopyPixels(converter, NULL, copyStride,
+                                                      copyBufferSize, pixels);
+                    if (SUCCEEDED(hr)) {
+                        ok = LayersLoadFromPixels(layerWidth, layerHeight, pixels,
+                                                 layerStride, TRUE);
+                    }
+                    free(pixels);
+                }
+            }
         }
     }
 
