@@ -169,8 +169,22 @@ void CoordBmpToScr(int xBmp, int yBmp, int* xScr, int* yScr)
 void CoordScrToBmpEx(int xScr, int yScr, int* xBmp, int* yBmp,
                     double scale, int offX, int offY)
 {
-    *xBmp = (int)floor(((double)xScr - offX) / scale);
-    *yBmp = (int)floor(((double)yScr - offY) / scale);
+    double fx = ((double)xScr - offX) / scale;
+    double fy = ((double)yScr - offY) / scale;
+
+    /*
+     * At zoom levels below 100%, multiple bitmap pixels map into a single
+     * screen pixel. Using floor() introduces a strong top-left bias that can
+     * warp freehand paths while drawing. Switch to nearest-pixel mapping when
+     * zoomed out so stroke sampling is symmetric.
+     */
+    if (scale < 1.0) {
+        *xBmp = (int)lround(fx);
+        *yBmp = (int)lround(fy);
+    } else {
+        *xBmp = (int)floor(fx);
+        *yBmp = (int)floor(fy);
+    }
 }
 
 void CoordScrToBmp(int xScr, int yScr, int* xBmp, int* yBmp)
