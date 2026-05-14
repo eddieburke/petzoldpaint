@@ -10,13 +10,13 @@
 
 #include "history.h"
 #include "layers.h"
-#include "tools/selection_tool.h"
 
 // Forward declarations for panel sync functions - avoids circular include
 // These are defined in the respective panel .c files
 extern void LayersPanelSync(void);
 extern void HistoryPanelSync(void);
 extern void InvalidateCanvas(void);
+extern void SelectionClearState(void);
 
 #define MAX_HISTORY_ENTRIES 100
 
