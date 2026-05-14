@@ -80,6 +80,11 @@ static void DrawEraserPointSized(BYTE *bits, int width, int height, int x, int y
   DrawPrim_DrawEraserPoint(bits, width, height, x, y, color, size);
 }
 
+static void DrawSprayPointSized(BYTE *bits, int width, int height, int x, int y,
+                                 COLORREF color, int size) {
+  DrawPrim_DrawSprayPoint(bits, width, height, x, y, color, size);
+}
+
 static int GetUnitSize(void) { return 1; }
 static int GetBrushWidthSize(void) { return nBrushWidth; }
 static int GetSprayRadiusSize(void) { return nSprayRadius; }
@@ -92,7 +97,7 @@ static const StrokePolicy *GetStrokePolicy(int tool) {
                       STROKE_COLOR_FROM_BUTTON, STROKE_COMPOSITE_NORMAL, TRUE, TRUE, FALSE, TOOL_BRUSH},
       [TOOL_ERASER] = {DrawEraserPointSized, NULL, GetBrushWidthSize,
                        STROKE_COLOR_BACKGROUND, STROKE_COMPOSITE_ERASE, TRUE, FALSE, FALSE, TOOL_ERASER},
-      [TOOL_AIRBRUSH] = {NULL, NULL, GetSprayRadiusSize,
+      [TOOL_AIRBRUSH] = {DrawSprayPointSized, NULL, GetSprayRadiusSize,
                          STROKE_COLOR_FROM_BUTTON, STROKE_COMPOSITE_NORMAL, FALSE, FALSE, TRUE, TOOL_AIRBRUSH},
   };
   typedef char StrokePolicyCoverage[(TOOL_AIRBRUSH < (int)(sizeof(policies) / sizeof(policies[0]))) ? 1 : -1];
