@@ -142,8 +142,8 @@ double GetZoomScale(void)
 void CoordBmpToScrEx(int xBmp, int yBmp, int* xScr, int* yScr,
                     double scale, int offX, int offY)
 {
-    *xScr = (int)floor(xBmp * scale + 0.5) + offX;
-    *yScr = (int)floor(yBmp * scale + 0.5) + offY;
+    *xScr = (int)floor((double)xBmp * scale) + offX;
+    *yScr = (int)floor((double)yBmp * scale) + offY;
 }
 
 void RectBmpToScrEx(const RECT* rcBmp, RECT* rcScr,
