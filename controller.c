@@ -320,7 +320,9 @@ void Controller_HandleMouseUp(HWND hwnd, int screenX, int screenY, int btn) {
                 Canvas_GetWidth(), Canvas_GetHeight(),
                 s_resize.newW, s_resize.newH);
             if (ResizeCanvas(s_resize.newW, s_resize.newH)) {
-                HistoryPush(desc);
+                if (!HistoryPush(desc)) {
+      /* Change applied, but undo entry could not be recorded. */
+    }
                 Controller_UpdateScrollbars(hwnd);
                 InvalidateWindow(hwnd);
                 SetDocumentDirty();
