@@ -149,6 +149,7 @@ void DrawPrim_DrawSprayPoint(BYTE *bits, int width, int height, int x, int y,
    int densities[] = {10, 20, 30};
    int idx = sprayRadiusIndex - 1;
    if (idx < 0) idx = 0;
+   if (idx > 2) idx = 2;
    int radius = radii[idx % 3];
    int density = densities[idx % 3];
 

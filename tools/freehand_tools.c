@@ -268,13 +268,21 @@ void FreehandTool_OnTimerTick(void) {
 
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
+    int radius = DrawPrim_GetSprayRadius(nSprayRadius) + 2;
+    RECT rcDirty = {s_session.lastPoint.x - radius, s_session.lastPoint.y - radius,
+                    s_session.lastPoint.x + radius, s_session.lastPoint.y + radius};
+
     DrawPrim_DrawSprayPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(),
                             s_session.lastPoint.x, s_session.lastPoint.y,
                             GetColorForButton(s_session.drawButton), nSprayRadius);
-    LayersMarkDirty();
+    LayersMarkDirtyRect(&rcDirty);
     StrokeSession_MarkPixelsModified(&s_session);
+
+    RECT rcScreen;
+    RectBmpToScr(&rcDirty, &rcScreen);
+    InflateRect(&rcScreen, 2, 2);
+    InvalidateCanvasRect(&rcScreen);
   }
-  InvalidateCanvas();
 }
 
 /*------------------------------------------------------------------------------
