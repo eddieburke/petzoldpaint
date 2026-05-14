@@ -97,7 +97,8 @@ BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor,
 
       if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
         DWORD *pPixel = (DWORD *)(bits + (ny * w + nx) * 4);
-        if (*pPixel == startPixel && (!hasSelection || IsPointInSelection(nx, ny))) {
+        if (*pPixel == startPixel &&
+            (!IsSelectionActive() || IsPointInSelection(nx, ny))) {
           *pPixel = fillPixel;
           StackPush(nx, ny);
         }

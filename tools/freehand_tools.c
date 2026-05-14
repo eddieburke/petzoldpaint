@@ -81,7 +81,7 @@ static void DrawEraserPointSized(BYTE *bits, int width, int height, int x, int y
 }
 
 static void DrawSprayPointSized(BYTE *bits, int width, int height, int x, int y,
-                                 COLORREF color, int size) {
+                                COLORREF color, int size) {
   DrawPrim_DrawSprayPoint(bits, width, height, x, y, color, size);
 }
 
