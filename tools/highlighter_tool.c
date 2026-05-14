@@ -19,6 +19,7 @@
 #include "tool_options/presets.h"
 #include "tool_options/tool_options.h"
 #include <math.h>
+#include "stroke_session.h"
 #include <stdio.h>
 
 /*------------------------------------------------------------------------------
@@ -83,10 +84,7 @@ void HighlighterTool_RegisterPresets(void) {
    Localized Drawing State
   ------------------------------------------------------------*/
 
-static BOOL  s_bDrawing = FALSE;
-static POINT s_ptLast = {0};
-static int   s_nDrawButton = 0;
-static BOOL  s_bPixelsModified = FALSE;
+static StrokeSession s_session = {0};
 
 /*------------------------------------------------------------
    Highlighter Rendering Helpers
@@ -125,12 +123,7 @@ static BYTE CalcHighlighterAlpha(void) {
   ------------------------------------------------------------*/
 
 void HighlighterToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  s_bDrawing = TRUE;
-  s_bPixelsModified = FALSE;
-  s_nDrawButton = nButton;
-  s_ptLast.x = x;
-  s_ptLast.y = y;
-  SetCapture(hWnd);
+  StrokeSession_Begin(&s_session, hWnd, x, y, nButton, TOOL_HIGHLIGHTER);
 
   BYTE alpha = CalcHighlighterAlpha();
   BYTE *bits = LayersGetActiveColorBits();
@@ -140,61 +133,49 @@ void HighlighterToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
                           alpha, GetHighlighterBlendMode(),
                           (float)nHighlighterEdgeSoftness / 100.0f);
     LayersMarkDirty();
-    s_bPixelsModified = TRUE;
+    StrokeSession_MarkPixelsModified(&s_session);
   }
   InvalidateCanvas();
 }
 
 void HighlighterToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  if (!s_bDrawing || !(nButton & (MK_LBUTTON | MK_RBUTTON)))
+  if (!s_session.isDrawing || !StrokeSession_IsActiveButton(nButton))
     return;
 
   BYTE alpha = CalcHighlighterAlpha();
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
     DrawLineAAAlphaSoft(bits, Canvas_GetWidth(), Canvas_GetHeight(),
-                        (float)s_ptLast.x, (float)s_ptLast.y,
+                        (float)s_session.lastPoint.x, (float)s_session.lastPoint.y,
                         (float)x, (float)y, GetHighlighterSize() / 2.0f,
-                        GetColorForButton(s_nDrawButton), alpha,
+                        GetColorForButton(s_session.drawButton), alpha,
                         GetHighlighterBlendMode(),
                         (float)nHighlighterEdgeSoftness / 100.0f);
     LayersMarkDirty();
-    s_bPixelsModified = TRUE;
+    StrokeSession_MarkPixelsModified(&s_session);
   }
-  s_ptLast.x = x;
-  s_ptLast.y = y;
+  s_session.lastPoint.x = x;
+  s_session.lastPoint.y = y;
   InvalidateCanvas();
 }
 
 void HighlighterToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  if (s_bDrawing && s_bPixelsModified)
-    HistoryPushToolActionById(TOOL_HIGHLIGHTER, "Draw");
-  if (s_bDrawing) {
-    s_bDrawing = FALSE;
-    ReleaseCapture();
-    SetDocumentDirty();
-  }
+  StrokeSession_CommitIfNeeded(&s_session, "Draw");
+  StrokeSession_End(&s_session);
 }
 
-BOOL IsHighlighterDrawing(void) { return s_bDrawing; }
+BOOL IsHighlighterDrawing(void) { return s_session.isDrawing; }
 
 void HighlighterTool_Deactivate(void) {
-  if (s_bDrawing) {
-    s_bDrawing = FALSE;
-    ReleaseCapture();
-    SetDocumentDirty();
-  }
+  StrokeSession_End(&s_session);
 }
 
 BOOL CancelHighlighterDrawing(void) {
-  if (!s_bDrawing) return FALSE;
-  s_bDrawing = FALSE;
-  ReleaseCapture();
-  InvalidateCanvas();
+  if (!s_session.isDrawing) return FALSE;
+  StrokeSession_Cancel(&s_session);
   return TRUE;
 }
 
 void HighlighterTool_OnCaptureLost(void) {
-  if (s_bDrawing && s_bPixelsModified)
-    HistoryPushToolActionById(TOOL_HIGHLIGHTER, "Draw");
+  StrokeSession_OnCaptureLost(&s_session, "Draw");
 }

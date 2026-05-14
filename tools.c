@@ -77,39 +77,39 @@ typedef struct {
 } ToolVTable;
 
 static void PencilFreehandOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseDown(hWnd, x, y, nButton, TOOL_PENCIL);
+  BeginStroke(hWnd, x, y, nButton, FreehandGetPolicyForTool(TOOL_PENCIL));
 }
 
 static void PencilFreehandOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseMove(hWnd, x, y, nButton, TOOL_PENCIL);
+  AppendPoint(hWnd, x, y, nButton);
 }
 
 static void PencilFreehandOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseUp(hWnd, x, y, nButton, TOOL_PENCIL);
+  EndStroke(hWnd, x, y, nButton);
 }
 
 static void BrushFreehandOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseDown(hWnd, x, y, nButton, TOOL_BRUSH);
+  BeginStroke(hWnd, x, y, nButton, FreehandGetPolicyForTool(TOOL_BRUSH));
 }
 
 static void BrushFreehandOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseMove(hWnd, x, y, nButton, TOOL_BRUSH);
+  AppendPoint(hWnd, x, y, nButton);
 }
 
 static void BrushFreehandOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseUp(hWnd, x, y, nButton, TOOL_BRUSH);
+  EndStroke(hWnd, x, y, nButton);
 }
 
 static void EraserFreehandOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseDown(hWnd, x, y, nButton, TOOL_ERASER);
+  BeginStroke(hWnd, x, y, nButton, FreehandGetPolicyForTool(TOOL_ERASER));
 }
 
 static void EraserFreehandOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseMove(hWnd, x, y, nButton, TOOL_ERASER);
+  AppendPoint(hWnd, x, y, nButton);
 }
 
 static void EraserFreehandOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseUp(hWnd, x, y, nButton, TOOL_ERASER);
+  EndStroke(hWnd, x, y, nButton);
 }
 
 static const ToolVTable *GetToolVTable(int toolId);

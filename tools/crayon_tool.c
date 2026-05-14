@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "stroke_session.h"
 
 /*------------------------------------------------------------------------------
  * Crayon Presets
@@ -167,9 +168,7 @@ typedef struct {
   float pressure;
 } StrokePoint;
 
-static BOOL  s_bDrawing = FALSE;
-static int   s_nDrawButton = 0;
-static BOOL  s_bPixelsModified = FALSE;
+static StrokeSession s_session = {0};
 static int s_currentNoiseSeed = 0;
 static StrokePoint s_strokePoints[MAX_STROKE_POINTS];
 static int s_strokePointCount = 0;
@@ -737,10 +736,7 @@ static void DrawCrayonStroke(BYTE *bits, int width, int height,
 
 void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
    InitNoiseTextures();
-   s_bDrawing = TRUE;
-  s_bPixelsModified = FALSE;
-  s_nDrawButton = nButton;
-  SetCapture(hWnd);
+   StrokeSession_Begin(&s_session, hWnd, x, y, nButton, TOOL_CRAYON);
 
   // Generate new random seed for this stroke
   s_currentNoiseSeed = (int)GetTickCount() + (x * 1619) + (y * 31337);
@@ -755,15 +751,15 @@ void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
     int size = GetCrayonSize();
     float radius = size / 2.0f;
     DrawCrayonSpot(bits, Canvas_GetWidth(), Canvas_GetHeight(), (float)x, (float)y, radius,
-                   GetColorForButton(nButton), 1.0f, 1.0f, 0.0f);
+                   GetColorForButton(s_session.drawButton), 1.0f, 1.0f, 0.0f);
     LayersMarkDirty();
-    s_bPixelsModified = TRUE;
+    StrokeSession_MarkPixelsModified(&s_session);
   }
   InvalidateCanvas();
 }
 
 void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  if (!s_bDrawing || !(nButton & (MK_LBUTTON | MK_RBUTTON)))
+  if (!s_session.isDrawing || !StrokeSession_IsActiveButton(nButton))
     return;
 
   // Add new point to stroke
@@ -778,7 +774,7 @@ void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
 
     if (endIdx > startIdx) {
       int size = GetCrayonSize();
-      COLORREF color = GetColorForButton(s_nDrawButton);
+      COLORREF color = GetColorForButton(s_session.drawButton);
 
       for (int i = startIdx; i < endIdx; i++) {
         StrokePoint *p1 = &s_strokePoints[i];
@@ -793,7 +789,7 @@ void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
                                color, size, pressure);
       }
       LayersMarkDirty();
-      s_bPixelsModified = TRUE;
+      StrokeSession_MarkPixelsModified(&s_session);
     }
   }
 
@@ -802,14 +798,14 @@ void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
 
 void CrayonToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   // Add final point
-  if (s_bDrawing) {
+  if (s_session.isDrawing) {
     AddStrokePoint(x, y);
 
     // Draw final stroke segment
     BYTE *bits = LayersGetActiveColorBits();
     if (bits && s_strokePointCount >= 2) {
       int size = GetCrayonSize();
-      COLORREF color = GetColorForButton(s_nDrawButton);
+      COLORREF color = GetColorForButton(s_session.drawButton);
 
       int startIdx = (s_strokePointCount >= 3) ? s_strokePointCount - 3 : 0;
       int endIdx = s_strokePointCount - 1;
@@ -830,43 +826,30 @@ void CrayonToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
     }
   }
 
-  if (s_bDrawing && s_bPixelsModified) {
-    HistoryPushToolActionById(TOOL_CRAYON, "Draw");
-  }
-
-  if (s_bDrawing) {
-    s_bDrawing = FALSE;
-    ReleaseCapture();
-    SetDocumentDirty();
-  }
+  StrokeSession_CommitIfNeeded(&s_session, "Draw");
+  StrokeSession_End(&s_session);
   s_strokePointCount = 0;
 }
 
-BOOL IsCrayonDrawing(void) { return s_bDrawing; }
+BOOL IsCrayonDrawing(void) { return s_session.isDrawing; }
 
 void CrayonTool_Deactivate(void) {
-  if (s_bDrawing) {
-    s_bDrawing = FALSE;
-    ReleaseCapture();
-    SetDocumentDirty();
+  if (s_session.isDrawing) {
+    StrokeSession_End(&s_session);
     s_strokePointCount = 0;
   }
 }
 
 BOOL CancelCrayonDrawing(void) {
-  if (!s_bDrawing) {
+  if (!s_session.isDrawing) {
     s_strokePointCount = 0;
     return FALSE;
   }
-  s_bDrawing = FALSE;
-  ReleaseCapture();
-  InvalidateCanvas();
+  StrokeSession_Cancel(&s_session);
   s_strokePointCount = 0;
   return TRUE;
 }
 
 void CrayonTool_OnCaptureLost(void) {
-  if (s_bDrawing && s_bPixelsModified) {
-    HistoryPushToolActionById(TOOL_CRAYON, "Draw");
-  }
+  StrokeSession_OnCaptureLost(&s_session, "Draw");
 }

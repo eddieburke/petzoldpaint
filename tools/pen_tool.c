@@ -14,11 +14,9 @@
 #include "../layers.h"
 #include "tool_options/tool_options.h"
 #include <math.h>
+#include "stroke_session.h"
 
-static BOOL  s_bDrawing = FALSE;
-static POINT s_ptLast = {0};
-static int   s_nDrawButton = 0;
-static BOOL  s_bPixelsModified = FALSE;
+static StrokeSession s_session = {0};
 
 static int GetPenSize(void) {
    int sizes[] = {1, 2, 3, 4, 5};
@@ -50,71 +48,52 @@ static void DrawPenLine(BYTE *bits, int width, int height, int x1, int y1,
 }
 
 void PenToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  s_bDrawing = TRUE;
-  s_bPixelsModified = FALSE;
-  s_nDrawButton = nButton;
-  s_ptLast.x = x;
-  s_ptLast.y = y;
-  SetCapture(hWnd);
+  StrokeSession_Begin(&s_session, hWnd, x, y, nButton, TOOL_PEN);
 
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
     DrawPenPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(), x, y,
                  GetColorForButton(nButton));
     LayersMarkDirty();
-    s_bPixelsModified = TRUE;
+    StrokeSession_MarkPixelsModified(&s_session);
   }
   InvalidateCanvas();
 }
 
 void PenToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  if (!s_bDrawing || !(nButton & (MK_LBUTTON | MK_RBUTTON)))
+  if (!s_session.isDrawing || !StrokeSession_IsActiveButton(nButton))
     return;
 
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
-    DrawPenLine(bits, Canvas_GetWidth(), Canvas_GetHeight(), s_ptLast.x,
-                s_ptLast.y, x, y, GetColorForButton(s_nDrawButton));
+    DrawPenLine(bits, Canvas_GetWidth(), Canvas_GetHeight(), s_session.lastPoint.x,
+                s_session.lastPoint.y, x, y, GetColorForButton(s_session.drawButton));
     LayersMarkDirty();
-    s_bPixelsModified = TRUE;
+    StrokeSession_MarkPixelsModified(&s_session);
   }
-  s_ptLast.x = x;
-  s_ptLast.y = y;
+  s_session.lastPoint.x = x;
+  s_session.lastPoint.y = y;
   InvalidateCanvas();
 }
 
 void PenToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  if (s_bDrawing && s_bPixelsModified) {
-    HistoryPushToolActionById(TOOL_PEN, "Draw");
-  }
-  if (s_bDrawing) {
-    s_bDrawing = FALSE;
-    ReleaseCapture();
-    SetDocumentDirty();
-  }
+  StrokeSession_CommitIfNeeded(&s_session, "Draw");
+  StrokeSession_End(&s_session);
 }
 
 void PenTool_OnCaptureLost(void)
 {
-     if (s_bDrawing && s_bPixelsModified) {
-         HistoryPushToolActionById(TOOL_PEN, "Draw");
-     }
+     StrokeSession_OnCaptureLost(&s_session, "Draw");
 }
 
-BOOL IsPenDrawing(void) { return s_bDrawing; }
+BOOL IsPenDrawing(void) { return s_session.isDrawing; }
 
 void PenTool_Deactivate(void) {
-  if (s_bDrawing) {
-    s_bDrawing = FALSE;
-    ReleaseCapture();
-    SetDocumentDirty();
-  }
+  StrokeSession_End(&s_session);
 }
 
 BOOL CancelPenDrawing(void) {
-  if (!s_bDrawing) return FALSE;
-  s_bDrawing = FALSE;
-  ReleaseCapture();
-  InvalidateCanvas();
+  if (!s_session.isDrawing) return FALSE;
+  StrokeSession_Cancel(&s_session);
   return TRUE;
 }
