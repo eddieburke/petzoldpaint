@@ -76,6 +76,42 @@ typedef struct {
   void (*onTimerTick)(void);
 } ToolVTable;
 
+static void PencilFreehandOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  FreehandOnMouseDown(hWnd, x, y, nButton, TOOL_PENCIL);
+}
+
+static void PencilFreehandOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+  FreehandOnMouseMove(hWnd, x, y, nButton, TOOL_PENCIL);
+}
+
+static void PencilFreehandOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+  FreehandOnMouseUp(hWnd, x, y, nButton, TOOL_PENCIL);
+}
+
+static void BrushFreehandOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  FreehandOnMouseDown(hWnd, x, y, nButton, TOOL_BRUSH);
+}
+
+static void BrushFreehandOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+  FreehandOnMouseMove(hWnd, x, y, nButton, TOOL_BRUSH);
+}
+
+static void BrushFreehandOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+  FreehandOnMouseUp(hWnd, x, y, nButton, TOOL_BRUSH);
+}
+
+static void EraserFreehandOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  FreehandOnMouseDown(hWnd, x, y, nButton, TOOL_ERASER);
+}
+
+static void EraserFreehandOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+  FreehandOnMouseMove(hWnd, x, y, nButton, TOOL_ERASER);
+}
+
+static void EraserFreehandOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+  FreehandOnMouseUp(hWnd, x, y, nButton, TOOL_ERASER);
+}
+
 static const ToolVTable *GetToolVTable(int toolId);
 
 /*------------------------------------------------------------
@@ -175,8 +211,8 @@ static const ToolVTable s_ToolTable[] = {
                       SelectionToolDrawOverlay, NULL, SelectionTool_Deactivate,
                       SelectionTool_Cancel},
 
-    [TOOL_ERASER] = {FreehandEraserOnMouseDown, FreehandEraserOnMouseMove,
-                      FreehandEraserOnMouseUp, NULL, NULL, NULL,
+    [TOOL_ERASER] = {EraserFreehandOnMouseDown, EraserFreehandOnMouseMove,
+                      EraserFreehandOnMouseUp, NULL, NULL, NULL,
                       FreehandTool_Deactivate,
                       CancelFreehandDrawing, NULL, IsFreehandDrawing, FreehandTool_OnCaptureLost},
     [TOOL_FILL] = {FillToolOnMouseDown, NULL, NULL, NULL, NULL, NULL,

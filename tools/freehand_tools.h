@@ -4,12 +4,20 @@
 #include "../peztold_core.h"
 
 /*------------------------------------------------------------------------------
- * Shared Freehand Tool Entry Points
+ * Shared Freehand Stroke Controller API
  *----------------------------------------------------------------------------*/
 
-void FreehandTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int tool);
-void FreehandTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int tool);
-void FreehandTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int tool);
+void FreehandOnMouseDown(HWND hWnd, int x, int y, int nButton, int tool);
+void FreehandOnMouseMove(HWND hWnd, int x, int y, int nButton, int tool);
+void FreehandOnMouseUp(HWND hWnd, int x, int y, int nButton, int tool);
+
+/*------------------------------------------------------------------------------
+ * Airbrush Tool
+ *----------------------------------------------------------------------------*/
+
+void AirbrushToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
+void AirbrushToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
+void AirbrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
 void FreehandTool_OnTimerTick(void);
 
 /*------------------------------------------------------------------------------
