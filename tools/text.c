@@ -134,7 +134,9 @@ void TextRender_Blend(BYTE* dst, int dw, int dh, BYTE* src, int sw, int sh, int 
 
 void TextRender_ToActive(const char* txt, int len, int tw, int th, int dx, int dy, BYTE* dst) {
     BYTE* tmpBits; HBITMAP hTmp = CreateDibSection32(tw, th, &tmpBits); if (!hTmp) return;
-    HDC hdc = CreateCompatibleDC(NULL); SelectObject(hdc, hTmp);
+    HDC hdc = CreateCompatibleDC(NULL);
+    if (!hdc) { DeleteObject(hTmp); return; }
+    SelectObject(hdc, hTmp);
     ZeroMemory(tmpBits, tw*th*4);
     SelectObject(hdc, s_font.hFont ? s_font.hFont : GetStockObject(DEFAULT_GUI_FONT));
     SetBkMode(hdc, TRANSPARENT); SetTextColor(hdc, RGB(255,255,255));
