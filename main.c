@@ -49,13 +49,13 @@ void ResizeLayout(HWND hwnd);
    enters the message loop.
   ------------------------------------------------------------*/
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-                  PSTR szCmdLine, int iCmdShow)
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                   PWSTR szCmdLine, int iCmdShow)
 {
-    static char szAppName[] = "PeztoldPaint";
+    static const wchar_t szAppName[] = L"PeztoldPaint";
     HWND hwnd;
     MSG msg;
-    WNDCLASS wndclass;
+    WNDCLASSW wndclass;
 
     OutputDebugStringA("WinMain: Starting\n");
 
@@ -80,13 +80,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     wndclass.lpszMenuName = MAKEINTRESOURCE(IDM_MAINMENU);
     wndclass.lpszClassName = szAppName;
 
-    if (!RegisterClass(&wndclass)) {
+    if (!RegisterClassW(&wndclass)) {
         OutputDebugStringA("WinMain: RegisterClass failed\n");
         return 0;
     }
 
     OutputDebugStringA("WinMain: Creating window\n");
-    hwnd = CreateWindow(szAppName, "Peztold Paint",
+    hwnd = CreateWindowW(szAppName, L"Peztold Paint",
                        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
                        CW_USEDEFAULT, CW_USEDEFAULT,
                        CW_USEDEFAULT, CW_USEDEFAULT,
