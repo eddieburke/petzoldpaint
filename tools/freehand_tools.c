@@ -192,7 +192,6 @@ static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy
 }
 
 static void AppendPoint(HWND hWnd, int x, int y, int nButton) {
-  (void)hWnd;
   if (!s_bDrawing || !(nButton & (MK_LBUTTON | MK_RBUTTON)))
     return;
 

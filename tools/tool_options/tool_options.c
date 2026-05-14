@@ -113,6 +113,22 @@ static int SliderValueFromY(int y, const RECT *prcSlider, int minValue,
   return invert ? (maxValue - scaled) : (minValue + scaled);
 }
 
+static BOOL UpdateSliderValueFromPoint(int x, int y, int sliderX, int sliderStartY,
+                                       int sliderW, int sliderH, int sliderCount,
+                                       int **valuePtrs, const int *maxVals,
+                                       const BOOL *inverts) {
+  int currentY = sliderStartY;
+  for (int i = 0; i < sliderCount; i++) {
+    RECT rcSlider = {sliderX, currentY, sliderX + sliderW, currentY + sliderH};
+    if (PtInRect(&rcSlider, (POINT){x, y})) {
+      *valuePtrs[i] = SliderValueFromY(y, &rcSlider, 0, maxVals[i], inverts[i]);
+      return TRUE;
+    }
+    currentY += sliderH + 22;
+  }
+  return FALSE;
+}
+
 static void DrawVerticalSlider(HDC hdc, const RECT *prcSlider, int value,
                                int minValue, int maxValue, BOOL invert) {
   RECT rcSlider = *prcSlider;
@@ -914,24 +930,17 @@ static BOOL HighlighterOptions_LButtonDown(HWND hwnd, int x, int y) {
 
   int sliderW = 40, sliderH = 50, sliderX = (clientW - sliderW) / 2;
   if (sliderX < OPTIONS_MARGIN) sliderX = OPTIONS_MARGIN;
-  int currentY = OPTIONS_MARGIN;
-
   int *valuePtrs[] = {&nHighlighterTransparency, &nHighlighterOpacity,
                       &nHighlighterEdgeSoftness, &nHighlighterSizeVariation,
                       &nHighlighterTexture};
   BOOL inverts[] = {TRUE, FALSE, FALSE, FALSE, FALSE};
   int maxVals[] = {255, 100, 100, 100, 100};
-
-  for (int i = 0; i < 5; i++) {
-    RECT rcSlider = {sliderX, currentY, sliderX + sliderW, currentY + sliderH};
-    if (PtInRect(&rcSlider, (POINT){x, y})) {
-      *valuePtrs[i] = SliderValueFromY(y, &rcSlider, 0, maxVals[i], inverts[i]);
-      InvalidateWindow(hwnd);
-      InvalidateCanvas();
-      SetCapture(hwnd);
-      return TRUE;
-    }
-    currentY += sliderH + 22;
+  if (UpdateSliderValueFromPoint(x, y, sliderX, OPTIONS_MARGIN, sliderW, sliderH, 5,
+                                 valuePtrs, maxVals, inverts)) {
+    InvalidateWindow(hwnd);
+    InvalidateCanvas();
+    SetCapture(hwnd);
+    return TRUE;
   }
 
   int btnH = 14, btnW = 40, btnX = (clientW - btnW) / 2;
@@ -976,8 +985,6 @@ static BOOL HighlighterOptions_MouseMove(HWND hwnd, int y) {
 
   int sliderW = 40, sliderH = 50, sliderX = (clientW - sliderW) / 2;
   if (sliderX < OPTIONS_MARGIN) sliderX = OPTIONS_MARGIN;
-  int currentY = OPTIONS_MARGIN;
-
   int *valuePtrs[] = {&nHighlighterTransparency, &nHighlighterOpacity,
                       &nHighlighterEdgeSoftness, &nHighlighterSizeVariation,
                       &nHighlighterTexture};
@@ -985,18 +992,13 @@ static BOOL HighlighterOptions_MouseMove(HWND hwnd, int y) {
   int maxVals[] = {255, 100, 100, 100, 100};
 
   POINT pt; GetCursorPos(&pt); ScreenToClient(hwnd, &pt);
-
-  for (int i = 0; i < 5; i++) {
-    RECT rcSlider = {sliderX, currentY, sliderX + sliderW, currentY + sliderH};
-    if (PtInRect(&rcSlider, pt)) {
-      *valuePtrs[i] = SliderValueFromY(pt.y, &rcSlider, 0, maxVals[i], inverts[i]);
-      InvalidateWindow(hwnd);
-      InvalidateCanvas();
-      return TRUE;
-    }
-    currentY += sliderH + 22;
+  if (!UpdateSliderValueFromPoint(pt.x, pt.y, sliderX, OPTIONS_MARGIN, sliderW, sliderH,
+                                  5, valuePtrs, maxVals, inverts)) {
+    return FALSE;
   }
-  return FALSE;
+  InvalidateWindow(hwnd);
+  InvalidateCanvas();
+  return TRUE;
 }
 
 /*------------------------------------------------------------
@@ -1066,23 +1068,18 @@ static BOOL CrayonOptions_LButtonDown(HWND hwnd, int x, int y) {
 
   int sliderW = 40, sliderH = 50, sliderX = (clientW - sliderW) / 2;
   if (sliderX < OPTIONS_MARGIN) sliderX = OPTIONS_MARGIN;
-  int currentY = OPTIONS_MARGIN;
-
   int *valuePtrs[] = {&nCrayonDensity, &nCrayonTextureIntensity,
                       &nCrayonSprayAmount, &nCrayonColorVariation,
                       &nCrayonBrightnessRange, &nCrayonSaturationRange,
                       &nCrayonHueShiftRange};
-
-  for (int i = 0; i < 7; i++) {
-    RECT rcSlider = {sliderX, currentY, sliderX + sliderW, currentY + sliderH};
-    if (PtInRect(&rcSlider, (POINT){x, y})) {
-      *valuePtrs[i] = SliderValueFromY(y, &rcSlider, 0, 100, TRUE);
-      InvalidateWindow(hwnd);
-      InvalidateCanvas();
-      SetCapture(hwnd);
-      return TRUE;
-    }
-    currentY += sliderH + 22;
+  static const int kCrayonMaxVals[] = {100, 100, 100, 100, 100, 100, 100};
+  static const BOOL kCrayonInverts[] = {TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE};
+  if (UpdateSliderValueFromPoint(x, y, sliderX, OPTIONS_MARGIN, sliderW, sliderH, 7,
+                                 valuePtrs, kCrayonMaxVals, kCrayonInverts)) {
+    InvalidateWindow(hwnd);
+    InvalidateCanvas();
+    SetCapture(hwnd);
+    return TRUE;
   }
 
   int btnH = 14, btnW = 40, btnX = (clientW - btnW) / 2;
@@ -1118,26 +1115,21 @@ static BOOL CrayonOptions_MouseMove(HWND hwnd, int y) {
 
   int sliderW = 40, sliderH = 50, sliderX = (clientW - sliderW) / 2;
   if (sliderX < OPTIONS_MARGIN) sliderX = OPTIONS_MARGIN;
-  int currentY = OPTIONS_MARGIN;
-
   int *valuePtrs[] = {&nCrayonDensity, &nCrayonTextureIntensity,
                       &nCrayonSprayAmount, &nCrayonColorVariation,
                       &nCrayonBrightnessRange, &nCrayonSaturationRange,
                       &nCrayonHueShiftRange};
+  static const int kCrayonMaxVals[] = {100, 100, 100, 100, 100, 100, 100};
+  static const BOOL kCrayonInverts[] = {TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE};
 
   POINT pt; GetCursorPos(&pt); ScreenToClient(hwnd, &pt);
-
-  for (int i = 0; i < 7; i++) {
-    RECT rcSlider = {sliderX, currentY, sliderX + sliderW, currentY + sliderH};
-    if (PtInRect(&rcSlider, pt)) {
-      *valuePtrs[i] = SliderValueFromY(pt.y, &rcSlider, 0, 100, TRUE);
-      InvalidateWindow(hwnd);
-      InvalidateCanvas();
-      return TRUE;
-    }
-    currentY += sliderH + 22;
+  if (!UpdateSliderValueFromPoint(pt.x, pt.y, sliderX, OPTIONS_MARGIN, sliderW, sliderH,
+                                  7, valuePtrs, kCrayonMaxVals, kCrayonInverts)) {
+    return FALSE;
   }
-  return FALSE;
+  InvalidateWindow(hwnd);
+  InvalidateCanvas();
+  return TRUE;
 }
 
 static void DrawShapeWithLineOptions(HDC hdc, RECT *prcClient) {
