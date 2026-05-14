@@ -19,8 +19,8 @@ typedef struct {
 } Point;
 
 static Point *s_stack = NULL;
-static int s_stackCount = 0;
-static int s_stackCap = 0;
+static size_t s_stackCount = 0;
+static size_t s_stackCap = 0;
 
 static inline void StackPush(int x, int y) {
   if (s_stackCount >= s_stackCap)
@@ -65,8 +65,12 @@ void FloodFillCanvas(int startX, int startY, COLORREF fillColor,
   }
 
     // Allocate stack
-    s_stackCap = (size_t)w * h;
-    s_stack = (Point *)malloc(s_stackCap * sizeof(Point));
+  size_t pixelCount = (size_t)w * (size_t)h;
+  if (w <= 0 || h <= 0 || pixelCount > (SIZE_MAX / sizeof(Point)))
+    return;
+
+  s_stackCap = pixelCount;
+  s_stack = (Point *)malloc(s_stackCap * sizeof(Point));
   if (!s_stack)
     return;
   s_stackCount = 0;
