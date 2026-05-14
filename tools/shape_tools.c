@@ -203,7 +203,7 @@ void CancelShapeDrawing(void) { ShapeTool_OnCancel(); }
  * Event Handlers
  *----------------------------------------------------------------------------*/
 
-static void OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
+void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
   if (s_Shape.state != SHAPE_STATE_IDLE)
     return;
 
@@ -219,7 +219,7 @@ static void OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
   SetCapture(hWnd);
 }
 
-static void OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
+void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
   if (s_Shape.state == SHAPE_STATE_IDLE || s_Shape.activeToolId != toolId)
     return;
 
@@ -239,7 +239,7 @@ static void OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
   }
 }
 
-static void OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
+void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
   if (s_Shape.state == SHAPE_STATE_IDLE)
     return;
   if (GetCapture() == hWnd) {
@@ -289,50 +289,6 @@ void ShapeToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
                                 s_Shape.ptEnd.x, s_Shape.ptEnd.y);
     Overlay_DrawBoxHandles(&ctx, &rc);
   }
-}
-
-/*------------------------------------------------------------------------------
- * Public API Wrappers — per-tool dispatch
- *----------------------------------------------------------------------------*/
-
-void LineToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  OnMouseDown(hWnd, x, y, nButton, TOOL_LINE);
-}
-void LineToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  OnMouseMove(hWnd, x, y, nButton, TOOL_LINE);
-}
-void LineToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  OnMouseUp(hWnd, x, y, nButton, TOOL_LINE);
-}
-
-void RectToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  OnMouseDown(hWnd, x, y, nButton, TOOL_RECT);
-}
-void RectToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  OnMouseMove(hWnd, x, y, nButton, TOOL_RECT);
-}
-void RectToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  OnMouseUp(hWnd, x, y, nButton, TOOL_RECT);
-}
-
-void EllipseToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  OnMouseDown(hWnd, x, y, nButton, TOOL_ELLIPSE);
-}
-void EllipseToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  OnMouseMove(hWnd, x, y, nButton, TOOL_ELLIPSE);
-}
-void EllipseToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  OnMouseUp(hWnd, x, y, nButton, TOOL_ELLIPSE);
-}
-
-void RoundRectToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  OnMouseDown(hWnd, x, y, nButton, TOOL_ROUNDRECT);
-}
-void RoundRectToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  OnMouseMove(hWnd, x, y, nButton, TOOL_ROUNDRECT);
-}
-void RoundRectToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  OnMouseUp(hWnd, x, y, nButton, TOOL_ROUNDRECT);
 }
 
 /* Lifecycle hooks — wired into ToolVTable in tools.c */

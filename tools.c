@@ -92,15 +92,27 @@ typedef struct {
   .onViewportChanged = NULL, .isBusy = (_is_busy), .onCaptureLost = (_capture_lost)
 
 static void SharedFreehandOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  BeginStroke(hWnd, x, y, nButton, FreehandGetPolicyForTool(Tool_GetCurrent()));
+  FreehandTool_OnMouseDown(hWnd, x, y, nButton, Tool_GetCurrent());
 }
 
 static void SharedFreehandOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  AppendPoint(hWnd, x, y, nButton);
+  FreehandTool_OnMouseMove(hWnd, x, y, nButton, Tool_GetCurrent());
 }
 
 static void SharedFreehandOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  EndStroke(hWnd, x, y, nButton);
+  FreehandTool_OnMouseUp(hWnd, x, y, nButton, Tool_GetCurrent());
+}
+
+static void SharedShapeOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  ShapeTool_OnMouseDown(hWnd, x, y, nButton, Tool_GetCurrent());
+}
+
+static void SharedShapeOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+  ShapeTool_OnMouseMove(hWnd, x, y, nButton, Tool_GetCurrent());
+}
+
+static void SharedShapeOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+  ShapeTool_OnMouseUp(hWnd, x, y, nButton, Tool_GetCurrent());
 }
 
 static const ToolVTable *GetToolVTable(int toolId);
@@ -180,32 +192,32 @@ static const ToolVTable s_ToolTable[] = {
                    NULL, TextToolDrawOverlay, NULL,
                    TextTool_Deactivate, CancelText, TextToolOnViewportChanged},
 
-    /* Shape tools: draft layer model — no ghost, lifecycle hooks registered */
-    [TOOL_LINE] = {.onMouseDown = LineToolOnMouseDown,
-                   .onMouseMove = LineToolOnMouseMove,
-                   .onMouseUp = LineToolOnMouseUp,
+    /* Shape tools: shared controller + policy dispatch with draft-layer rendering. */
+    [TOOL_LINE] = {.onMouseDown = SharedShapeOnMouseDown,
+                   .onMouseMove = SharedShapeOnMouseMove,
+                   .onMouseUp = SharedShapeOnMouseUp,
                    .drawOverlay = ShapeToolDrawOverlay,
                    TOOL_LIFECYCLE_SHAPE_COMMON},
     [TOOL_CURVE] = {BezierToolOnMouseDown, BezierToolOnMouseMove,
                     BezierToolOnMouseUp, NULL, BezierToolDrawOverlay,
                     NULL, BezierTool_Deactivate, BezierTool_Cancel, NULL, IsCurvePending, NULL},
-    [TOOL_RECT] = {.onMouseDown = RectToolOnMouseDown,
-                   .onMouseMove = RectToolOnMouseMove,
-                   .onMouseUp = RectToolOnMouseUp,
+    [TOOL_RECT] = {.onMouseDown = SharedShapeOnMouseDown,
+                   .onMouseMove = SharedShapeOnMouseMove,
+                   .onMouseUp = SharedShapeOnMouseUp,
                    .drawOverlay = ShapeToolDrawOverlay,
                    TOOL_LIFECYCLE_SHAPE_COMMON},
     [TOOL_POLYGON] = {PolygonTool_OnMouseDown, PolygonTool_OnMouseMove,
                       PolygonTool_OnMouseUp, PolygonTool_OnDoubleClick,
                       PolygonTool_DrawOverlay, NULL, PolygonTool_Deactivate,
                       PolygonTool_Cancel, NULL, IsPolygonPending, NULL},
-    [TOOL_ELLIPSE] = {.onMouseDown = EllipseToolOnMouseDown,
-                      .onMouseMove = EllipseToolOnMouseMove,
-                      .onMouseUp = EllipseToolOnMouseUp,
+    [TOOL_ELLIPSE] = {.onMouseDown = SharedShapeOnMouseDown,
+                      .onMouseMove = SharedShapeOnMouseMove,
+                      .onMouseUp = SharedShapeOnMouseUp,
                       .drawOverlay = ShapeToolDrawOverlay,
                       TOOL_LIFECYCLE_SHAPE_COMMON},
-    [TOOL_ROUNDRECT] = {.onMouseDown = RoundRectToolOnMouseDown,
-                        .onMouseMove = RoundRectToolOnMouseMove,
-                        .onMouseUp = RoundRectToolOnMouseUp,
+    [TOOL_ROUNDRECT] = {.onMouseDown = SharedShapeOnMouseDown,
+                        .onMouseMove = SharedShapeOnMouseMove,
+                        .onMouseUp = SharedShapeOnMouseUp,
                         .drawOverlay = ShapeToolDrawOverlay,
                         TOOL_LIFECYCLE_SHAPE_COMMON},
     [TOOL_PEN] = {.onMouseDown = PenToolOnMouseDown,
