@@ -1,8 +1,8 @@
 /*------------------------------------------------------------
    HISTORY.C -- Full Undo History System
 
-   This module implements an unlimited undo history that tracks
-   all actions from the beginning of the document.
+   This module implements a bounded undo history that tracks
+   the most recent actions (up to MAX_HISTORY_ENTRIES).
   ------------------------------------------------------------*/
 
 #include <stdlib.h>
@@ -61,11 +61,6 @@ static HistoryEntry *CreateEntryFromCurrentState(const char *description) {
 static void TrimRedoBranch(void) {
   if (!s_currentEntry || !s_currentEntry->next)
     return;
-  if (entry->snapshot)
-    LayersDestroySnapshot(entry->snapshot);
-  free(entry->description);
-  free(entry);
-}
 
   HistoryEntry *entry = s_currentEntry->next;
   while (entry) {
@@ -95,6 +90,7 @@ static void AppendEntry(HistoryEntry *entry) {
   s_currentPosition = s_historyCount - 1;
 }
 
+// Keep only the most recent MAX_HISTORY_ENTRIES snapshots.
 static void PruneHeadIfNeeded(void) {
   while (s_historyCount > MAX_HISTORY_ENTRIES && s_historyHead) {
     HistoryEntry *oldHead = s_historyHead;
