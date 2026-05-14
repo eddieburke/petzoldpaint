@@ -21,7 +21,7 @@ BOOL HistoryRedo(void);
 BOOL HistoryCanUndo(void);
 BOOL HistoryCanRedo(void);
 void HistoryClear(void);
-void HistoryJumpTo(int index);
+BOOL HistoryJumpTo(int index);
 int HistoryGetPosition(void);  // Returns current position (0 = beginning, count-1 = end)
 int HistoryGetCount(void);
 const char* HistoryGetDescription(int index);

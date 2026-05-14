@@ -65,7 +65,7 @@ void LayersEnsureDraft(void);
 
 typedef struct LayerSnapshot LayerSnapshot;
 LayerSnapshot *LayersCreateSnapshot(void);
-void LayersApplySnapshot(LayerSnapshot *snapshot);
+BOOL LayersApplySnapshot(LayerSnapshot *snapshot);
 void LayersDestroySnapshot(LayerSnapshot *snapshot);
 
 BOOL LayersLoadFromBitmap(HBITMAP hBmp);
