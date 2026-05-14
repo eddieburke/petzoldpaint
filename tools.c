@@ -107,6 +107,57 @@ static void ToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
 static void ToolOnDoubleClick(HWND hWnd, int x, int y, int nButton);
 static void ToolOnCaptureLost(void);
 static void ToolOnViewportChanged(HWND hWnd);
+static void FreehandPencilOnMouseDown(HWND hWnd, int x, int y, int nButton);
+static void FreehandPencilOnMouseMove(HWND hWnd, int x, int y, int nButton);
+static void FreehandPencilOnMouseUp(HWND hWnd, int x, int y, int nButton);
+static void FreehandBrushOnMouseDown(HWND hWnd, int x, int y, int nButton);
+static void FreehandBrushOnMouseMove(HWND hWnd, int x, int y, int nButton);
+static void FreehandBrushOnMouseUp(HWND hWnd, int x, int y, int nButton);
+static void FreehandEraserOnMouseDown(HWND hWnd, int x, int y, int nButton);
+static void FreehandEraserOnMouseMove(HWND hWnd, int x, int y, int nButton);
+static void FreehandEraserOnMouseUp(HWND hWnd, int x, int y, int nButton);
+static void FreehandAirbrushOnMouseDown(HWND hWnd, int x, int y, int nButton);
+static void FreehandAirbrushOnMouseMove(HWND hWnd, int x, int y, int nButton);
+static void FreehandAirbrushOnMouseUp(HWND hWnd, int x, int y, int nButton);
+
+static void FreehandPencilOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  FreehandTool_OnMouseDown(hWnd, x, y, nButton, TOOL_PENCIL);
+}
+static void FreehandPencilOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+  FreehandTool_OnMouseMove(hWnd, x, y, nButton, TOOL_PENCIL);
+}
+static void FreehandPencilOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+  FreehandTool_OnMouseUp(hWnd, x, y, nButton, TOOL_PENCIL);
+}
+static void FreehandBrushOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  FreehandTool_OnMouseDown(hWnd, x, y, nButton, TOOL_BRUSH);
+}
+static void FreehandBrushOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+  FreehandTool_OnMouseMove(hWnd, x, y, nButton, TOOL_BRUSH);
+}
+static void FreehandBrushOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+  FreehandTool_OnMouseUp(hWnd, x, y, nButton, TOOL_BRUSH);
+}
+static void FreehandEraserOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  FreehandTool_OnMouseDown(hWnd, x, y, nButton, TOOL_ERASER);
+}
+static void FreehandEraserOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+  FreehandTool_OnMouseMove(hWnd, x, y, nButton, TOOL_ERASER);
+}
+static void FreehandEraserOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+  FreehandTool_OnMouseUp(hWnd, x, y, nButton, TOOL_ERASER);
+}
+static void FreehandAirbrushOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  FreehandTool_OnMouseDown(hWnd, x, y, nButton, TOOL_AIRBRUSH);
+  SetTimer(hWnd, 101, 30, NULL);
+}
+static void FreehandAirbrushOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+  FreehandTool_OnMouseMove(hWnd, x, y, nButton, TOOL_AIRBRUSH);
+}
+static void FreehandAirbrushOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+  KillTimer(hWnd, 101);
+  FreehandTool_OnMouseUp(hWnd, x, y, nButton, TOOL_AIRBRUSH);
+}
 
 /*------------------------------------------------------------
    Tool VTable Registry
@@ -124,8 +175,8 @@ static const ToolVTable s_ToolTable[] = {
                       SelectionToolDrawOverlay, NULL, SelectionTool_Deactivate,
                       SelectionTool_Cancel},
 
-    [TOOL_ERASER] = {EraserToolOnMouseDown, EraserToolOnMouseMove,
-                      EraserToolOnMouseUp, NULL, NULL, NULL,
+    [TOOL_ERASER] = {FreehandEraserOnMouseDown, FreehandEraserOnMouseMove,
+                      FreehandEraserOnMouseUp, NULL, NULL, NULL,
                       FreehandTool_Deactivate,
                       CancelFreehandDrawing, NULL, IsFreehandDrawing, FreehandTool_OnCaptureLost},
     [TOOL_FILL] = {FillToolOnMouseDown, NULL, NULL, NULL, NULL, NULL,
@@ -136,16 +187,16 @@ static const ToolVTable s_ToolTable[] = {
                         MagnifierToolOnMouseUp, NULL,
                         MagnifierToolDrawOverlay, NULL, MagnifierToolDeactivate,
                         NULL, NULL, NULL, MagnifierToolDeactivate},
-    [TOOL_PENCIL] = {PencilToolOnMouseDown, PencilToolOnMouseMove,
-                     PencilToolOnMouseUp, NULL, NULL, NULL,
+    [TOOL_PENCIL] = {FreehandPencilOnMouseDown, FreehandPencilOnMouseMove,
+                     FreehandPencilOnMouseUp, NULL, NULL, NULL,
                      FreehandTool_Deactivate,
                      CancelFreehandDrawing, NULL, IsFreehandDrawing, FreehandTool_OnCaptureLost},
-    [TOOL_BRUSH] = {BrushToolOnMouseDown, BrushToolOnMouseMove,
-                    BrushToolOnMouseUp, NULL, NULL, NULL,
+    [TOOL_BRUSH] = {FreehandBrushOnMouseDown, FreehandBrushOnMouseMove,
+                    FreehandBrushOnMouseUp, NULL, NULL, NULL,
                     FreehandTool_Deactivate,
                     CancelFreehandDrawing, NULL, IsFreehandDrawing, FreehandTool_OnCaptureLost},
-    [TOOL_AIRBRUSH] = {AirbrushToolOnMouseDown, AirbrushToolOnMouseMove,
-                       AirbrushToolOnMouseUp, NULL, NULL, NULL,
+    [TOOL_AIRBRUSH] = {FreehandAirbrushOnMouseDown, FreehandAirbrushOnMouseMove,
+                       FreehandAirbrushOnMouseUp, NULL, NULL, NULL,
                        FreehandTool_Deactivate,
                        CancelFreehandDrawing, NULL, IsFreehandDrawing, FreehandTool_OnCaptureLost, FreehandTool_OnTimerTick},
     [TOOL_TEXT] = {TextToolOnMouseDown, TextToolOnMouseMove, TextToolOnMouseUp,

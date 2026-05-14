@@ -4,36 +4,12 @@
 #include "../peztold_core.h"
 
 /*------------------------------------------------------------------------------
- * Pencil Tool
+ * Shared Freehand Tool Entry Points
  *----------------------------------------------------------------------------*/
 
-void PencilToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void PencilToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void PencilToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
-
-/*------------------------------------------------------------------------------
- * Brush Tool
- *----------------------------------------------------------------------------*/
-
-void BrushToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void BrushToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void BrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
-
-/*------------------------------------------------------------------------------
- * Eraser Tool
- *----------------------------------------------------------------------------*/
-
-void EraserToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void EraserToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void EraserToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
-
-/*------------------------------------------------------------------------------
- * Airbrush Tool
- *----------------------------------------------------------------------------*/
-
-void AirbrushToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void AirbrushToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void AirbrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
+void FreehandTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int tool);
+void FreehandTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int tool);
+void FreehandTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int tool);
 void FreehandTool_OnTimerTick(void);
 
 /*------------------------------------------------------------------------------

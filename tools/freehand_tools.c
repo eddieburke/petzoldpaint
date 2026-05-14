@@ -116,8 +116,7 @@ static void FreehandDrawInterpolated(BYTE *bits, int width, int height,
  * Unified Event Handlers
  *----------------------------------------------------------------------------*/
 
-static void FreehandOnMouseDown(HWND hWnd, int x, int y, int nButton,
-                                int tool) {
+void FreehandTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int tool) {
   if (s_bDrawing && nButton != s_nDrawButton) {
     CancelFreehandDrawing();
     return;
@@ -157,8 +156,7 @@ static void FreehandOnMouseDown(HWND hWnd, int x, int y, int nButton,
   }
 }
 
-static void FreehandOnMouseMove(HWND hWnd, int x, int y, int nButton,
-                                int tool) {
+void FreehandTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int tool) {
   if (!s_bDrawing || !(nButton & (MK_LBUTTON | MK_RBUTTON)))
     return;
   if (s_activeFreehandTool != tool)
@@ -196,81 +194,15 @@ static void FreehandOnMouseMove(HWND hWnd, int x, int y, int nButton,
   InvalidateCanvas();
 }
 
-static void FreehandOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+void FreehandTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int tool) {
   if (s_bDrawing && s_bPixelsModified) {
-    HistoryPushToolActionById(s_activeFreehandTool, "Draw");
+    HistoryPushToolActionById(tool, "Draw");
   }
   if (s_bDrawing) {
     s_bDrawing = FALSE;
     ReleaseCapture();
     SetDocumentDirty();
   }
-}
-
-/*------------------------------------------------------------------------------
- * Pencil Tool Public API
- *----------------------------------------------------------------------------*/
-
-void PencilToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseDown(hWnd, x, y, nButton, TOOL_PENCIL);
-}
-
-void PencilToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseMove(hWnd, x, y, nButton, TOOL_PENCIL);
-}
-
-void PencilToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseUp(hWnd, x, y, nButton);
-}
-
-/*------------------------------------------------------------------------------
- * Brush Tool Public API
- *----------------------------------------------------------------------------*/
-
-void BrushToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseDown(hWnd, x, y, nButton, TOOL_BRUSH);
-}
-
-void BrushToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseMove(hWnd, x, y, nButton, TOOL_BRUSH);
-}
-
-void BrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseUp(hWnd, x, y, nButton);
-}
-
-/*------------------------------------------------------------------------------
- * Eraser Tool Public API
- *----------------------------------------------------------------------------*/
-
-void EraserToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseDown(hWnd, x, y, nButton, TOOL_ERASER);
-}
-
-void EraserToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseMove(hWnd, x, y, nButton, TOOL_ERASER);
-}
-
-void EraserToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseUp(hWnd, x, y, nButton);
-}
-
-/*------------------------------------------------------------------------------
- * Airbrush Tool Public API
- *----------------------------------------------------------------------------*/
-
-void AirbrushToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseDown(hWnd, x, y, nButton, TOOL_AIRBRUSH);
-  SetTimer(hWnd, 101, 30, NULL);
-}
-
-void AirbrushToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseMove(hWnd, x, y, nButton, TOOL_AIRBRUSH);
-}
-
-void AirbrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  KillTimer(hWnd, 101);
-  FreehandOnMouseUp(hWnd, x, y, nButton);
 }
 
 void FreehandTool_OnTimerTick(void) {
