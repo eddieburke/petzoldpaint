@@ -61,14 +61,9 @@ void LayersMarkDirty(void) {
   s_partialDirty = FALSE;
 }
 
-void LayersMarkDirtyRect(RECT *pRect) {
+void LayersMarkDirtyRect(const RECT *pRect) {
   if (s_compositeDirty)
     return;
-  if (!pRect) {
-    LayersMarkDirty();
-    return;
-  }
-
   // Validate rect
   if (pRect->left >= pRect->right || pRect->top >= pRect->bottom)
     return;
