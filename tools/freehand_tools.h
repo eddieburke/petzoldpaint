@@ -26,7 +26,6 @@ void FreehandTool_OnTimerTick(void);
 
 BOOL IsFreehandDrawing(void);
 void FreehandTool_Deactivate(void);
-void FreehandTool_OnCaptureLost(void);
 BOOL CancelFreehandDrawing(void);
 int GetActiveFreehandTool(void);
 

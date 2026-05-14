@@ -14,7 +14,6 @@ void CrayonToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
 BOOL IsCrayonDrawing(void);
 void CrayonTool_Deactivate(void);
 BOOL CancelCrayonDrawing(void);
-void CrayonTool_OnCaptureLost(void);
 
 /*------------------------------------------------------------------------------
  * Tool Options (Owned by Crayon Tool)

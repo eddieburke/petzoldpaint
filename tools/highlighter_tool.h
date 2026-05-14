@@ -14,7 +14,6 @@ void HighlighterToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
 BOOL IsHighlighterDrawing(void);
 void HighlighterTool_Deactivate(void);
 BOOL CancelHighlighterDrawing(void);
-void HighlighterTool_OnCaptureLost(void);
 
 void HighlighterTool_RegisterPresets(void);
 
