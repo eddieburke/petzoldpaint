@@ -1,12 +1,42 @@
-*.aps
-*.obj
+# Build output
 *.exe
-*.ilk
+*.obj
+*.lib
+*.dll
+*.exp
 *.pdb
+*.ilk
 *.res
+*.idb
+*.ipdb
+*.iobj
+*.tlog
+*.lastbuildstate
 *.log
-*.txt
 *.manifest
-*.user
-*.suo
+*.aps
+
+# Build directories
+Debug/
+Release/
+x64/
+x86/
+ipch/
+
+# Visual Studio
 .vs/
+*.suo
+*.sdf
+*.opensdf
+*.ncb
+*.user
+*.userosscache
+
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Temp / backup
+*.bak
+*.old
+*~
