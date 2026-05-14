@@ -10,6 +10,7 @@
 #include "text_font.h"
 #include "selection_tool.h"
 #include "text_toolbar.h"
+#include "text_session.h"
 #include "../canvas.h"
 #include "../draw.h"
 #include "../geom.h"
@@ -96,6 +97,7 @@ typedef struct {
 } TextState;
 
 static TextState s_text = {0};
+static TextSession s_textSession = {0};
 
 // Forward decls
 void TextToolbar_Show(BOOL bShow);
@@ -161,18 +163,19 @@ void CommitText(HWND hParent) {
                 if (s_text.bOpaque) DrawRectAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), s_text.rcBox.left, s_text.rcBox.top, s_text.rcBox.right-s_text.rcBox.left, s_text.rcBox.bottom-s_text.rcBox.top, Palette_GetSecondaryColor(), 255, LAYER_BLEND_NORMAL);
                 int ins = TEXT_MARGIN + TEXT_EDIT_INSET;
                 TextRender_ToActive(buf, len, (s_text.rcBox.right-s_text.rcBox.left)-ins*2, (s_text.rcBox.bottom-s_text.rcBox.top)-ins*2, s_text.rcBox.left+ins, s_text.rcBox.top+ins, bits);
-                HistoryPushToolActionById(TOOL_TEXT, "Text Placement");
-                SetDocumentDirty();
+                TextSession_MarkModified(&s_textSession);
+                TextSession_CommitIfNeeded(&s_textSession, "Text Placement");
+                TextSession_End(&s_textSession);
             }
             free(buf);
         }
     }
-    LayersClearDraft(); TextEdit_Destroy(); TextToolbar_Show(FALSE); s_text.mode = TEXT_NONE; InvalidateCanvas();
+    LayersClearDraft(); TextEdit_Destroy(); TextToolbar_Show(FALSE); s_text.mode = TEXT_NONE; TextSession_End(&s_textSession); InvalidateCanvas();
 }
 
 BOOL CancelText(void) {
     if (s_text.mode == TEXT_NONE) return FALSE;
-    LayersClearDraft(); TextEdit_Destroy(); TextToolbar_Show(FALSE); s_text.mode = TEXT_NONE; InvalidateCanvas();
+    LayersClearDraft(); TextEdit_Destroy(); TextToolbar_Show(FALSE); s_text.mode = TEXT_NONE; TextSession_Cancel(&s_textSession); InvalidateCanvas();
     return TRUE;
 }
 
@@ -303,10 +306,10 @@ static void OnTextFontChanged(void) {
 
 void TextToolOnMouseDown(HWND hwnd, int x, int y, int btn) {
     if (s_text.mode == TEXT_NONE) {
-        s_text.ptDragStart = (POINT){x, y}; s_text.rcBox = (RECT){x, y, x, y}; s_text.mode = TEXT_DRAWING; SetCapture(hwnd);
+        s_text.ptDragStart = (POINT){x, y}; s_text.rcBox = (RECT){x, y, x, y}; s_text.mode = TEXT_DRAWING; TextSession_Begin(&s_textSession, hwnd, x, y);
     } else if (s_text.mode == TEXT_EDITING) {
         int h = Overlay_HitTestBoxHandles(&s_text.rcBox, x, y);
-        if (h >= 0) { s_text.nHandle = h; s_text.ptDragStart = (POINT){x, y}; s_text.rcBoxStart = s_text.rcBox; s_text.mode = TEXT_RESIZING; SetCapture(hwnd); }
+        if (h >= 0) { s_text.nHandle = h; s_text.ptDragStart = (POINT){x, y}; s_text.rcBoxStart = s_text.rcBox; s_text.mode = TEXT_RESIZING; TextSession_Begin(&s_textSession, hwnd, x, y); }
         else if (!PtInRect(&s_text.rcBox, (POINT){x, y})) CommitText(hwnd);
     }
 }
