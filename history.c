@@ -156,12 +156,15 @@ void HistoryPush(const char *description) {
 }
 
 // Helper to apply a snapshot
-static void ApplySnapshot(HistoryEntry *entry) {
-  LayersApplySnapshot(entry->snapshot);
+static BOOL ApplySnapshot(HistoryEntry *entry) {
+  if (!entry || !LayersApplySnapshot(entry->snapshot))
+    return FALSE;
+
   LayersMarkDirty();
   LayersSetActiveIndex(entry->activeLayerIndex);
   SelectionClearState();
   InvalidateCanvas();
+  return TRUE;
 }
 
 // Notify panels after history changes
@@ -175,9 +178,12 @@ BOOL HistoryUndo(void) {
     return FALSE;
   }
 
-  s_currentEntry = s_currentEntry->prev;
+  HistoryEntry *target = s_currentEntry->prev;
+  if (!ApplySnapshot(target))
+    return FALSE;
+
+  s_currentEntry = target;
   s_currentPosition--;
-  ApplySnapshot(s_currentEntry);
   HistoryNotifyPanels();
   return TRUE;
 }
@@ -187,9 +193,12 @@ BOOL HistoryRedo(void) {
     return FALSE;
   }
 
-  s_currentEntry = s_currentEntry->next;
+  HistoryEntry *target = s_currentEntry->next;
+  if (!ApplySnapshot(target))
+    return FALSE;
+
+  s_currentEntry = target;
   s_currentPosition++;
-  ApplySnapshot(s_currentEntry);
   HistoryNotifyPanels();
   return TRUE;
 }
@@ -208,15 +217,20 @@ void HistoryClear(void) {
   HistoryNotifyPanels();
 }
 
-void HistoryJumpTo(int index) {
+BOOL HistoryJumpTo(int index) {
   HistoryEntry *entry = FindEntryAtIndex(index);
 
-  if (entry && entry != s_currentEntry) {
-    s_currentEntry = entry;
-    s_currentPosition = index;
-    ApplySnapshot(entry);
-    HistoryNotifyPanels();
+  if (!entry || entry == s_currentEntry) {
+    return FALSE;
   }
+
+  if (!ApplySnapshot(entry))
+    return FALSE;
+
+  s_currentEntry = entry;
+  s_currentPosition = index;
+  HistoryNotifyPanels();
+  return TRUE;
 }
 
 int HistoryGetCount(void) { return s_historyCount; }

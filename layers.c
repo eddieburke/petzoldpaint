@@ -752,50 +752,57 @@ LayerSnapshot *LayersCreateSnapshot(void) {
   return snapshot;
 }
 
-void LayersApplySnapshot(LayerSnapshot *snapshot) {
+BOOL LayersApplySnapshot(LayerSnapshot *snapshot) {
   if (!snapshot)
-    return;
+    return FALSE;
 
-  LayersDestroy();
-  if (!EnsureLayerCapacity(snapshot->layerCount)) {
-    return;
+  if (snapshot->layerCount < 0 || snapshot->layerCount > MAX_LAYERS)
+    return FALSE;
+
+  Layer tempLayers[MAX_LAYERS] = {0};
+  for (int i = 0; i < snapshot->layerCount; i++) {
+    Layer *dst = &tempLayers[i];
+    Layer *src = &snapshot->layers[i];
+    *dst = *src;
+    dst->colorBmp = CreateDibSection32(snapshot->width, snapshot->height, &dst->colorBits);
+    if (!dst->colorBmp || !dst->colorBits) {
+      for (int j = 0; j <= i; j++) {
+        ClearLayerBitmaps(&tempLayers[j]);
+      }
+      return FALSE;
+    }
+    if (src->colorBits) {
+      memcpy(dst->colorBits, src->colorBits, snapshot->width * snapshot->height * 4);
+    }
   }
+
+  Layer oldLayers[MAX_LAYERS] = {0};
+  int oldLayerCount = s_layerCount;
+  for (int i = 0; i < oldLayerCount; i++) {
+    oldLayers[i] = s_layers[i];
+    s_layers[i].colorBmp = NULL;
+    s_layers[i].colorBits = NULL;
+  }
+
   s_layerCount = snapshot->layerCount;
   s_activeIndex = snapshot->activeIndex;
-
   Canvas_SetWidth(snapshot->width);
   Canvas_SetHeight(snapshot->height);
 
-  // Track successfully created layers for cleanup on failure
-  int successfullyCreatedLayers = 0;
-  
   for (int i = 0; i < s_layerCount; i++) {
-    s_layers[i] = snapshot->layers[i];
-
-    // Deep copy the bitmap data from snapshot
-    // We do NOT take ownership of snapshot bitmaps, we copy them.
-    s_layers[i].colorBmp =
-        CreateDibSection32(Canvas_GetWidth(), Canvas_GetHeight(), &s_layers[i].colorBits);
-    if (!s_layers[i].colorBmp || !s_layers[i].colorBits) {
-      // Clean up successfully created layers before returning
-      for (int j = 0; j < successfullyCreatedLayers; j++) {
-        ClearLayerBitmaps(&s_layers[j]);
-      }
-      LayersDestroy(); // Clean up all layers
-      return;
-    }
-    
-    successfullyCreatedLayers++;
-
-    // Copy pixel data
-    if (snapshot->layers[i].colorBits) {
-      memcpy(s_layers[i].colorBits, snapshot->layers[i].colorBits,
-             Canvas_GetWidth() * Canvas_GetHeight() * 4);
-    }
+    s_layers[i] = tempLayers[i];
+    tempLayers[i].colorBmp = NULL;
+    tempLayers[i].colorBits = NULL;
   }
-  
+
+  for (int i = 0; i < oldLayerCount; i++) {
+    ClearLayerBitmaps(&oldLayers[i]);
+  }
+
+
   s_compositeDirty = TRUE;
   s_partialDirty = FALSE;
+  return TRUE;
 }
 
 void LayersDestroySnapshot(LayerSnapshot *snapshot) {
