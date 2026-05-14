@@ -76,39 +76,30 @@ typedef struct {
   void (*onTimerTick)(void);
 } ToolVTable;
 
-static void PencilFreehandOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  BeginStroke(hWnd, x, y, nButton, FreehandGetPolicyForTool(TOOL_PENCIL));
+#define TOOL_LIFECYCLE_FREEHAND_COMMON                                           \
+  .onActivate = NULL, .onDeactivate = FreehandTool_Deactivate,                  \
+  .onCancel = CancelFreehandDrawing, .onViewportChanged = NULL,                 \
+  .isBusy = IsFreehandDrawing, .onCaptureLost = FreehandTool_OnCaptureLost
+
+#define TOOL_LIFECYCLE_SHAPE_COMMON                                              \
+  .onActivate = NULL, .onDeactivate = ShapeTool_Deactivate,                      \
+  .onCancel = ShapeTool_Cancel, .onViewportChanged = NULL,                       \
+  .isBusy = ShapeTool_IsBusy, .onCaptureLost = NULL
+
+#define TOOL_LIFECYCLE_MODAL_COMMON(_deactivate, _cancel, _is_busy,              \
+                                    _capture_lost)                               \
+  .onActivate = NULL, .onDeactivate = (_deactivate), .onCancel = (_cancel),      \
+  .onViewportChanged = NULL, .isBusy = (_is_busy), .onCaptureLost = (_capture_lost)
+
+static void SharedFreehandOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  BeginStroke(hWnd, x, y, nButton, FreehandGetPolicyForTool(Tool_GetCurrent()));
 }
 
-static void PencilFreehandOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+static void SharedFreehandOnMouseMove(HWND hWnd, int x, int y, int nButton) {
   AppendPoint(hWnd, x, y, nButton);
 }
 
-static void PencilFreehandOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  EndStroke(hWnd, x, y, nButton);
-}
-
-static void BrushFreehandOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  BeginStroke(hWnd, x, y, nButton, FreehandGetPolicyForTool(TOOL_BRUSH));
-}
-
-static void BrushFreehandOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  AppendPoint(hWnd, x, y, nButton);
-}
-
-static void BrushFreehandOnMouseUp(HWND hWnd, int x, int y, int nButton) {
-  EndStroke(hWnd, x, y, nButton);
-}
-
-static void EraserFreehandOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  BeginStroke(hWnd, x, y, nButton, FreehandGetPolicyForTool(TOOL_ERASER));
-}
-
-static void EraserFreehandOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  AppendPoint(hWnd, x, y, nButton);
-}
-
-static void EraserFreehandOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+static void SharedFreehandOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   EndStroke(hWnd, x, y, nButton);
 }
 
@@ -160,10 +151,10 @@ static const ToolVTable s_ToolTable[] = {
                       SelectionToolDrawOverlay, NULL, SelectionTool_Deactivate,
                       SelectionTool_Cancel},
 
-    [TOOL_ERASER] = {EraserFreehandOnMouseDown, EraserFreehandOnMouseMove,
-                      EraserFreehandOnMouseUp, NULL, NULL, NULL,
-                      FreehandTool_Deactivate,
-                      CancelFreehandDrawing, NULL, IsFreehandDrawing, FreehandTool_OnCaptureLost},
+    [TOOL_ERASER] = {.onMouseDown = SharedFreehandOnMouseDown,
+                     .onMouseMove = SharedFreehandOnMouseMove,
+                     .onMouseUp = SharedFreehandOnMouseUp,
+                     TOOL_LIFECYCLE_FREEHAND_COMMON},
     [TOOL_FILL] = {FillToolOnMouseDown, NULL, NULL, NULL, NULL, NULL,
                     NULL},
     [TOOL_PICK] = {PickToolOnMouseDown, PickToolOnMouseMove, NULL, NULL, NULL,
@@ -172,53 +163,72 @@ static const ToolVTable s_ToolTable[] = {
                         MagnifierToolOnMouseUp, NULL,
                         MagnifierToolDrawOverlay, NULL, MagnifierToolDeactivate,
                         NULL, NULL, NULL, MagnifierToolDeactivate},
-    [TOOL_PENCIL] = {PencilFreehandOnMouseDown, PencilFreehandOnMouseMove,
-                     PencilFreehandOnMouseUp, NULL, NULL, NULL,
-                     FreehandTool_Deactivate,
-                     CancelFreehandDrawing, NULL, IsFreehandDrawing, FreehandTool_OnCaptureLost},
-    [TOOL_BRUSH] = {BrushFreehandOnMouseDown, BrushFreehandOnMouseMove,
-                    BrushFreehandOnMouseUp, NULL, NULL, NULL,
-                    FreehandTool_Deactivate,
-                    CancelFreehandDrawing, NULL, IsFreehandDrawing, FreehandTool_OnCaptureLost},
-    [TOOL_AIRBRUSH] = {AirbrushToolOnMouseDown, AirbrushToolOnMouseMove,
-                       AirbrushToolOnMouseUp, NULL, NULL, NULL,
-                       FreehandTool_Deactivate,
-                       CancelFreehandDrawing, NULL, IsFreehandDrawing, FreehandTool_OnCaptureLost, FreehandTool_OnTimerTick},
+    [TOOL_PENCIL] = {.onMouseDown = SharedFreehandOnMouseDown,
+                     .onMouseMove = SharedFreehandOnMouseMove,
+                     .onMouseUp = SharedFreehandOnMouseUp,
+                     TOOL_LIFECYCLE_FREEHAND_COMMON},
+    [TOOL_BRUSH] = {.onMouseDown = SharedFreehandOnMouseDown,
+                    .onMouseMove = SharedFreehandOnMouseMove,
+                    .onMouseUp = SharedFreehandOnMouseUp,
+                    TOOL_LIFECYCLE_FREEHAND_COMMON},
+    [TOOL_AIRBRUSH] = {.onMouseDown = AirbrushToolOnMouseDown,
+                       .onMouseMove = AirbrushToolOnMouseMove,
+                       .onMouseUp = AirbrushToolOnMouseUp,
+                       TOOL_LIFECYCLE_FREEHAND_COMMON,
+                       .onTimerTick = FreehandTool_OnTimerTick},
     [TOOL_TEXT] = {TextToolOnMouseDown, TextToolOnMouseMove, TextToolOnMouseUp,
                    NULL, TextToolDrawOverlay, NULL,
                    TextTool_Deactivate, CancelText, TextToolOnViewportChanged},
 
     /* Shape tools: draft layer model — no ghost, lifecycle hooks registered */
-    [TOOL_LINE] = {LineToolOnMouseDown, LineToolOnMouseMove, LineToolOnMouseUp,
-                   NULL, ShapeToolDrawOverlay, NULL, ShapeTool_Deactivate,
-                   ShapeTool_Cancel, NULL, ShapeTool_IsBusy, NULL},
+    [TOOL_LINE] = {.onMouseDown = LineToolOnMouseDown,
+                   .onMouseMove = LineToolOnMouseMove,
+                   .onMouseUp = LineToolOnMouseUp,
+                   .drawOverlay = ShapeToolDrawOverlay,
+                   TOOL_LIFECYCLE_SHAPE_COMMON},
     [TOOL_CURVE] = {BezierToolOnMouseDown, BezierToolOnMouseMove,
                     BezierToolOnMouseUp, NULL, BezierToolDrawOverlay,
                     NULL, BezierTool_Deactivate, BezierTool_Cancel, NULL, IsCurvePending, NULL},
-    [TOOL_RECT] = {RectToolOnMouseDown, RectToolOnMouseMove, RectToolOnMouseUp,
-                   NULL, ShapeToolDrawOverlay, NULL, ShapeTool_Deactivate,
-                   ShapeTool_Cancel, NULL, ShapeTool_IsBusy, NULL},
+    [TOOL_RECT] = {.onMouseDown = RectToolOnMouseDown,
+                   .onMouseMove = RectToolOnMouseMove,
+                   .onMouseUp = RectToolOnMouseUp,
+                   .drawOverlay = ShapeToolDrawOverlay,
+                   TOOL_LIFECYCLE_SHAPE_COMMON},
     [TOOL_POLYGON] = {PolygonTool_OnMouseDown, PolygonTool_OnMouseMove,
                       PolygonTool_OnMouseUp, PolygonTool_OnDoubleClick,
                       PolygonTool_DrawOverlay, NULL, PolygonTool_Deactivate,
                       PolygonTool_Cancel, NULL, IsPolygonPending, NULL},
-    [TOOL_ELLIPSE] = {EllipseToolOnMouseDown, EllipseToolOnMouseMove,
-                      EllipseToolOnMouseUp, NULL, ShapeToolDrawOverlay,
-                      NULL, ShapeTool_Deactivate, ShapeTool_Cancel, NULL, ShapeTool_IsBusy, NULL},
-    [TOOL_ROUNDRECT] = {RoundRectToolOnMouseDown, RoundRectToolOnMouseMove,
-                      RoundRectToolOnMouseUp, NULL,
-                      ShapeToolDrawOverlay, NULL, ShapeTool_Deactivate,
-                      ShapeTool_Cancel, NULL, ShapeTool_IsBusy, NULL},
-    [TOOL_PEN] = {PenToolOnMouseDown, PenToolOnMouseMove, PenToolOnMouseUp,
-                  NULL, NULL, NULL, PenTool_Deactivate,
-                  CancelPenDrawing, NULL, IsPenDrawing, PenTool_OnCaptureLost},
-    [TOOL_HIGHLIGHTER] = {HighlighterToolOnMouseDown,
-                          HighlighterToolOnMouseMove, HighlighterToolOnMouseUp,
-                          NULL, NULL, NULL, HighlighterTool_Deactivate,
-                          CancelHighlighterDrawing, NULL, IsHighlighterDrawing, HighlighterTool_OnCaptureLost},
-    [TOOL_CRAYON] = {CrayonToolOnMouseDown, CrayonToolOnMouseMove,
-                     CrayonToolOnMouseUp, NULL, NULL, NULL,
-                     CrayonTool_Deactivate, CancelCrayonDrawing, NULL, IsCrayonDrawing, CrayonTool_OnCaptureLost}};
+    [TOOL_ELLIPSE] = {.onMouseDown = EllipseToolOnMouseDown,
+                      .onMouseMove = EllipseToolOnMouseMove,
+                      .onMouseUp = EllipseToolOnMouseUp,
+                      .drawOverlay = ShapeToolDrawOverlay,
+                      TOOL_LIFECYCLE_SHAPE_COMMON},
+    [TOOL_ROUNDRECT] = {.onMouseDown = RoundRectToolOnMouseDown,
+                        .onMouseMove = RoundRectToolOnMouseMove,
+                        .onMouseUp = RoundRectToolOnMouseUp,
+                        .drawOverlay = ShapeToolDrawOverlay,
+                        TOOL_LIFECYCLE_SHAPE_COMMON},
+    [TOOL_PEN] = {.onMouseDown = PenToolOnMouseDown,
+                  .onMouseMove = PenToolOnMouseMove,
+                  .onMouseUp = PenToolOnMouseUp,
+                  TOOL_LIFECYCLE_MODAL_COMMON(PenTool_Deactivate,
+                                              CancelPenDrawing, IsPenDrawing,
+                                              PenTool_OnCaptureLost)},
+    [TOOL_HIGHLIGHTER] = {
+        .onMouseDown = HighlighterToolOnMouseDown,
+        .onMouseMove = HighlighterToolOnMouseMove,
+        .onMouseUp = HighlighterToolOnMouseUp,
+        TOOL_LIFECYCLE_MODAL_COMMON(HighlighterTool_Deactivate,
+                                    CancelHighlighterDrawing,
+                                    IsHighlighterDrawing,
+                                    HighlighterTool_OnCaptureLost)},
+    [TOOL_CRAYON] = {.onMouseDown = CrayonToolOnMouseDown,
+                     .onMouseMove = CrayonToolOnMouseMove,
+                     .onMouseUp = CrayonToolOnMouseUp,
+                     TOOL_LIFECYCLE_MODAL_COMMON(CrayonTool_Deactivate,
+                                                 CancelCrayonDrawing,
+                                                 IsCrayonDrawing,
+                                                 CrayonTool_OnCaptureLost)}};
 
 static const ToolVTable *GetToolVTable(int toolId) {
   if (toolId < 0 ||
