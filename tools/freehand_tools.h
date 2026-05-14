@@ -4,28 +4,12 @@
 #include "../peztold_core.h"
 
 /*------------------------------------------------------------------------------
- * Pencil Tool
+ * Shared Freehand Stroke Controller API
  *----------------------------------------------------------------------------*/
 
-void PencilToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void PencilToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void PencilToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
-
-/*------------------------------------------------------------------------------
- * Brush Tool
- *----------------------------------------------------------------------------*/
-
-void BrushToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void BrushToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void BrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
-
-/*------------------------------------------------------------------------------
- * Eraser Tool
- *----------------------------------------------------------------------------*/
-
-void EraserToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void EraserToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void EraserToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
+void FreehandOnMouseDown(HWND hWnd, int x, int y, int nButton, int tool);
+void FreehandOnMouseMove(HWND hWnd, int x, int y, int nButton, int tool);
+void FreehandOnMouseUp(HWND hWnd, int x, int y, int nButton, int tool);
 
 /*------------------------------------------------------------------------------
  * Airbrush Tool
