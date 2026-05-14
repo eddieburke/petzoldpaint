@@ -1,0 +1,12 @@
+*.aps
+*.obj
+*.exe
+*.ilk
+*.pdb
+*.res
+*.log
+*.txt
+*.manifest
+*.user
+*.suo
+.vs/

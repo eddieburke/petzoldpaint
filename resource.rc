@@ -1,0 +1,246 @@
+#include <windows.h>
+#include "resource.h"
+
+//
+// Icons, Cursors, Bitmaps
+//
+
+// Application Icon
+IDI_ICON2 ICON "assets/ICON2_1.ico"
+IDI_ICON3 ICON "assets/ICON3_1.ico"
+
+// Tool Cursors
+IDC_CURSOR1101 CURSOR "assets/CURSOR1101_1.cur"
+IDC_CURSOR1201 CURSOR "assets/CURSOR1201_1.cur"
+IDC_CURSOR1203 CURSOR "assets/CURSOR1203_1.cur"
+IDC_CURSOR1204 CURSOR "assets/CURSOR1204_1.cur"
+IDC_CURSOR1205 CURSOR "assets/CURSOR1205_1.cur"
+IDC_CURSOR1206 CURSOR "assets/CURSOR1206_1.cur"
+IDC_CURSOR1207 CURSOR "assets/CURSOR1207_1.cur"
+IDC_CURSOR8012 CURSOR "assets/CURSOR8012_1.cur"
+IDC_CURSOR8025 CURSOR "assets/CURSOR8025_1.cur"
+IDC_CURSOR8026 CURSOR "assets/CURSOR8026_1.cur"
+IDC_CURSOR8027 CURSOR "assets/CURSOR8027_1.cur"
+IDC_CURSOR8028 CURSOR "assets/CURSOR8028_1.cur"
+IDC_CURSOR8029 CURSOR "assets/CURSOR8029_1.cur"
+IDC_CURSOR8030 CURSOR "assets/CURSOR8030_1.cur"
+IDC_CURSOR_ERASER CURSOR "assets/ERASER_CURSOR.cur"
+
+// Bitmaps
+IDB_BITMAP3550 BITMAP "assets/BITMAP3550_1.bmp"
+IDB_BITMAP859  BITMAP "assets/BITMAP859_1.bmp"
+IDB_BITMAP863  BITMAP "assets/BITMAP863_1.bmp"
+IDB_BITMAP864  BITMAP "assets/BITMAP864_1.bmp"
+IDB_BITMAP9248 BITMAP "assets/BITMAP9248_1.bmp"
+IDB_BITMAP895  BITMAP "assets/BITMAP895_1.bmp"
+
+//
+// Menus
+//
+
+IDM_MAINMENU MENU DISCARDABLE 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New\tCtrl+N",           IDM_NEW
+        MENUITEM "&Open...\tCtrl+O",       IDM_OPEN
+        MENUITEM "&Save\tCtrl+S",          IDM_SAVE
+        MENUITEM "Save &As...",            IDM_SAVEAS
+        MENUITEM SEPARATOR
+        MENUITEM "Page Se&tup...",         IDM_PAGESETUP
+        MENUITEM "&Print...\tCtrl+P",      IDM_PRINT
+        MENUITEM "Print Pre&view",         IDM_PRINTPREVIEW
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit\tAlt+F4",          IDM_EXIT
+    END
+    POPUP "&Edit"
+    BEGIN
+        MENUITEM "&Undo\tCtrl+Z",          IDM_UNDO
+        MENUITEM "&Redo\tCtrl+Y",          IDM_REDO
+        MENUITEM SEPARATOR
+        MENUITEM "Cu&t\tCtrl+X",           IDM_CUT
+        MENUITEM "&Copy\tCtrl+C",          IDM_COPY
+        MENUITEM "&Paste\tCtrl+V",         IDM_PASTE
+        MENUITEM "Cle&ar Selection\tDel",  IDM_CLEAR
+        MENUITEM "Select &All\tCtrl+A",    IDM_SELECTALL
+        MENUITEM SEPARATOR
+        MENUITEM "Paste &From...",         57600
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Tool Box\tCtrl+T",      IDM_TOOLBOX, CHECKED
+        MENUITEM "&Color Box\tCtrl+L",     IDM_COLORBOX, CHECKED
+        MENUITEM "&Status Bar",            IDM_STATUSBAR, CHECKED
+        MENUITEM SEPARATOR
+        POPUP "&Zoom"
+        BEGIN
+            MENUITEM "&Normal Size\tCtrl+PgUp", IDM_ZOOM_100
+            MENUITEM "&Large Size\tCtrl+PgDn",  IDM_ZOOM_400
+            MENUITEM "C&ustom...",              IDM_ZOOM_100
+        END
+        MENUITEM "&View Bitmap\tCtrl+F",   IDM_PRESETS
+    END
+    POPUP "&Image"
+    BEGIN
+        MENUITEM "&Flip/Rotate...\tCtrl+R", IDM_FLIPROTATE
+        MENUITEM "&Stretch/Skew...\tCtrl+W",IDM_RESIZESKEW
+        MENUITEM "&Invert Colors\tCtrl+I",  IDM_INVERT
+        MENUITEM "&Attributes...\tCtrl+E",  IDM_ATTRIBUTES
+        MENUITEM "&Clear Image\tCtrl+Shift+N", IDM_CLEARIMAGE
+    END
+    POPUP "&Colors"
+    BEGIN
+        MENUITEM "&Edit Colors...",        IDM_EDIT_COLORS
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About PeztoldPaint",    57664
+    END
+END
+
+//
+// Accelerators
+//
+
+IDM_MAINMENU ACCELERATORS
+BEGIN
+    "Z",            IDM_UNDO,               VIRTKEY, CONTROL
+    "Y",            IDM_REDO,               VIRTKEY, CONTROL
+    "N",            IDM_NEW,                VIRTKEY, CONTROL
+    "O",            IDM_OPEN,               VIRTKEY, CONTROL
+    "S",            IDM_SAVE,               VIRTKEY, CONTROL
+    "P",            IDM_PRINT,              VIRTKEY, CONTROL
+    "X",            IDM_CUT,                VIRTKEY, CONTROL
+    "C",            IDM_COPY,               VIRTKEY, CONTROL
+    "V",            IDM_PASTE,              VIRTKEY, CONTROL
+    "A",            IDM_SELECTALL,          VIRTKEY, CONTROL
+    "T",            IDM_TOOLBOX,            VIRTKEY, CONTROL
+    "L",            IDM_COLORBOX,           VIRTKEY, CONTROL
+    "R",            IDM_FLIPROTATE,         VIRTKEY, CONTROL
+    "W",            IDM_RESIZESKEW,         VIRTKEY, CONTROL
+    "I",            IDM_INVERT,             VIRTKEY, CONTROL
+    "E",            IDM_ATTRIBUTES,         VIRTKEY, CONTROL
+    "N",            IDM_CLEARIMAGE,         VIRTKEY, SHIFT, CONTROL
+    VK_DELETE,      IDM_CLEAR,              VIRTKEY
+    VK_PRIOR,       IDM_ZOOM_100,           VIRTKEY, CONTROL
+    VK_NEXT,        IDM_ZOOM_400,           VIRTKEY, CONTROL
+END
+
+//
+// Dialogs
+//
+
+IDD_FLIPROTATE DIALOG DISCARDABLE  0, 0, 180, 80
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Flip and Rotate"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    GROUPBOX        "Action",IDC_STATIC,7,7,100,66
+    CONTROL         "&Flip horizontal",IDC_FLIP_HORZ,"Button",BS_AUTORADIOBUTTON | WS_GROUP,14,20,80,10
+    CONTROL         "Flip &vertical",IDC_FLIP_VERT,"Button",BS_AUTORADIOBUTTON,14,35,80,10
+    CONTROL         "&Rotate by angle",IDC_ROTATE_ANGLE,"Button",BS_AUTORADIOBUTTON,14,50,80,10
+    
+    DEFPUSHBUTTON   "OK",IDOK,115,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,115,24,50,14
+END
+
+IDD_ATTRIBUTES DIALOG DISCARDABLE  0, 0, 200, 110
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Attributes"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    GROUPBOX        "Units",IDC_STATIC,7,7,70,50
+    CONTROL         "&Inches",IDC_UNITS_INCHES,"Button",BS_AUTORADIOBUTTON | WS_GROUP,14,20,50,10
+    CONTROL         "C&m",IDC_UNITS_CM,"Button",BS_AUTORADIOBUTTON,14,32,50,10
+    CONTROL         "&Pixels",IDC_UNITS_PIXELS,"Button",BS_AUTORADIOBUTTON,14,44,50,10
+
+    GROUPBOX        "Colors",IDC_STATIC,85,7,60,40
+    CONTROL         "&Black and white",IDC_COLORS_BW,"Button",BS_AUTORADIOBUTTON | WS_GROUP,92,20,50,10
+    CONTROL         "Co&lors",IDC_COLORS_COLOR,"Button",BS_AUTORADIOBUTTON,92,32,50,10
+
+    LTEXT           "&Width:",IDC_STATIC,7,65,22,8
+    EDITTEXT        IDC_WIDTH,35,63,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "&Height:",IDC_STATIC,85,65,24,8
+    EDITTEXT        IDC_HEIGHT,115,63,40,14,ES_AUTOHSCROLL | ES_NUMBER
+
+    DEFPUSHBUTTON   "OK",IDOK,143,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,143,24,50,14
+    PUSHBUTTON      "&Default",1025,143,44,50,14
+END
+
+IDD_RESIZESKEW DIALOGEX 0, 0, 280, 130
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Resize and Skew"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+{
+    GROUPBOX        "Resize", IDC_STATIC, 7, 7, 215, 55
+    ICON            IDI_SCALE_HORZ, IDC_STATIC, 15, 20, 21, 20
+    LTEXT           "&Horizontal:", IDC_STATIC, 40, 22, 40, 8
+    EDITTEXT        IDC_RESIZE_HORZ, 82, 20, 35, 14, ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "%", IDC_STATIC, 120, 22, 10, 8
+    ICON            IDI_SCALE_VERT, IDC_STATIC, 135, 20, 21, 20
+    LTEXT           "&Vertical:", IDC_STATIC, 160, 22, 30, 8
+    EDITTEXT        IDC_RESIZE_VERT, 192, 20, 35, 14, ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "%", IDC_STATIC, 230, 22, 10, 8
+
+    GROUPBOX        "Skew (Degrees)", IDC_STATIC, 7, 67, 215, 55
+    ICON            IDI_SKEW_HORZ, IDC_STATIC, 15, 80, 21, 20
+    LTEXT           "H&orizontal:", IDC_STATIC, 40, 82, 40, 8
+    EDITTEXT        IDC_SKEW_HORZ, 82, 80, 35, 14, ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Degrees", IDC_STATIC, 120, 82, 30, 8
+    ICON            IDI_SKEW_VERT, IDC_STATIC, 135, 80, 21, 20
+    LTEXT           "V&ertical:", IDC_STATIC, 160, 82, 30, 8
+    EDITTEXT        IDC_SKEW_VERT, 192, 80, 35, 14, ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Degrees", IDC_STATIC, 230, 82, 30, 8
+
+    DEFPUSHBUTTON   "OK", IDOK, 230, 7, 45, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 230, 24, 45, 14
+}
+
+IDD_JPEG_OPTIONS DIALOG DISCARDABLE  0, 0, 170, 110
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "JPEG Save Options"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "&Quality (0-100):", IDC_STATIC, 10, 15, 60, 8
+    EDITTEXT        IDC_JPEG_QUALITY, 75, 13, 30, 14, ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "&Chroma Subsampling:", IDC_STATIC, 10, 35, 80, 8
+    COMBOBOX        IDC_JPEG_SUBSAMPLING, 10, 45, 150, 60, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "&Flatten with background color", IDC_JPEG_USE_BG_COLOR, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 10, 65, 150, 10
+    DEFPUSHBUTTON   "OK", IDOK, 55, 90, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 110, 90, 50, 14
+END
+
+// Version Information
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,0
+ PRODUCTVERSION 1,0,0,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "Antigravity Systems"
+            VALUE "FileDescription", "PeztoldPaint - Windows Paint Clone"
+            VALUE "FileVersion", "1.0.0.0"
+            VALUE "InternalName", "PeztoldPaint.exe"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Antigravity Systems"
+            VALUE "OriginalFilename", "PeztoldPaint.exe"
+            VALUE "ProductName", "PeztoldPaint"
+            VALUE "ProductVersion", "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

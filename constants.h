@@ -1,0 +1,9 @@
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
+
+#define MIN_ZOOM_PERCENT   12.5
+#define MAX_ZOOM_PERCENT   3200.0
+#define SNAP_ANGLE_DEG     45
+#define DEFAULT_BRUSH_SIZE 1
+
+#endif /* CONSTANTS_H */
