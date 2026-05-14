@@ -34,17 +34,17 @@ static inline void StackPush(int x, int y) {
    Fills a connected region of pixels with the specified color.
   ------------------------------------------------------------*/
 
-void FloodFillCanvas(int startX, int startY, COLORREF fillColor,
+BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor,
                      BYTE fillAlpha) {
   BYTE *bits = LayersGetActiveColorBits();
   if (!bits)
-    return;
+    return FALSE;
 
   int w = Canvas_GetWidth();
   int h = Canvas_GetHeight();
 
   if (startX < 0 || startX >= w || startY < 0 || startY >= h)
-    return;
+    return FALSE;
 
   BYTE *startPx = bits + (startY * w + startX) * 4;
   DWORD startPixel = *(DWORD *)startPx;
@@ -56,23 +56,23 @@ void FloodFillCanvas(int startX, int startY, COLORREF fillColor,
 
   // Early exit if clicking on already-filled color
   if (startPixel == fillPixel) {
-    return;
+    return FALSE;
   }
 
   // Check if starting point is inside selection
   if (!IsPointInSelection(startX, startY)) {
-    return;
+    return FALSE;
   }
 
     // Allocate stack
   size_t pixelCount = (size_t)w * (size_t)h;
   if (w <= 0 || h <= 0 || pixelCount > (SIZE_MAX / sizeof(Point)))
-    return;
+    return FALSE;
 
   s_stackCap = pixelCount;
   s_stack = (Point *)malloc(s_stackCap * sizeof(Point));
   if (!s_stack)
-    return;
+    return FALSE;
   s_stackCount = 0;
 
   // Set start pixel and push
@@ -109,6 +109,7 @@ void FloodFillCanvas(int startX, int startY, COLORREF fillColor,
   s_stackCap = 0;
 
   LayersMarkDirty();
+  return TRUE;
 }
 
 void FloodFillCleanup(void) {

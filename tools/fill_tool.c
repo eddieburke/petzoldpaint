@@ -10,10 +10,12 @@ void FillToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   HBITMAP hOldColor = NULL;
   HDC hColor = LayersGetActiveColorDC(&hOldColor);
   if (hColor) {
-    FloodFillCanvas(x, y, GetColorForButton(nButton), 255);
+    BOOL changed = FloodFillCanvas(x, y, GetColorForButton(nButton), 255);
     ReleaseBitmapDC(hColor, hOldColor);
-    HistoryPushToolActionById(TOOL_FILL, "Flood Fill");
+    if (changed) {
+      HistoryPushToolActionById(TOOL_FILL, "Flood Fill");
+      InvalidateCanvas();
+      SetDocumentDirty();
+    }
   }
-  InvalidateCanvas();
-  SetDocumentDirty();
 }
