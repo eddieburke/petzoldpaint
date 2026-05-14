@@ -59,8 +59,8 @@ BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor,
     return FALSE;
   }
 
-  // Check if starting point is inside selection
-  if (!IsPointInSelection(startX, startY)) {
+  // If a selection exists, fill is constrained to that selection.
+  if (IsSelectionActive() && !IsPointInSelection(startX, startY)) {
     return FALSE;
   }
 
@@ -95,7 +95,8 @@ BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor,
 
       if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
         DWORD *pPixel = (DWORD *)(bits + (ny * w + nx) * 4);
-        if (*pPixel == startPixel && IsPointInSelection(nx, ny)) {
+        if (*pPixel == startPixel &&
+            (!IsSelectionActive() || IsPointInSelection(nx, ny))) {
           *pPixel = fillPixel;
           StackPush(nx, ny);
         }
