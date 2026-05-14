@@ -538,7 +538,9 @@ void SelectionCopy(void) {
 void SelectionCut(void) { 
     SelectionCopy(); 
     SelectionDelete(); 
-    HistoryPush("Cut");
+    if (!HistoryPush("Cut")) {
+        /* Change applied, but undo entry could not be recorded. */
+    }
 }
 
 void SelectionPaste(HWND hWnd) {
@@ -599,7 +601,9 @@ void SelectionDelete(void) {
             }
         }
         UpdateCanvasAfterModification(); SelectionClearState();
-        HistoryPush("Delete Selection");
+        if (!HistoryPush("Delete Selection")) {
+            /* Change applied, but undo entry could not be recorded. */
+        }
     }
 }
 

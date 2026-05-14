@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "history.h"
 #include "layers.h"
@@ -143,16 +144,32 @@ void HistoryDestroy(void) {
   s_currentPosition = -1;
 }
 
-void HistoryPush(const char *description) {
+void HistoryReportPushFailure(const char *context) {
+  const char *label = context ? context : "Action";
+  char msg[256];
+  snprintf(msg, sizeof(msg),
+           "History push failed for '%s' (undo entry not recorded).\n", label);
+  msg[sizeof(msg) - 1] = '\0';
+  OutputDebugStringA(msg);
+}
+
+BOOL HistoryPush(const char *description) {
   if (!description)
     description = "Action";
 
   TrimRedoBranch();
-  AppendEntry(CreateEntryFromCurrentState(description));
+  HistoryEntry *entry = CreateEntryFromCurrentState(description);
+  if (!entry) {
+    HistoryReportPushFailure(description);
+    return FALSE;
+  }
+
+  AppendEntry(entry);
   PruneHeadIfNeeded();
 
   // Notify panels of history change
   HistoryNotifyPanels();
+  return TRUE;
 }
 
 // Helper to apply a snapshot

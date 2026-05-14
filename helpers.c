@@ -64,7 +64,9 @@ void HistoryPushFormatted(const char* format, ...)
     va_end(args);
     buffer[sizeof(buffer) - 1] = '\0';
 
-    HistoryPush(buffer);
+    if (!HistoryPush(buffer)) {
+        return;
+    }
 }
 
 void HistoryPushToolAction(const char* toolName, const char* action)
@@ -112,4 +114,3 @@ void HistoryPushToolActionById(int toolId, const char* action)
 {
     HistoryPushToolAction(GetToolName(toolId), action);
 }
-

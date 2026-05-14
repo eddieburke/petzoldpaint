@@ -15,7 +15,8 @@ typedef struct HistoryEntry {
 // History system functions
 void HistoryInit(void);
 void HistoryDestroy(void);
-void HistoryPush(const char* description);
+BOOL HistoryPush(const char* description);
+void HistoryReportPushFailure(const char* context);
 BOOL HistoryUndo(void);
 BOOL HistoryRedo(void);
 BOOL HistoryCanUndo(void);

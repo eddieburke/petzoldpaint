@@ -189,8 +189,10 @@ static void HandleDeleteLayer(void) {
   Tool_FinalizeCurrentState();
   int idx = ListIndexToLayerIndex(listIdx);
   if (LayersDeleteLayer(idx)) {
-    HistoryPush("Delete Layer");
-    RefreshLayerList();
+    BOOL historyRecorded = HistoryPush("Delete Layer");
+    if (!historyRecorded) {
+      RefreshLayerList();
+    }
     InvalidateCanvas();
     SetDocumentDirty();
   }
@@ -383,8 +385,10 @@ static LRESULT CALLBACK LayersPanelWndProc(HWND hwnd, UINT message,
     case IDC_BTN_MERGE:
       Tool_FinalizeCurrentState();
       if (LayersMergeDown(LayersGetActiveIndex())) {
-        HistoryPush("Merge Layer");
-        RefreshLayerList();
+        BOOL historyRecorded = HistoryPush("Merge Layer");
+        if (!historyRecorded) {
+          RefreshLayerList();
+        }
         InvalidateCanvas();
         SetDocumentDirty();
       }

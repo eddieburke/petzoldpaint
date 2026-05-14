@@ -84,7 +84,9 @@ static void DoFlip(BOOL bHorz) {
   StringCchPrintf(desc, sizeof(desc), "Flip %s", bHorz ? "Horizontal" : "Vertical");
   if (LayersApplyRawTransformToAll(Canvas_GetWidth(), Canvas_GetHeight(), FlipRawTransform,
                                    (void *)(INT_PTR)bHorz)) {
-    HistoryPush(desc);
+    if (!HistoryPush(desc)) {
+      /* Change applied, but undo entry could not be recorded. */
+    }
     SetDocumentDirty();
     LayersPanelSync();
     InvalidateCanvas();
@@ -135,7 +137,9 @@ static void DoRotate(int degrees) {
   StringCchPrintf(desc, sizeof(desc), "Rotate %d Degrees", degrees);
   if (LayersApplyRawTransformToAll(nNewW, nNewH, RotateRawTransform,
                                    (void *)(INT_PTR)degrees)) {
-    HistoryPush(desc);
+    if (!HistoryPush(desc)) {
+      /* Change applied, but undo entry could not be recorded. */
+    }
     SetDocumentDirty();
     LayersPanelSync();
     SendMessage(hMainWnd, WM_SIZE, 0, 0);
@@ -306,7 +310,9 @@ void ImageResizeSkew(HWND hWnd) {
             finalW, finalH);
     if (LayersApplyRawTransformToAll(finalW, finalH, SkewRawTransform,
                                      &skewParams)) {
-      HistoryPush(desc);
+      if (!HistoryPush(desc)) {
+      /* Change applied, but undo entry could not be recorded. */
+    }
       SetDocumentDirty();
       LayersPanelSync();
       SendMessage(hMainWnd, WM_SIZE, 0, 0);
@@ -374,7 +380,9 @@ void ImageAttributes(HWND hWnd) {
       LayersPanelSync();
 
       // Push undo state AFTER resize is complete
-      HistoryPush(desc);
+      if (!HistoryPush(desc)) {
+      /* Change applied, but undo entry could not be recorded. */
+    }
     }
     InvalidateCanvas();
     SendMessage(hMainWnd, WM_SIZE, 0, 0);
@@ -404,7 +412,9 @@ void ImageInvertColors(HWND hWnd) {
 
   LayersMarkDirty();
 
-  HistoryPush("Invert Colors");
+  if (!HistoryPush("Invert Colors")) {
+    /* Change applied, but undo entry could not be recorded. */
+  }
   SetDocumentDirty();
   InvalidateCanvas();
 }
@@ -417,7 +427,9 @@ void ImageInvertColors(HWND hWnd) {
 
 void ImageClear(HWND hWnd) {
   ClearCanvas(Palette_GetSecondaryColor());
-  HistoryPush("Clear Image");
+  if (!HistoryPush("Clear Image")) {
+    /* Change applied, but undo entry could not be recorded. */
+  }
   SetDocumentDirty();
   InvalidateCanvas();
 }
