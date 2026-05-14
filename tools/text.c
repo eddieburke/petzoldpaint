@@ -140,7 +140,7 @@ void TextRender_ToActive(const char* txt, int len, int tw, int th, int dx, int d
     ZeroMemory(tmpBits, tw*th*4);
     SelectObject(hdc, s_font.hFont ? s_font.hFont : GetStockObject(DEFAULT_GUI_FONT));
     SetBkMode(hdc, TRANSPARENT); SetTextColor(hdc, RGB(255,255,255));
-    RECT rc = {0, 0, tw, th}; DrawText(hdc, txt, len, &rc, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX | DT_EDITCONTROL);
+    RECT rc = {0, 0, tw, th}; DrawTextA(hdc, txt, len, &rc, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX | DT_EDITCONTROL);
     TextRender_Blend(dst, Canvas_GetWidth(), Canvas_GetHeight(), tmpBits, tw, th, dx, dy, Palette_GetPrimaryColor());
     DeleteDC(hdc); DeleteObject(hTmp);
 }
@@ -151,11 +151,11 @@ void TextRender_ToActive(const char* txt, int len, int tw, int th, int dx, int d
 
 void CommitText(HWND hParent) {
     if (s_text.mode == TEXT_NONE || !s_text.hEdit) return;
-    int len = GetWindowTextLength(s_text.hEdit);
+    int len = GetWindowTextLengthA(s_text.hEdit);
     if (len > 0) {
         char* buf = malloc(len + 1);
         if (buf) {
-            GetWindowText(s_text.hEdit, buf, len + 1);
+            GetWindowTextA(s_text.hEdit, buf, len + 1);
             BYTE* bits = LayersGetActiveColorBits();
             if (bits) {
                 if (s_text.bOpaque) DrawRectAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), s_text.rcBox.left, s_text.rcBox.top, s_text.rcBox.right-s_text.rcBox.left, s_text.rcBox.bottom-s_text.rcBox.top, Palette_GetSecondaryColor(), 255, LAYER_BLEND_NORMAL);
@@ -288,7 +288,7 @@ static void OnTextFontChanged(void) {
             TextFont_SetFaceName(buf);
         }
         HWND hSizeCB = GetDlgItem(hToolbar, IDC_TEXT_SIZE);
-        GetWindowText(hSizeCB, buf, sizeof(buf));
+        GetWindowTextA(hSizeCB, buf, sizeof(buf));
         int s = atoi(buf);
         if (s > 0) TextFont_SetSize(s);
     }
@@ -359,11 +359,11 @@ void TextToolOnMouseUp(HWND hwnd, int x, int y, int btn) {
 
 void TextToolDrawGhost(HDC hdc) {
     if (s_text.mode != TEXT_EDITING || !s_text.hEdit) return;
-    int len = GetWindowTextLength(s_text.hEdit); if (len <= 0) return;
+    int len = GetWindowTextLengthA(s_text.hEdit); if (len <= 0) return;
     BYTE* bits = LayersGetDraftBits(); if (!bits) return;
     LayersClearDraft();
     char* buf = malloc(len + 1); if (buf) {
-        GetWindowText(s_text.hEdit, buf, len + 1);
+        GetWindowTextA(s_text.hEdit, buf, len + 1);
         if (s_text.bOpaque) DrawRectAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), s_text.rcBox.left, s_text.rcBox.top, s_text.rcBox.right-s_text.rcBox.left, s_text.rcBox.bottom-s_text.rcBox.top, Palette_GetSecondaryColor(), 255, LAYER_BLEND_NORMAL);
         int ins = TEXT_MARGIN + TEXT_EDIT_INSET;
         TextRender_ToActive(buf, len, (s_text.rcBox.right-s_text.rcBox.left)-ins*2, (s_text.rcBox.bottom-s_text.rcBox.top)-ins*2, s_text.rcBox.left+ins, s_text.rcBox.top+ins, bits);
