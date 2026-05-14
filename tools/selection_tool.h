@@ -14,6 +14,7 @@
 void SelectionToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
 void SelectionToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
 void SelectionToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
+void SelectionTool_OnCaptureLost(void);
 
 void SelectionToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY); // Draw handles/frame
 void SelectionTool_Deactivate(void);
