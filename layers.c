@@ -615,6 +615,23 @@ void HistoryPushLayerVisibility(int layerIndex, BOOL oldVisible,
                        newVisible ? "Visible" : "Hidden", layerName);
 }
 
+void HistoryPushLayerBlendMode(int layerIndex, int oldMode, int newMode) {
+  static const char *kBlendModeNames[LAYER_BLEND_COUNT] = {"Normal",
+                                                            "Multiply",
+                                                            "Screen",
+                                                            "Overlay"};
+  const char *oldLabel = (oldMode >= 0 && oldMode < LAYER_BLEND_COUNT)
+                             ? kBlendModeNames[oldMode]
+                             : "Unknown";
+  const char *newLabel = (newMode >= 0 && newMode < LAYER_BLEND_COUNT)
+                             ? kBlendModeNames[newMode]
+                             : "Unknown";
+  char layerName[64];
+  GetLayerDisplayName(layerIndex, layerName, sizeof(layerName));
+  HistoryPushFormatted("Blend Mode: %s \u2192 %s (%s)", oldLabel, newLabel,
+                       layerName);
+}
+
 
 void HistoryPushLayerMove(int fromIndex, int toIndex) {
   char fromName[64];
