@@ -90,6 +90,19 @@ static void AppendEntry(HistoryEntry *entry) {
   s_currentPosition = s_historyCount - 1;
 }
 
+static HistoryEntry *FindEntryAtIndex(int index) {
+  if (index < 0 || index >= s_historyCount)
+    return NULL;
+
+  HistoryEntry *entry = s_historyHead;
+  int i = 0;
+  while (entry && i < index) {
+    entry = entry->next;
+    i++;
+  }
+  return entry;
+}
+
 // Keep only the most recent MAX_HISTORY_ENTRIES snapshots.
 static void PruneHeadIfNeeded(void) {
   while (s_historyCount > MAX_HISTORY_ENTRIES && s_historyHead) {
