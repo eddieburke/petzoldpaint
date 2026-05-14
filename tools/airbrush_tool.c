@@ -80,6 +80,10 @@ void AirbrushToolOnTimerTick(HWND hWnd) {
     SprayAtCurrentPoint();
 }
 
+void FreehandTool_OnTimerTick(void) {
+  AirbrushToolOnTimerTick(GetCanvasWindow());
+}
+
 BOOL IsAirbrushDrawing(void) { return s_session.isDrawing; }
 
 void AirbrushTool_Deactivate(void) {
