@@ -34,11 +34,13 @@ double GetZoomScale(void);
 
 void CoordBmpToScr(int xBmp, int yBmp, int* xScr, int* yScr);
 void CoordScrToBmp(int xScr, int yScr, int* xBmp, int* yBmp);
+void CoordScrToBmpDouble(int xScr, int yScr, double* xBmp, double* yBmp);
 void RectBmpToScr(const RECT* rcBmp, RECT* rcScr);
 
 void CoordBmpToScrEx(int xBmp, int yBmp, int* xScr, int* yScr, double scale, int offX, int offY);
 void RectBmpToScrEx(const RECT* rcBmp, RECT* rcScr, double scale, int offX, int offY);
 void CoordScrToBmpEx(int xScr, int yScr, int* xBmp, int* yBmp, double scale, int offX, int offY);
+void CoordScrToBmpExDouble(int xScr, int yScr, double* xBmp, double* yBmp, double scale, int offX, int offY);
 
 void GetScaledDimensions(int width, int height, int* scaledW, int* scaledH);
 void ScreenDeltaToBitmap(int dx, int dy, int* outDx, int* outDy);

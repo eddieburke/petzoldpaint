@@ -207,7 +207,7 @@ static void DrawResizeHandles(HDC hdc, int nDestX, int nDestY, int nScaledW,
             nDestY + nScaledH + 2 + HANDLE_SZ);
 
   SelectObject(hdc, hOldBrush);
-  DeleteBrush(hBrush);
+  Gdi_DeleteBrush(hBrush);
 #undef HANDLE_SZ
 }
 
@@ -292,7 +292,7 @@ LRESULT CALLBACK CanvasWndProc(HWND hwnd, UINT message, WPARAM wParam,
 
         RestorePen(s_hViewDC, hOldPen);
         SelectObject(s_hViewDC, hOldBrush2);
-        DeletePen(hPenDotted);
+        Gdi_DeletePen(hPenDotted);
       }
     }
 
@@ -436,15 +436,15 @@ void Canvas_ApplyZoomCentered(double newZoom) {
     int nDestX, nDestY;
     GetCanvasViewportOrigin(&nDestX, &nDestY);
 
-    double xBmp = (double)(ptMouseX - nDestX) / oldScale;
-    double yBmp = (double)(ptMouseY - nDestY) / oldScale;
+    double xBmp = (double)(ptMouseX + 0.5 - nDestX) / oldScale;
+    double yBmp = (double)(ptMouseY + 0.5 - nDestY) / oldScale;
 
     Canvas_SetZoom(newZoom);
     Controller_UpdateScrollbars(hCanvasWnd);
     GetCanvasViewportOrigin(&nDestX, &nDestY);
 
-    int newXScreen = (int)(xBmp * newScale) + nDestX;
-    int newYScreen = (int)(yBmp * newScale) + nDestY;
+    int newXScreen = (int)floor(xBmp * newScale - 0.5) + nDestX;
+    int newYScreen = (int)floor(yBmp * newScale - 0.5) + nDestY;
 
     Canvas_SetScrollX(Canvas_GetScrollX() + (newXScreen - ptMouseX));
     Canvas_SetScrollY(Canvas_GetScrollY() + (newYScreen - ptMouseY));

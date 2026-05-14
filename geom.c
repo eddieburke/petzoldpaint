@@ -166,25 +166,25 @@ void CoordBmpToScr(int xBmp, int yBmp, int* xScr, int* yScr)
     CoordBmpToScrEx(xBmp, yBmp, xScr, yScr, GetZoomScale(), nDestX, nDestY);
 }
 
+void CoordScrToBmpExDouble(int xScr, int yScr, double* xBmp, double* yBmp,
+                          double scale, int offX, int offY)
+{
+    /* 
+     * Use the center of the screen pixel to avoid top-left bias.
+     * Returning doubles allows tools to handle sub-pixel interpolation 
+     * which is critical when zoomed out.
+     */
+    if (xBmp) *xBmp = ((double)xScr + 0.5 - offX) / scale;
+    if (yBmp) *yBmp = ((double)yScr + 0.5 - offY) / scale;
+}
+
 void CoordScrToBmpEx(int xScr, int yScr, int* xBmp, int* yBmp,
                     double scale, int offX, int offY)
 {
-    double fx = ((double)xScr - offX) / scale;
-    double fy = ((double)yScr - offY) / scale;
-
-    /*
-     * At zoom levels below 100%, multiple bitmap pixels map into a single
-     * screen pixel. Using floor() introduces a strong top-left bias that can
-     * warp freehand paths while drawing. Switch to nearest-pixel mapping when
-     * zoomed out so stroke sampling is symmetric.
-     */
-    if (scale < 1.0) {
-        *xBmp = (int)lround(fx);
-        *yBmp = (int)lround(fy);
-    } else {
-        *xBmp = (int)floor(fx);
-        *yBmp = (int)floor(fy);
-    }
+    double fx, fy;
+    CoordScrToBmpExDouble(xScr, yScr, &fx, &fy, scale, offX, offY);
+    if (xBmp) *xBmp = (int)floor(fx);
+    if (yBmp) *yBmp = (int)floor(fy);
 }
 
 void CoordScrToBmp(int xScr, int yScr, int* xBmp, int* yBmp)
@@ -215,4 +215,11 @@ void ScreenDeltaToBitmap(int dx, int dy, int* outDx, int* outDy)
         *outDx = (int)(dx / scale);
     if (outDy)
         *outDy = (int)(dy / scale);
+}
+
+void CoordScrToBmpDouble(int xScr, int yScr, double* xBmp, double* yBmp)
+{
+    int nDestX, nDestY;
+    GetCanvasViewportOrigin(&nDestX, &nDestY);
+    CoordScrToBmpExDouble(xScr, yScr, xBmp, yBmp, GetZoomScale(), nDestX, nDestY);
 }

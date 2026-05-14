@@ -45,12 +45,11 @@ typedef struct {
 
 static ResizeState s_resize = {0};
 
-/*------------------------------------------------------------
-   Forward Declarations
-------------------------------------------------------------*/
-
 static ResizeHandleType HitTestResizeHandle(HWND hwnd, int x, int y);
 static void HandleScroll(HWND hwnd, int nBar, int nScrollCode);
+
+static int s_lastToolX = -1;
+static int s_lastToolY = -1;
 
 /*------------------------------------------------------------
    Public: Controller_Init
@@ -235,6 +234,8 @@ void Controller_HandleMouseDown(HWND hwnd, int screenX, int screenY, int btn) {
     if (!BmpCoordInBounds(screenX, screenY, &xBitmap, &yBitmap))
         return;
 
+    s_lastToolX = screenX;
+    s_lastToolY = screenY;
     ToolHandlePointerEvent(TOOL_POINTER_DOWN, hwnd, xBitmap, yBitmap, btn);
 }
 
@@ -283,26 +284,50 @@ void Controller_HandleMouseMove(HWND hwnd, int screenX, int screenY, int wParam)
         return;
     }
 
-    /* --- Tool mouse move --- */
-    int xBitmap, yBitmap;
-    CoordScrToBmp(screenX, screenY, &xBitmap, &yBitmap);
-
-    int xClamp = max(-1000, min(xBitmap, 10000));
-    int yClamp = max(-1000, min(yBitmap, 10000));
-    StatusBarSetCoordinates(xClamp, yClamp);
-
-    if (xBitmap >= 0 && xBitmap < Canvas_GetWidth() &&
-        yBitmap >= 0 && yBitmap < Canvas_GetHeight()) {
-        COLORREF c = LayersSampleCompositeColor(xBitmap, yBitmap, Palette_GetSecondaryColor());
-        StatusBarSetColor(c);
+    /* --- Tool mouse move with Screen-Space Interpolation --- */
+    if (s_lastToolX == -1 || !(wParam & (MK_LBUTTON | MK_RBUTTON))) {
+        s_lastToolX = screenX;
+        s_lastToolY = screenY;
     }
 
-    if (xBitmap < 0) xBitmap = 0;
-    if (xBitmap >= Canvas_GetWidth()) xBitmap = Canvas_GetWidth() - 1;
-    if (yBitmap < 0) yBitmap = 0;
-    if (yBitmap >= Canvas_GetHeight()) yBitmap = Canvas_GetHeight() - 1;
+    int dx = screenX - s_lastToolX;
+    int dy = screenY - s_lastToolY;
+    int steps = max(abs(dx), abs(dy));
 
-    ToolHandlePointerEvent(TOOL_POINTER_MOVE, hwnd, xBitmap, yBitmap, wParam);
+    // If mouse didn't move to a new screen pixel, still process the current point once
+    if (steps == 0) steps = 1;
+
+    for (int i = 1; i <= steps; i++) {
+        int xCur = s_lastToolX + (dx * i) / steps;
+        int yCur = s_lastToolY + (dy * i) / steps;
+
+        int xBitmap, yBitmap;
+        CoordScrToBmp(xCur, yCur, &xBitmap, &yBitmap);
+
+        // Update status bar only for the final destination point
+        if (i == steps) {
+            int xClamp = max(-1000, min(xBitmap, 10000));
+            int yClamp = max(-1000, min(yBitmap, 10000));
+            StatusBarSetCoordinates(xClamp, yClamp);
+
+            if (xBitmap >= 0 && xBitmap < Canvas_GetWidth() &&
+                yBitmap >= 0 && yBitmap < Canvas_GetHeight()) {
+                COLORREF c = LayersSampleCompositeColor(xBitmap, yBitmap, Palette_GetSecondaryColor());
+                StatusBarSetColor(c);
+            }
+        }
+
+        // Clamp bitmap coordinates to canvas bounds for tool safety
+        if (xBitmap < 0) xBitmap = 0;
+        if (xBitmap >= Canvas_GetWidth()) xBitmap = Canvas_GetWidth() - 1;
+        if (yBitmap < 0) yBitmap = 0;
+        if (yBitmap >= Canvas_GetHeight()) yBitmap = Canvas_GetHeight() - 1;
+
+        ToolHandlePointerEvent(TOOL_POINTER_MOVE, hwnd, xBitmap, yBitmap, wParam);
+    }
+
+    s_lastToolX = screenX;
+    s_lastToolY = screenY;
 }
 
 /*------------------------------------------------------------
@@ -340,6 +365,8 @@ void Controller_HandleMouseUp(HWND hwnd, int screenX, int screenY, int btn) {
     if (yBitmap < 0) yBitmap = 0;
     if (yBitmap >= Canvas_GetHeight()) yBitmap = Canvas_GetHeight() - 1;
 
+    s_lastToolX = -1;
+    s_lastToolY = -1;
     ToolHandlePointerEvent(TOOL_POINTER_UP, hwnd, xBitmap, yBitmap, btn);
 }
 
@@ -351,6 +378,8 @@ void Controller_HandleCaptureLost(HWND hwnd) {
     if (s_resize.active) {
         s_resize.active = FALSE;
     }
+    s_lastToolX = -1;
+    s_lastToolY = -1;
     ToolHandleLifecycleEvent(TOOL_LIFECYCLE_CAPTURE_LOST, hwnd);
 }
 
@@ -442,15 +471,15 @@ void Controller_HandleMouseWheel(HWND hwnd, WPARAM wParam, LPARAM lParam) {
             int nDestX, nDestY;
             GetCanvasViewportOrigin(&nDestX, &nDestY);
 
-            double xBmp = (double)(ptMouse.x - nDestX) / oldScale;
-            double yBmp = (double)(ptMouse.y - nDestY) / oldScale;
+            double xBmp = (double)(ptMouse.x + 0.5 - nDestX) / oldScale;
+            double yBmp = (double)(ptMouse.y + 0.5 - nDestY) / oldScale;
 
             Canvas_SetZoom(newZoom);
             Controller_UpdateScrollbars(hwnd);
             GetCanvasViewportOrigin(&nDestX, &nDestY);
 
-            int newXScreen = (int)(xBmp * newScale) + nDestX;
-            int newYScreen = (int)(yBmp * newScale) + nDestY;
+            int newXScreen = (int)floor(xBmp * newScale - 0.5) + nDestX;
+            int newYScreen = (int)floor(yBmp * newScale - 0.5) + nDestY;
 
             Canvas_SetScrollX(Canvas_GetScrollX() + (newXScreen - ptMouse.x));
             Canvas_SetScrollY(Canvas_GetScrollY() + (newYScreen - ptMouse.y));
