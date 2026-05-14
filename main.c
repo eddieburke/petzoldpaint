@@ -253,8 +253,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DROPFILES:
         {
             HDROP hDrop = (HDROP)wParam;
-            char szPath[MAX_PATH];
-            if (DragQueryFile(hDrop, 0, szPath, sizeof(szPath))) {
+            wchar_t szPath[MAX_PATH];
+            if (DragQueryFileW(hDrop, 0, szPath, ARRAYSIZE(szPath))) {
                 if (DocumentConfirmDiscardOrSave(hwnd))
                     DocumentOpen(hwnd, szPath);
             }
