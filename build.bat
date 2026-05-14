@@ -27,7 +27,7 @@ set CORE_FILES=main.c canvas.c tools.c draw.c layers.c helpers.c gdi_utils.c geo
 
 
 :: Tool files
-set TOOL_FILES=tools/bezier_tool.c tools/crayon_tool.c tools/drawing_primitives.c tools/fill_tool.c tools/freehand_tools.c tools/highlighter_tool.c tools/magnifier_tool.c tools/pen_tool.c tools/pick_tool.c tools/polygon_tool.c tools/selection.c tools/shape_tools.c tools/stroke_session.c tools/text.c
+set TOOL_FILES=tools/bezier_tool.c tools/crayon_tool.c tools/drawing_primitives.c tools/fill_tool.c tools/freehand_tools.c tools/highlighter_tool.c tools/magnifier_tool.c tools/pen_tool.c tools/pick_tool.c tools/polygon_tool.c tools/selection.c tools/shape_tools.c tools/stroke_session.c tools/tool_session.c tools/text.c
 
 :: UI and Panel files
 set UI_FILES=ui/widgets/colorbox.c ui/widgets/statusbar.c ui/widgets/toolbar.c ui/panels/history_panel.c ui/panels/layers_panel.c

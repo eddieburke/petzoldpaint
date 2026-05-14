@@ -1,15 +1,9 @@
 #ifndef STROKE_SESSION_H
 #define STROKE_SESSION_H
 
-#include "../peztold_core.h"
+#include "tool_session.h"
 
-typedef struct {
-  BOOL isDrawing;
-  BOOL pixelsModified;
-  int drawButton;
-  int toolId;
-  POINT lastPoint;
-} StrokeSession;
+typedef ToolSession StrokeSession;
 
 void StrokeSession_Begin(StrokeSession *s, HWND hWnd, int x, int y, int nButton, int toolId);
 void StrokeSession_UpdateLastPoint(StrokeSession *s, int x, int y);
