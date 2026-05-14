@@ -157,6 +157,15 @@ static void ResetShapeState(void) {
   s_Shape.activeToolId = 0;
 }
 
+static void CommitShapeAction(int toolId, const char *actionName) {
+  LayersMergeDraftToActive();
+  LayersMarkDirty();
+  SetDocumentDirty();
+  HistoryPushToolActionById(toolId, actionName);
+  ResetShapeState();
+  InvalidateCanvas();
+}
+
 /* Called when tool is deactivated (tool switch, layer op, etc.) */
 static void ShapeTool_OnDeactivate(void) {
   if (s_Shape.state != SHAPE_STATE_IDLE) {
@@ -189,12 +198,7 @@ void CommitPendingShape(void) {
   if (!IsShapePending())
     return;
   /* Merge whatever is in the draft to active */
-  LayersMergeDraftToActive();
-  LayersMarkDirty();
-  SetDocumentDirty();
-  HistoryPushToolActionById(s_Shape.activeToolId, "Draw Shape");
-  ResetShapeState();
-  InvalidateCanvas();
+  CommitShapeAction(s_Shape.activeToolId, "Draw Shape");
 }
 
 void CancelShapeDrawing(void) { ShapeTool_OnCancel(); }
@@ -261,12 +265,7 @@ void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
 
     /* Draw final shape directly to draft, then merge into active layer */
     UpdateDraftLayer();
-    LayersMergeDraftToActive();
-    LayersMarkDirty();
-    SetDocumentDirty();
-    HistoryPushToolActionById(toolId, "Draw Shape");
-    ResetShapeState();
-    InvalidateCanvas();
+    CommitShapeAction(toolId, "Draw Shape");
   }
 }
 
