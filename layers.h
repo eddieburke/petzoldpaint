@@ -42,6 +42,7 @@ void GetLayerDisplayName(int layerIndex, char *out, int outSize);
 void HistoryPushLayerOpacity(int layerIndex, int oldPercent, int newPercent);
 void HistoryPushLayerVisibility(int layerIndex, BOOL oldVisible,
                                 BOOL newVisible);
+void HistoryPushLayerBlendMode(int layerIndex, int oldMode, int newMode);
 void HistoryPushLayerMove(int fromIndex, int toIndex);
 
 HBITMAP LayersGetActiveColorBitmap(void);

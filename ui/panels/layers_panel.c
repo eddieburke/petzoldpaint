@@ -256,6 +256,7 @@ static void HandleBlendChange(void) {
   // Only push history if actually changed
   if (oldMode != newMode) {
     LayersSetBlendMode(idx, newMode);
+    HistoryPushLayerBlendMode(idx, oldMode, newMode);
     InvalidateCanvas();
     SetDocumentDirty();
   }
