@@ -33,7 +33,7 @@ void RestorePen(HDC hdc, HPEN hOld) {
   }
 }
 
-void DeletePen(HPEN hPen) {
+void Gdi_DeletePen(HPEN hPen) {
   if (hPen) {
     DeleteObject(hPen);
   }
@@ -53,13 +53,13 @@ void RestoreBrush(HDC hdc, HBRUSH hOld) {
   }
 }
 
-void DeleteBrush(HBRUSH hBrush) {
+void Gdi_DeleteBrush(HBRUSH hBrush) {
   if (hBrush) {
     DeleteObject(hBrush);
   }
 }
 
-void DeleteFont(HFONT hFont) {
+void Gdi_DeleteFont(HFONT hFont) {
   if (hFont) {
     DeleteObject(hFont);
   }

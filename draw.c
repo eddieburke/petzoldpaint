@@ -24,14 +24,14 @@ void DrawSelectionFrame(HDC hdc, RECT *rc, BOOL bDotted) {
   if (hWhitePen) {
     Rectangle(hdc, rc->left, rc->top, rc->right, rc->bottom);
     RestorePen(hdc, hOldPen);
-    DeletePen(hWhitePen);
+    Gdi_DeletePen(hWhitePen);
   }
 
   HPEN hBlackPen = CreatePenAndSelect(hdc, bDotted ? PS_DOT : PS_DASH, 1, RGB(0, 0, 0), &hOldPen);
   if (hBlackPen) {
     Rectangle(hdc, rc->left, rc->top, rc->right, rc->bottom);
     RestorePen(hdc, hOldPen);
-    DeletePen(hBlackPen);
+    Gdi_DeletePen(hBlackPen);
   }
 
   SelectObject(hdc, hOldBr);

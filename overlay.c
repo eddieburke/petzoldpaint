@@ -130,7 +130,7 @@ void Overlay_DrawDottedRect(const OverlayContext *ctx, const RECT *rcBitmap) {
 
 SelectObject(ctx->hdc, hOldBrush);
   RestorePen(ctx->hdc, hOldPen);
-  DeletePen(hPen);
+  Gdi_DeletePen(hPen);
 }
 
 /*------------------------------------------------------------
@@ -150,7 +150,7 @@ void Overlay_DrawLine(const OverlayContext *ctx, int x1Bmp, int y1Bmp,
   LineTo(ctx->hdc, x2Scr, y2Scr);
 
   RestorePen(ctx->hdc, hOldPen);
-  DeletePen(hPen);
+  Gdi_DeletePen(hPen);
 }
 
 void Overlay_DrawPolyline(const OverlayContext *ctx, const POINT *ptsBitmap,
@@ -172,7 +172,7 @@ void Overlay_DrawPolyline(const OverlayContext *ctx, const POINT *ptsBitmap,
   if (hPen) {
     Polyline(ctx->hdc, ptsScreen, count);
     RestorePen(ctx->hdc, hOldPen);
-    DeletePen(hPen);
+    Gdi_DeletePen(hPen);
   }
 
   free(ptsScreen);

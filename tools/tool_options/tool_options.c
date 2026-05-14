@@ -137,7 +137,7 @@ static void DrawVerticalSlider(HDC hdc, const RECT *prcSlider, int value,
   if (hBr) {
     FillRect(hdc, &rcSlider, hBr);
     RestoreBrush(hdc, hOldBr);
-    DeleteBrush(hBr);
+    Gdi_DeleteBrush(hBr);
   }
   DrawEdge(hdc, &rcSlider, BDR_SUNKENOUTER, BF_RECT);
 
@@ -242,7 +242,7 @@ static void DrawGlossySelection(HDC hdc, RECT *prc) {
     MoveToEx(hdc, prc->left + 1, prc->bottom - 2, NULL);
     LineTo(hdc, prc->right - 1, prc->bottom - 2);
     RestorePen(hdc, hOldPen);
-    DeletePen(hHighlight);
+    Gdi_DeletePen(hHighlight);
   }
 }
 
@@ -275,7 +275,7 @@ static void DrawSelectionOptions(HDC hdc, RECT *prcClient) {
     LineTo(hdc, rc.left + 10, rc.top + btnH - 4);
     LineTo(hdc, rc.left + btnW - 6, rc.top + 6);
     RestorePen(hdc, hOldPen);
-    DeletePen(hPen);
+    Gdi_DeletePen(hPen);
 
     // Cancel button (X)
     rc = rcCancel;
@@ -288,7 +288,7 @@ static void DrawSelectionOptions(HDC hdc, RECT *prcClient) {
     MoveToEx(hdc, rc.left + btnW - 6, rc.top + 4, NULL);
     LineTo(hdc, rc.left + 6, rc.top + btnH - 4);
     RestorePen(hdc, hOldPen);
-    DeletePen(hPen);
+    Gdi_DeletePen(hPen);
 
     y = barY + btnH + 8;
   } else {
@@ -318,7 +318,7 @@ static void DrawSelectionOptions(HDC hdc, RECT *prcClient) {
     InflateRect(&rcInner, -4, -4);
     FillRect(hdc, &rcInner, hBr);
     RestoreBrush(hdc, hOldBr);
-    DeleteBrush(hBr);
+    Gdi_DeleteBrush(hBr);
   }
 }
 
@@ -565,7 +565,7 @@ static void DrawShapeOptions(HDC hdc, RECT *prcClient) {
       if (hPen) {
         Rectangle(hdc, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2);
         RestorePen(hdc, hOldPen);
-        DeletePen(hPen);
+        Gdi_DeletePen(hPen);
       }
       SelectObject(hdc, hHoldBr);
     } else if (i == SHAPE_BORDER_FILL) {
@@ -577,10 +577,10 @@ static void DrawShapeOptions(HDC hdc, RECT *prcClient) {
         if (hPen) {
           Rectangle(hdc, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2);
           RestorePen(hdc, hOldPen);
-          DeletePen(hPen);
+          Gdi_DeletePen(hPen);
         }
         SelectObject(hdc, hHoldBr);
-        DeleteBrush(hFillBr);
+        Gdi_DeleteBrush(hFillBr);
       }
     } else {
       HBRUSH hBr =
@@ -919,8 +919,8 @@ static void HighlighterOptions_Draw(HDC hdc, RECT *prcClient) {
   DrawCenteredText(hdc, btnX, y + 2, btnW, "Presets");
 
   SelectObject(hdc, hOldFont);
-  DeleteFont(hFontSlider);
-  DeleteFont(hFontPreset);
+  Gdi_DeleteFont(hFontSlider);
+  Gdi_DeleteFont(hFontPreset);
 }
 
 static BOOL HighlighterOptions_LButtonDown(HWND hwnd, int x, int y) {
@@ -1057,8 +1057,8 @@ static void CrayonOptions_Draw(HDC hdc, RECT *prcClient) {
   DrawCenteredText(hdc, btnX, y + 2, btnW, "Presets");
 
   SelectObject(hdc, hOldFont);
-  DeleteFont(hFontSlider);
-  DeleteFont(hFontPreset);
+  Gdi_DeleteFont(hFontSlider);
+  Gdi_DeleteFont(hFontPreset);
 }
 
 static BOOL CrayonOptions_LButtonDown(HWND hwnd, int x, int y) {

@@ -92,7 +92,7 @@ void MagnifierToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
 
   SelectObject(hdc, hBrushOld);
   RestorePen(hdc, hOldPen);
-  DeletePen(hPen);
+  Gdi_DeletePen(hPen);
 }
 
 void MagnifierToolDeactivate(void) {

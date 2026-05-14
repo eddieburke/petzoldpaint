@@ -61,7 +61,7 @@ static void DrawToolbarButton(HDC hdc, RECT* rc, BOOL bHot, BOOL bPressed, BOOL 
 
     HBRUSH hFill = CreateSolidBrush(fill);
     FillRect(hdc, rc, hFill);
-    DeleteBrush(hFill);
+    Gdi_DeleteBrush(hFill);
 
     HPEN hOldPen;
     HPEN hPen = CreatePenAndSelect(hdc, PS_SOLID, 1, border, &hOldPen);
@@ -69,7 +69,7 @@ static void DrawToolbarButton(HDC hdc, RECT* rc, BOOL bHot, BOOL bPressed, BOOL 
     Rectangle(hdc, rc->left, rc->top, rc->right, rc->bottom);
     SelectObject(hdc, hOldBrush);
     RestorePen(hdc, hOldPen);
-    DeletePen(hPen);
+    Gdi_DeletePen(hPen);
 }
 LRESULT CALLBACK ToolbarWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {

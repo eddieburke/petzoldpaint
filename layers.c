@@ -602,7 +602,7 @@ void GetLayerDisplayName(int layerIndex, char *out, int outSize) {
 void HistoryPushLayerOpacity(int layerIndex, int oldPercent, int newPercent) {
   char layerName[64];
   GetLayerDisplayName(layerIndex, layerName, sizeof(layerName));
-  HistoryPushFormatted("Opacity: %d%% → %d%% (%s)", oldPercent, newPercent,
+  HistoryPushFormatted("Opacity: %d%% -> %d%% (%s)", oldPercent, newPercent,
                        layerName);
 }
 
@@ -610,7 +610,7 @@ void HistoryPushLayerVisibility(int layerIndex, BOOL oldVisible,
                                 BOOL newVisible) {
   char layerName[64];
   GetLayerDisplayName(layerIndex, layerName, sizeof(layerName));
-  HistoryPushFormatted("Visibility: %s → %s (%s)",
+  HistoryPushFormatted("Visibility: %s -> %s (%s)",
                        oldVisible ? "Visible" : "Hidden",
                        newVisible ? "Visible" : "Hidden", layerName);
 }
@@ -628,7 +628,7 @@ void HistoryPushLayerBlendMode(int layerIndex, int oldMode, int newMode) {
                              : "Unknown";
   char layerName[64];
   GetLayerDisplayName(layerIndex, layerName, sizeof(layerName));
-  HistoryPushFormatted("Blend Mode: %s \u2192 %s (%s)", oldLabel, newLabel,
+  HistoryPushFormatted("Blend Mode: %s -> %s (%s)", oldLabel, newLabel,
                        layerName);
 }
 
