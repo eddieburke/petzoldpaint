@@ -47,7 +47,7 @@ static BOOL HandleZoomMenu(HWND hwnd, WORD id) {
 }
 
 static BOOL CanPasteFromClipboard(void) {
-  UINT uPng = RegisterClipboardFormat("PNG");
+  UINT uPng = RegisterClipboardFormatA("PNG");
   if (uPng && IsClipboardFormatAvailable(uPng))
     return TRUE;
   return IsClipboardFormatAvailable(CF_DIBV5) ||
@@ -79,7 +79,7 @@ void DocumentNew(HWND hwnd) {
   SyncAfterDocumentLoadOrReset(hwnd);
 }
 
-void DocumentOpen(HWND hwnd, const char *path) {
+void DocumentOpen(HWND hwnd, const wchar_t *path) {
   BOOL loaded = FALSE;
   if (path) {
     loaded = LoadBitmapFromFile(path);
@@ -99,7 +99,7 @@ void DocumentOpen(HWND hwnd, const char *path) {
 BOOL DocumentConfirmDiscardOrSave(HWND hwnd) {
   if (!Doc_IsDirty())
     return TRUE;
-  int r = MessageBox(hwnd, "Save changes?", "Paint", MB_YESNOCANCEL);
+  int r = MessageBoxW(hwnd, L"Save changes?", L"Paint", MB_YESNOCANCEL);
   if (r == IDYES)
     return FileSave(hwnd);
   if (r == IDCANCEL)

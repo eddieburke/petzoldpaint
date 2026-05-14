@@ -1,6 +1,6 @@
 /*------------------------------------------------------------
    FILE_IO.C -- File Input/Output Operations
-   
+
    This module handles loading and saving bitmap files in
    both BMP and PNG formats using Windows Imaging Component.
   ------------------------------------------------------------*/
@@ -76,26 +76,26 @@ void FileIO_ShutdownCom(void)
    File Extension Helpers
   ------------------------------------------------------------*/
 
-static BOOL HasExtension(const char* path, const char* ext)
+static BOOL HasExtension(const wchar_t* path, const wchar_t* ext)
 {
-    const char* dot = strrchr(path, '.');
+    const wchar_t* dot = wcsrchr(path, L'.');
     if (!dot)
         return FALSE;
-    return _stricmp(dot, ext) == 0;
+    return _wcsicmp(dot, ext) == 0;
 }
 
-static void EnsureExtensionForSave(char* path, size_t maxLen, const char* ext)
+static void EnsureExtensionForSave(wchar_t* path, size_t maxLen, const wchar_t* ext)
 {
-    const char* dot = strrchr(path, '.');
-    const char* slash1 = strrchr(path, '\\');
-    const char* slash2 = strrchr(path, '/');
-    const char* lastSlash = slash1 > slash2 ? slash1 : slash2;
+    const wchar_t* dot = wcsrchr(path, L'.');
+    const wchar_t* slash1 = wcsrchr(path, L'\\');
+    const wchar_t* slash2 = wcsrchr(path, L'/');
+    const wchar_t* lastSlash = slash1 > slash2 ? slash1 : slash2;
 
     if (!dot || (lastSlash && dot < lastSlash)) {
-        size_t len = strlen(path);
-        size_t extLen = strlen(ext);
+        size_t len = wcslen(path);
+        size_t extLen = wcslen(ext);
         if (len + extLen + 1 < maxLen) {
-            StringCchCat(path, maxLen, ext);
+            StringCchCatW(path, maxLen, ext);
         }
     }
 }
@@ -108,26 +108,21 @@ static void ShowWicError(HRESULT hr, const char* operation)
 {
     char msg[512];
     char hrMsg[256] = "";
-    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                   NULL, hr, 0, hrMsg, sizeof(hrMsg), NULL);
-    StringCchPrintf(msg, sizeof(msg), "%s failed.\nHRESULT: 0x%08lX\n%s",
+    StringCchPrintfA(msg, sizeof(msg), "%s failed.\nHRESULT: 0x%08lX\n%s",
                     operation, hr, hrMsg);
-    MessageBox(hMainWnd, msg, "Image Error", MB_ICONERROR);
+    MessageBoxA(hMainWnd, msg, "Image Error", MB_ICONERROR);
 }
 
 /*------------------------------------------------------------
     PNG Loading Function
 ------------------------------------------------------------*/
 
-static BOOL LoadWicImage(const char* szPath)
+static BOOL LoadWicImage(const wchar_t* szPath)
 {
     if (!EnsureWicFactory())
         return FALSE;
-
-    WCHAR wPath[MAX_PATH];
-    if (MultiByteToWideChar(CP_ACP, 0, szPath, -1, wPath, MAX_PATH) <= 0) {
-        return FALSE;
-    }
 
     IWICBitmapDecoder* decoder = NULL;
     IWICBitmapFrameDecode* frame = NULL;
@@ -135,7 +130,7 @@ static BOOL LoadWicImage(const char* szPath)
     BOOL ok = FALSE;
 
     HRESULT hr = g_wicFactory->lpVtbl->CreateDecoderFromFilename(
-        g_wicFactory, wPath, NULL, GENERIC_READ,
+        g_wicFactory, szPath, NULL, GENERIC_READ,
         WICDecodeMetadataCacheOnLoad, &decoder);
 
     if (SUCCEEDED(hr)) {
@@ -231,14 +226,14 @@ INT_PTR CALLBACK JpegOptionsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
    WIC Saving Function
   ------------------------------------------------------------*/
 
-static BOOL SaveWicImage(const char* lpszFileName, REFGUID containerFormat)
+static BOOL SaveWicImage(const wchar_t* lpszFileName, REFGUID containerFormat)
 {
     if (!EnsureWicFactory())
         return FALSE;
 
     BYTE* bits = NULL;
     HBITMAP hBmp = NULL;
-    
+
     if (IsEqualGUID(containerFormat, &GUID_ContainerFormatJpeg) && g_jpegFlattenBg) {
         hBmp = LayersFlattenToBitmap(Palette_GetSecondaryColor());
         if (hBmp) {
@@ -256,7 +251,6 @@ static BOOL SaveWicImage(const char* lpszFileName, REFGUID containerFormat)
         return FALSE;
     }
 
-    WCHAR wPath[MAX_PATH];
     BOOL ok = FALSE;
 
     IWICStream* stream = NULL;
@@ -264,10 +258,10 @@ static BOOL SaveWicImage(const char* lpszFileName, REFGUID containerFormat)
     IWICBitmapFrameEncode* frame = NULL;
     IPropertyBag2* props = NULL;
 
-    if (MultiByteToWideChar(CP_ACP, 0, lpszFileName, -1, wPath, MAX_PATH) > 0) {
+    if (lpszFileName && lpszFileName[0] != L'\0') {
         HRESULT hr = g_wicFactory->lpVtbl->CreateStream(g_wicFactory, &stream);
         if (SUCCEEDED(hr)) {
-            hr = stream->lpVtbl->InitializeFromFilename(stream, wPath,
+            hr = stream->lpVtbl->InitializeFromFilename(stream, lpszFileName,
                                                         GENERIC_WRITE);
         }
         if (SUCCEEDED(hr)) {
@@ -364,34 +358,34 @@ cleanup:
 
 /*------------------------------------------------------------
    FileLoad
-   
+
    Displays the file open dialog and loads the selected file.
   ------------------------------------------------------------*/
 
 BOOL FileLoad(HWND hWnd)
 {
-    OPENFILENAME ofn;
-    char szFile[MAX_PATH] = "";
+    OPENFILENAMEW ofn;
+    wchar_t szFile[MAX_PATH] = L"";
 
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = hWnd;
     ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = "All Image Files\0*.bmp;*.png;*.jpg;*.jpeg;*.gif;*.tif;*.tiff\0"
-                     "Bitmap Files (*.bmp)\0*.bmp\0"
-                     "PNG Files (*.png)\0*.png\0"
-                     "JPEG Files (*.jpg, *.jpeg)\0*.jpg;*.jpeg\0"
-                     "GIF Files (*.gif)\0*.gif\0"
-                     "TIFF Files (*.tif, *.tiff)\0*.tif;*.tiff\0"
-                     "All Files (*.*)\0*.*\0";
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrFilter = L"All Image Files\0*.bmp;*.png;*.jpg;*.jpeg;*.gif;*.tif;*.tiff\0"
+                      L"Bitmap Files (*.bmp)\0*.bmp\0"
+                      L"PNG Files (*.png)\0*.png\0"
+                      L"JPEG Files (*.jpg, *.jpeg)\0*.jpg;*.jpeg\0"
+                      L"GIF Files (*.gif)\0*.gif\0"
+                      L"TIFF Files (*.tif, *.tiff)\0*.tif;*.tiff\0"
+                      L"All Files (*.*)\0*.*\0";
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = NULL;
     ofn.nMaxFileTitle = 0;
     ofn.lpstrInitialDir = NULL;
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-    if (GetOpenFileName(&ofn)) {
+    if (GetOpenFileNameW(&ofn)) {
         if (LoadBitmapFromFile(ofn.lpstrFile)) {
             InvalidateRect(hWnd, NULL, TRUE);
             Doc_SetFile(szFile);
@@ -401,9 +395,9 @@ BOOL FileLoad(HWND hWnd)
 
     DWORD dlgErr = CommDlgExtendedError();
     if (dlgErr != 0) {
-        char msg[128];
-        StringCchPrintf(msg, sizeof(msg), "Open dialog failed (0x%08lX).", dlgErr);
-        MessageBox(hWnd, msg, "File Open Error", MB_ICONERROR);
+        wchar_t msg[128];
+        StringCchPrintfW(msg, 128, L"Open dialog failed (0x%08lX).", dlgErr);
+        MessageBoxW(hWnd, msg, L"File Open Error", MB_ICONERROR);
     }
 
     return FALSE;
@@ -411,22 +405,22 @@ BOOL FileLoad(HWND hWnd)
 
 /*------------------------------------------------------------
    LoadBitmapFromFile
-   
+
    Loads a bitmap file (BMP or PNG) into the layers system.
   ------------------------------------------------------------*/
 
-BOOL LoadBitmapFromFile(const char* szPath)
+BOOL LoadBitmapFromFile(const wchar_t* szPath)
 {
-    if (HasExtension(szPath, ".png")  || 
-        HasExtension(szPath, ".jpg")  || 
-        HasExtension(szPath, ".jpeg") ||
-        HasExtension(szPath, ".gif")  ||
-        HasExtension(szPath, ".tif")  ||
-        HasExtension(szPath, ".tiff")) {
+    if (HasExtension(szPath, L".png")  ||
+        HasExtension(szPath, L".jpg")  ||
+        HasExtension(szPath, L".jpeg") ||
+        HasExtension(szPath, L".gif")  ||
+        HasExtension(szPath, L".tif")  ||
+        HasExtension(szPath, L".tiff")) {
         return LoadWicImage(szPath);
     }
 
-    HBITMAP hNewBmp = (HBITMAP)LoadImage(NULL, szPath, IMAGE_BITMAP, 0, 0,
+    HBITMAP hNewBmp = (HBITMAP)LoadImageW(NULL, szPath, IMAGE_BITMAP, 0, 0,
                                          LR_LOADFROMFILE | LR_CREATEDIBSECTION);
     if (!hNewBmp)
         return FALSE;
@@ -438,11 +432,11 @@ BOOL LoadBitmapFromFile(const char* szPath)
 
 /*------------------------------------------------------------
    SaveBitmapToFile
-   
+
    Saves a bitmap to a BMP file using GDI functions.
   ------------------------------------------------------------*/
 
-BOOL SaveBitmapToFile(HBITMAP hBmp, LPCSTR lpszFileName)
+BOOL SaveBitmapToFile(HBITMAP hBmp, LPCWSTR lpszFileName)
 {
     if (HasExtension(lpszFileName, ".png")) {
         return SaveWicImage(lpszFileName, &GUID_ContainerFormatPng);
@@ -510,7 +504,7 @@ BOOL SaveBitmapToFile(HBITMAP hBmp, LPCSTR lpszFileName)
         return FALSE;
     }
 
-    HANDLE hf = CreateFile(lpszFileName, GENERIC_READ | GENERIC_WRITE, 0, NULL,
+    HANDLE hf = CreateFileW(lpszFileName, GENERIC_READ | GENERIC_WRITE, 0, NULL,
                           CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hf == INVALID_HANDLE_VALUE) {
         GlobalFree(lpBits);
@@ -549,18 +543,18 @@ BOOL SaveBitmapToFile(HBITMAP hBmp, LPCSTR lpszFileName)
 
 /*------------------------------------------------------------
    FileSave
-   
+
    Saves the current document to the previously opened file.
   ------------------------------------------------------------*/
 
 BOOL FileSave(HWND hWnd)
 {
-    const char *file = Doc_GetFile();
-    if (strlen(file) > 0) {
-        if (HasExtension(file, ".png")) {
+    const wchar_t *file = Doc_GetFile();
+    if (wcslen(file) > 0) {
+        if (HasExtension(file, L".png")) {
             return SaveWicImage(file, &GUID_ContainerFormatPng);
         }
-        if (HasExtension(file, ".jpg") || HasExtension(file, ".jpeg")) {
+        if (HasExtension(file, L".jpg") || HasExtension(file, L".jpeg")) {
             return SaveWicImage(file, &GUID_ContainerFormatJpeg);
         }
 
@@ -576,41 +570,41 @@ BOOL FileSave(HWND hWnd)
 
 /*------------------------------------------------------------
    FileSaveAs
-   
+
    Displays the file save dialog and saves the document.
   ------------------------------------------------------------*/
 
 BOOL FileSaveAs(HWND hWnd)
 {
-    OPENFILENAME ofn;
-    char szFile[MAX_PATH] = "";
+    OPENFILENAMEW ofn;
+    wchar_t szFile[MAX_PATH] = L"";
 
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = hWnd;
     ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = "PNG Files (*.png)\0*.png\0"
-                     "Bitmap Files (*.bmp)\0*.bmp\0"
-                     "JPEG Files (*.jpg)\0*.jpg\0";
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrFilter = L"PNG Files (*.png)\0*.png\0"
+                      L"Bitmap Files (*.bmp)\0*.bmp\0"
+                      L"JPEG Files (*.jpg)\0*.jpg\0";
     ofn.nFilterIndex = 1;
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
 
-    if (GetSaveFileName(&ofn)) {
-        if (!HasExtension(ofn.lpstrFile, ".png") &&
-            !HasExtension(ofn.lpstrFile, ".bmp") &&
-            !HasExtension(ofn.lpstrFile, ".jpg") &&
-            !HasExtension(ofn.lpstrFile, ".jpeg")) {
+    if (GetSaveFileNameW(&ofn)) {
+        if (!HasExtension(ofn.lpstrFile, L".png") &&
+            !HasExtension(ofn.lpstrFile, L".bmp") &&
+            !HasExtension(ofn.lpstrFile, L".jpg") &&
+            !HasExtension(ofn.lpstrFile, L".jpeg")) {
             if (ofn.nFilterIndex == 1) {
-                EnsureExtensionForSave(ofn.lpstrFile, MAX_PATH, ".png");
+                EnsureExtensionForSave(ofn.lpstrFile, MAX_PATH, L".png");
             } else if (ofn.nFilterIndex == 3) {
-                EnsureExtensionForSave(ofn.lpstrFile, MAX_PATH, ".jpg");
+                EnsureExtensionForSave(ofn.lpstrFile, MAX_PATH, L".jpg");
             } else {
-                EnsureExtensionForSave(ofn.lpstrFile, MAX_PATH, ".bmp");
+                EnsureExtensionForSave(ofn.lpstrFile, MAX_PATH, L".bmp");
             }
         }
 
-        if (HasExtension(ofn.lpstrFile, ".png")) {
+        if (HasExtension(ofn.lpstrFile, L".png")) {
             if (SaveWicImage(ofn.lpstrFile, &GUID_ContainerFormatPng)) {
                 Doc_SetFile(ofn.lpstrFile);
                 return TRUE;
@@ -618,7 +612,7 @@ BOOL FileSaveAs(HWND hWnd)
             return FALSE;
         }
 
-        if (HasExtension(ofn.lpstrFile, ".jpg") || HasExtension(ofn.lpstrFile, ".jpeg")) {
+        if (HasExtension(ofn.lpstrFile, L".jpg") || HasExtension(ofn.lpstrFile, L".jpeg")) {
             if (DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_JPEG_OPTIONS), hWnd, JpegOptionsDlgProc) == IDCANCEL) {
                 return FALSE;
             }
@@ -640,9 +634,9 @@ BOOL FileSaveAs(HWND hWnd)
     }
     DWORD dlgErr = CommDlgExtendedError();
     if (dlgErr != 0) {
-        char msg[128];
-        StringCchPrintf(msg, sizeof(msg), "Save dialog failed (0x%08lX).", dlgErr);
-        MessageBox(hWnd, msg, "File Save Error", MB_ICONERROR);
+        wchar_t msg[128];
+        StringCchPrintfW(msg, 128, L"Save dialog failed (0x%08lX).", dlgErr);
+        MessageBoxW(hWnd, msg, L"File Save Error", MB_ICONERROR);
     }
     return FALSE;
 }

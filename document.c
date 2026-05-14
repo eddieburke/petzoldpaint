@@ -10,7 +10,7 @@ static Document g_doc = {
     800,                    /* width         */
     600,                    /* height        */
     FALSE,                  /* dirty         */
-    "",                     /* currentFile   */
+    L"",                    /* currentFile   */
     0,                      /* scrollX       */
     0,                      /* scrollY       */
     100.0                   /* zoomPercent   */
@@ -35,15 +35,15 @@ void Doc_SetDirty(void)         { g_doc.dirty = TRUE; }
 void Doc_ClearDirty(void)       { g_doc.dirty = FALSE; }
 
 /* Current file */
-const char* Doc_GetFile(void)   { return g_doc.currentFile; }
-void Doc_SetFile(const char *p) {
+const wchar_t* Doc_GetFile(void) { return g_doc.currentFile; }
+void Doc_SetFile(const wchar_t *p) {
     if (p) {
-        StringCchCopy(g_doc.currentFile, MAX_PATH, p);
+        StringCchCopyW(g_doc.currentFile, MAX_PATH, p);
     } else {
-        g_doc.currentFile[0] = '\0';
+        g_doc.currentFile[0] = L'\0';
     }
 }
-void Doc_ClearFile(void)        { g_doc.currentFile[0] = '\0'; }
+void Doc_ClearFile(void)        { g_doc.currentFile[0] = L'\0'; }
 
 /* Scroll */
 int Doc_GetScrollX(void)        { return g_doc.scrollX; }
