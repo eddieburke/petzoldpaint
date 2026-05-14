@@ -7,6 +7,10 @@
 #include "../layers.h"
 
 void FillToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  if (nButton != MK_LBUTTON && nButton != MK_RBUTTON) {
+    return;
+  }
+
   HBITMAP hOldColor = NULL;
   HDC hColor = LayersGetActiveColorDC(&hOldColor);
   if (hColor) {
