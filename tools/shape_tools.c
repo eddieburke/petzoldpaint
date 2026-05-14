@@ -27,7 +27,7 @@
 #include "../ui/widgets/colorbox.h"
 #include "tool_options/tool_options.h"
 #include "palette.h"
-#include "shape_session.h"
+#include "tool_session.h"
 
 /*------------------------------------------------------------------------------
  * Tool State Definitions
@@ -49,7 +49,7 @@ static struct {
   POINT ptEnd;
   int drawButton;
 } s_Shape = {SHAPE_STATE_IDLE, 0, {0, 0}, {0, 0}, 0};
-static ShapeSession s_shapeSession = {0};
+static ToolSession s_shapeSession = {0};
 
 /*------------------------------------------------------------------------------
  * DrawShapeToBits
@@ -159,8 +159,8 @@ static void ResetShapeState(void) {
 static void CommitShapeAction(int toolId, const char *actionName) {
   LayersMergeDraftToActive();
   LayersMarkDirty();
-  ShapeSession_CommitIfNeeded(&s_shapeSession, actionName);
-  ShapeSession_End(&s_shapeSession);
+  ToolSession_CommitIfNeeded(&s_shapeSession, actionName);
+  ToolSession_End(&s_shapeSession);
   ResetShapeState();
   InvalidateCanvas();
 }
@@ -169,7 +169,7 @@ static void CommitShapeAction(int toolId, const char *actionName) {
 static void ShapeTool_OnDeactivate(void) {
   if (s_Shape.state != SHAPE_STATE_IDLE) {
     LayersClearDraft();
-    ShapeSession_Cancel(&s_shapeSession);
+    ToolSession_Cancel(&s_shapeSession);
     ResetShapeState();
     InvalidateCanvas();
   }
@@ -216,7 +216,7 @@ void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
   s_Shape.ptStart.x = x;
   s_Shape.ptStart.y = y;
   s_Shape.ptEnd = s_Shape.ptStart;
-  ShapeSession_Begin(&s_shapeSession, hWnd, x, y, nButton, toolId);
+  ToolSession_Begin(&s_shapeSession, hWnd, x, y, nButton, toolId);
 }
 
 void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
@@ -237,7 +237,7 @@ void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
     s_Shape.ptEnd.x = endX;
     s_Shape.ptEnd.y = endY;
     UpdateDraftLayer();
-    ShapeSession_MarkModified(&s_shapeSession);
+    ToolSession_MarkModified(&s_shapeSession);
     InvalidateCanvas();
   }
 }
@@ -260,7 +260,7 @@ void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
 
     /* Draw final shape directly to draft, then merge into active layer */
     UpdateDraftLayer();
-    ShapeSession_MarkModified(&s_shapeSession);
+    ToolSession_MarkModified(&s_shapeSession);
     CommitShapeAction(toolId, "Draw Shape");
   }
 }
