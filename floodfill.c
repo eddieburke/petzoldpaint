@@ -59,8 +59,10 @@ BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor,
     return FALSE;
   }
 
-  // If a selection exists, fill is constrained to that selection.
-  if (IsSelectionActive() && !IsPointInSelection(startX, startY)) {
+  BOOL hasSelection = IsSelectionActive();
+
+  // If a selection exists, restrict fill to that selection.
+  if (hasSelection && !IsPointInSelection(startX, startY)) {
     return FALSE;
   }
 

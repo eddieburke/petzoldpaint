@@ -267,6 +267,8 @@ void FreehandTool_OnTimerTick(void) {
     DrawPrim_DrawSprayPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(),
                             s_session.lastPoint.x, s_session.lastPoint.y,
                             GetColorForButton(s_session.drawButton), nSprayRadius);
+    LayersMarkDirty();
+    StrokeSession_MarkPixelsModified(&s_session);
   }
   InvalidateCanvas();
 }
