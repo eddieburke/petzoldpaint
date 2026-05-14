@@ -24,6 +24,11 @@
  *----------------------------------------------------------------------------*/
 
 static StrokeSession s_session = {0};
+typedef struct {
+  BYTE *bits;
+  int width;
+  int height;
+} ActiveSurface;
 
 typedef void (*PointDrawSizedFn)(BYTE *bits, int width, int height, int x, int y,
                                  COLORREF color, int size);
@@ -116,6 +121,23 @@ static COLORREF ResolveStrokeColor(const StrokePolicy *policy, int button) {
   return GetColorForButton(button);
 }
 
+static ActiveSurface ActiveSurface_Get(void) {
+  ActiveSurface s = {0};
+  s.bits = LayersGetActiveColorBits();
+  if (!s.bits) return s;
+  s.width = Canvas_GetWidth();
+  s.height = Canvas_GetHeight();
+  return s;
+}
+
+static void InvalidateDirtyBitmapRect(const RECT *rcDirty) {
+  LayersMarkDirtyRect(rcDirty);
+  RECT rcScreen;
+  RectBmpToScr(rcDirty, &rcScreen);
+  InflateRect(&rcScreen, 2, 2);
+  InvalidateCanvasRect(&rcScreen);
+}
+
 static void FreehandDrawInterpolated(BYTE *bits, int width, int height,
                                      const StrokePolicy *policy, int x1, int y1,
                                      int x2, int y2, COLORREF color) {
@@ -160,9 +182,9 @@ static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy
 
   StrokeSession_Begin(&s_session, hWnd, x, y, nButton, tool);
 
-  BYTE *bits = LayersGetActiveColorBits();
-  if (bits) {
-    sp->pfnPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(), x, y,
+  ActiveSurface surface = ActiveSurface_Get();
+  if (surface.bits) {
+    sp->pfnPoint(surface.bits, surface.width, surface.height, x, y,
                      ResolveStrokeColor(sp, nButton), sp->pfnGetSize());
     LayersMarkDirty();
     StrokeSession_MarkPixelsModified(&s_session);
@@ -173,12 +195,7 @@ static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy
     rcDirty.top = y - radius;
     rcDirty.right = x + radius;
     rcDirty.bottom = y + radius;
-    LayersMarkDirtyRect(&rcDirty);
-
-    RECT rcScreen;
-    RectBmpToScr(&rcDirty, &rcScreen);
-    InflateRect(&rcScreen, 2, 2);
-    InvalidateCanvasRect(&rcScreen);
+    InvalidateDirtyBitmapRect(&rcDirty);
   }
 }
 
@@ -190,9 +207,9 @@ static void AppendPoint(HWND hWnd, int x, int y, int nButton) {
   if (!sp || !sp->pfnPoint)
     return;
 
-  BYTE *bits = LayersGetActiveColorBits();
-  if (bits) {
-    FreehandDrawInterpolated(bits, Canvas_GetWidth(), Canvas_GetHeight(), sp, s_session.lastPoint.x,
+  ActiveSurface surface = ActiveSurface_Get();
+  if (surface.bits) {
+    FreehandDrawInterpolated(surface.bits, surface.width, surface.height, sp, s_session.lastPoint.x,
                              s_session.lastPoint.y, x, y, ResolveStrokeColor(sp, s_session.drawButton));
 
     // Calculate dirty rect in BITMAP space
@@ -204,14 +221,8 @@ static void AppendPoint(HWND hWnd, int x, int y, int nButton) {
     rcDirty.bottom = max(s_session.lastPoint.y, y) + radius;
 
     // Send bitmap space to layer engine
-    LayersMarkDirtyRect(&rcDirty);
+    InvalidateDirtyBitmapRect(&rcDirty);
     StrokeSession_MarkPixelsModified(&s_session);
-
-    // Translate to Screen Space for OS Redraw
-    RECT rcScreen;
-    RectBmpToScr(&rcDirty, &rcScreen);
-    InflateRect(&rcScreen, 2, 2); // Pad for zoom rounding margins
-    InvalidateCanvasRect(&rcScreen);
   }
   StrokeSession_UpdateLastPoint(&s_session, x, y);
   InvalidateCanvas();
@@ -266,22 +277,17 @@ void AirbrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
 void FreehandTool_OnTimerTick(void) {
   if (!s_session.isDrawing || s_session.toolId != TOOL_AIRBRUSH) return;
 
-  BYTE *bits = LayersGetActiveColorBits();
-  if (bits) {
+  ActiveSurface surface = ActiveSurface_Get();
+  if (surface.bits) {
     int radius = DrawPrim_GetSprayRadius(nSprayRadius) + 2;
     RECT rcDirty = {s_session.lastPoint.x - radius, s_session.lastPoint.y - radius,
                     s_session.lastPoint.x + radius, s_session.lastPoint.y + radius};
 
-    DrawPrim_DrawSprayPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(),
+    DrawPrim_DrawSprayPoint(surface.bits, surface.width, surface.height,
                             s_session.lastPoint.x, s_session.lastPoint.y,
                             GetColorForButton(s_session.drawButton), nSprayRadius);
-    LayersMarkDirtyRect(&rcDirty);
+    InvalidateDirtyBitmapRect(&rcDirty);
     StrokeSession_MarkPixelsModified(&s_session);
-
-    RECT rcScreen;
-    RectBmpToScr(&rcDirty, &rcScreen);
-    InflateRect(&rcScreen, 2, 2);
-    InvalidateCanvasRect(&rcScreen);
   }
 }
 
