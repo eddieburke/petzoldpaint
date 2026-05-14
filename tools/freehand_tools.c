@@ -1,20 +1,27 @@
 /*------------------------------------------------------------------------------
  * FREEHAND_TOOLS.C
  *
- * Pencil, Brush, and Eraser only. Airbrush is intentionally separate because it
- * has timer-driven behavior instead of normal drag interpolation.
+ * Freehand Drawing Tools Implementation
+ *
+ * Implements the core logic for Pencil, Brush, Eraser, and Airbrush tools.
+ * Handles mouse events, capture, and interpolation for smooth drawing.
  *----------------------------------------------------------------------------*/
 
 #include "freehand_tools.h"
 #include "../canvas.h"
-#include "../geom.h"
+#include "../geom.h"       /* <-- Added for RectBmpToScr */
 #include "../helpers.h"
-#include "../layers.h"
 #include "../palette.h"
+#include "../layers.h"
+#include "../ui/widgets/colorbox.h"
 #include "drawing_primitives.h"
-#include "stroke_session.h"
 #include "tool_options/tool_options.h"
+#include "stroke_session.h"
 #include <stdlib.h>
+
+/*------------------------------------------------------------------------------
+ * Localized Drawing State
+ *----------------------------------------------------------------------------*/
 
 static StrokeSession s_session = {0};
 typedef struct {
@@ -23,85 +30,95 @@ typedef struct {
   int height;
 } ActiveSurface;
 
-typedef void (*PointDrawFn)(BYTE *bits, int width, int height, int x, int y,
-                            COLORREF color, int size);
-typedef void (*LineDrawFn)(BYTE *bits, int width, int height, int x1, int y1,
-                           int x2, int y2, COLORREF color, int size);
+typedef void (*PointDrawSizedFn)(BYTE *bits, int width, int height, int x, int y,
+                                 COLORREF color, int size);
+typedef void (*LineDrawSizedFn)(BYTE *bits, int width, int height, int x1, int y1,
+                                int x2, int y2, COLORREF color, int size);
 
-typedef struct {
+typedef enum {
+  STROKE_COLOR_FROM_BUTTON = 0,
+  STROKE_COLOR_BACKGROUND
+} StrokeColorSource;
+
+typedef enum {
+  STROKE_COMPOSITE_NORMAL = 0,
+  STROKE_COMPOSITE_ERASE
+} StrokeCompositeMode;
+
+struct FreehandStrokePolicy {
+  PointDrawSizedFn pfnPoint;
+  LineDrawSizedFn pfnLine;
+  int (*pfnGetSize)(void);
+  StrokeColorSource colorSource;
+  StrokeCompositeMode composite;
+  BOOL bInterpolate;
+  BOOL bSmooth;
+  BOOL bSpacing;
   int toolId;
-  PointDrawFn point;
-  LineDrawFn line;
-  int (*size)(void);
-  BOOL useSecondaryColor;
-} FreehandToolDef;
+};
+typedef struct FreehandStrokePolicy StrokePolicy;
 
-static int UnitSize(void) { return 1; }
-static int BrushSize(void) { return nBrushWidth; }
-
-static void PencilPoint(BYTE *bits, int width, int height, int x, int y,
-                        COLORREF color, int size) {
+static void DrawPencilPointSized(BYTE *bits, int width, int height, int x, int y,
+                                 COLORREF color, int size) {
   (void)size;
   DrawPrim_DrawPencilPoint(bits, width, height, x, y, color);
 }
 
-static void PencilLine(BYTE *bits, int width, int height, int x1, int y1,
-                       int x2, int y2, COLORREF color, int size) {
+static void DrawPencilLineSized(BYTE *bits, int width, int height, int x1, int y1,
+                                int x2, int y2, COLORREF color, int size) {
   (void)size;
   DrawPrim_DrawPencilLine(bits, width, height, x1, y1, x2, y2, color);
 }
 
-static void BrushPoint(BYTE *bits, int width, int height, int x, int y,
-                       COLORREF color, int size) {
+static void DrawBrushPointSized(BYTE *bits, int width, int height, int x, int y,
+                                COLORREF color, int size) {
   DrawPrim_DrawBrushPoint(bits, width, height, x, y, color, size);
 }
 
-static void BrushLine(BYTE *bits, int width, int height, int x1, int y1,
-                      int x2, int y2, COLORREF color, int size) {
+static void DrawBrushLineSized(BYTE *bits, int width, int height, int x1, int y1,
+                               int x2, int y2, COLORREF color, int size) {
   DrawPrim_DrawBrushLine(bits, width, height, x1, y1, x2, y2, color, size);
 }
 
-static void EraserPoint(BYTE *bits, int width, int height, int x, int y,
-                        COLORREF color, int size) {
+static void DrawEraserPointSized(BYTE *bits, int width, int height, int x, int y,
+                                 COLORREF color, int size) {
   DrawPrim_DrawEraserPoint(bits, width, height, x, y, color, size);
 }
 
-static const FreehandToolDef *GetToolDef(int toolId) {
-  static const FreehandToolDef pencil = {
-      TOOL_PENCIL, PencilPoint, PencilLine, UnitSize, FALSE};
-  static const FreehandToolDef brush = {
-      TOOL_BRUSH, BrushPoint, BrushLine, BrushSize, FALSE};
-  static const FreehandToolDef eraser = {
-      TOOL_ERASER, EraserPoint, NULL, BrushSize, TRUE};
+static void DrawSprayPointSized(BYTE *bits, int width, int height, int x, int y,
+                                COLORREF color, int size) {
+  DrawPrim_DrawSprayPoint(bits, width, height, x, y, color, size);
+}
 
-  switch (toolId) {
-  case TOOL_PENCIL:
-    return &pencil;
-  case TOOL_BRUSH:
-    return &brush;
-  case TOOL_ERASER:
-    return &eraser;
-  default:
-    return NULL;
+static int GetUnitSize(void) { return 1; }
+static int GetBrushWidthSize(void) { return nBrushWidth; }
+static int GetSprayRadiusSize(void) { return nSprayRadius; }
+
+static const StrokePolicy *GetStrokePolicy(int tool) {
+  static const StrokePolicy policies[] = {
+      [TOOL_PENCIL] = {DrawPencilPointSized, DrawPencilLineSized, GetUnitSize,
+                       STROKE_COLOR_FROM_BUTTON, STROKE_COMPOSITE_NORMAL, TRUE, FALSE, FALSE, TOOL_PENCIL},
+      [TOOL_BRUSH] = {DrawBrushPointSized, DrawBrushLineSized, GetBrushWidthSize,
+                      STROKE_COLOR_FROM_BUTTON, STROKE_COMPOSITE_NORMAL, TRUE, TRUE, FALSE, TOOL_BRUSH},
+      [TOOL_ERASER] = {DrawEraserPointSized, NULL, GetBrushWidthSize,
+                       STROKE_COLOR_BACKGROUND, STROKE_COMPOSITE_ERASE, TRUE, FALSE, FALSE, TOOL_ERASER},
+      [TOOL_AIRBRUSH] = {DrawSprayPointSized, NULL, GetSprayRadiusSize,
+                         STROKE_COLOR_FROM_BUTTON, STROKE_COMPOSITE_NORMAL, FALSE, FALSE, TRUE, TOOL_AIRBRUSH},
+  };
+  typedef char StrokePolicyCoverage[(TOOL_AIRBRUSH < (int)(sizeof(policies) / sizeof(policies[0]))) ? 1 : -1];
+  (void)sizeof(StrokePolicyCoverage);
+
+  if (tool < 0 || tool >= (int)(sizeof(policies) / sizeof(policies[0]))) return NULL;
+  if (!policies[tool].pfnGetSize) return NULL;
+  return &policies[tool];
+}
+
+static COLORREF ResolveStrokeColor(const StrokePolicy *policy, int button) {
+  if (policy->composite == STROKE_COMPOSITE_ERASE ||
+      policy->colorSource == STROKE_COLOR_BACKGROUND) {
+    return Palette_GetSecondaryColor();
   }
-}
-
-static COLORREF ToolColor(const FreehandToolDef *tool, int button) {
-  return tool->useSecondaryColor ? Palette_GetSecondaryColor()
-                                 : GetColorForButton(button);
-}
-
-static void MarkDirtyAroundLine(const FreehandToolDef *tool, int x1, int y1,
-                                int x2, int y2) {
-  int radius = DrawPrim_GetBrushSize(tool->size()) + 2;
-  RECT rcDirty = {min(x1, x2) - radius, min(y1, y2) - radius,
-                  max(x1, x2) + radius, max(y1, y2) + radius};
-  RECT rcScreen;
-
-  LayersMarkDirtyRect(&rcDirty);
-  RectBmpToScr(&rcDirty, &rcScreen);
-  InflateRect(&rcScreen, 2, 2);
-  InvalidateCanvasRect(&rcScreen);
+  return GetColorForButton(button);
 }
 
 static ActiveSurface ActiveSurface_Get(void) {
@@ -148,18 +165,22 @@ static void FreehandDrawInterpolated(BYTE *bits, int width, int height,
   }
 }
 
-void FreehandTool_OnMouseDown(HWND hWnd, int x, int y, int nButton,
-                              int toolId) {
-  const FreehandToolDef *tool = GetToolDef(toolId);
-  if (!tool)
-    return;
+/*------------------------------------------------------------------------------
+ * Unified Event Handlers
+ *----------------------------------------------------------------------------*/
 
+static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy *sp) {
+  int tool = sp ? sp->toolId : s_session.toolId;
   if (s_session.isDrawing && nButton != s_session.drawButton) {
     CancelFreehandDrawing();
     return;
   }
 
-  StrokeSession_Begin(&s_session, hWnd, x, y, nButton, toolId);
+  if (!sp) sp = GetStrokePolicy(tool);
+  if (!sp || !sp->pfnPoint)
+    return;
+
+  StrokeSession_Begin(&s_session, hWnd, x, y, nButton, tool);
 
   ActiveSurface surface = ActiveSurface_Get();
   if (surface.bits) {
@@ -178,16 +199,12 @@ void FreehandTool_OnMouseDown(HWND hWnd, int x, int y, int nButton,
   }
 }
 
-void FreehandTool_OnMouseMove(HWND hWnd, int x, int y, int nButton,
-                              int toolId) {
-  (void)hWnd;
-  (void)toolId;
+static void AppendPoint(HWND hWnd, int x, int y, int nButton) {
   if (!s_session.isDrawing || !StrokeSession_IsActiveButton(nButton))
     return;
 
-  const FreehandToolDef *tool = GetToolDef(s_session.toolId);
-  BYTE *bits = LayersGetActiveColorBits();
-  if (!tool || !bits)
+  const StrokePolicy *sp = GetStrokePolicy(s_session.toolId);
+  if (!sp || !sp->pfnPoint)
     return;
 
   ActiveSurface surface = ActiveSurface_Get();
@@ -208,15 +225,14 @@ void FreehandTool_OnMouseMove(HWND hWnd, int x, int y, int nButton,
     StrokeSession_MarkPixelsModified(&s_session);
   }
   StrokeSession_UpdateLastPoint(&s_session, x, y);
+  InvalidateCanvas();
 }
 
-void FreehandTool_OnMouseUp(HWND hWnd, int x, int y, int nButton,
-                            int toolId) {
+static void EndStroke(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   (void)x;
   (void)y;
   (void)nButton;
-  (void)toolId;
   StrokeSession_CommitIfNeeded(&s_session, "Draw");
   StrokeSession_End(&s_session);
 }
@@ -288,14 +304,20 @@ static void KillAirbrushTimerIfNeeded(HWND hWnd) {
 BOOL IsFreehandDrawing(void) { return s_session.isDrawing; }
 
 void FreehandTool_Deactivate(void) {
-  StrokeSession_End(&s_session);
+   if (s_session.isDrawing) {
+     KillAirbrushTimerIfNeeded(GetCanvasWindow());
+     StrokeSession_End(&s_session);
+   }
 }
 
+
 BOOL CancelFreehandDrawing(void) {
-  if (!s_session.isDrawing)
-    return FALSE;
-  StrokeSession_Cancel(&s_session);
-  return TRUE;
+   BOOL bWasDrawing = s_session.isDrawing;
+   if (s_session.isDrawing) {
+     KillAirbrushTimerIfNeeded(GetCanvasWindow());
+     StrokeSession_Cancel(&s_session);
+   }
+   return bWasDrawing;
 }
 
 int GetActiveFreehandTool(void) { return s_session.toolId; }
