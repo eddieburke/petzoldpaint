@@ -32,47 +32,100 @@ static HistoryEntry *s_currentEntry = NULL;
 static int s_historyCount = 0;
 static int s_currentPosition = -1;
 
+static void FreeHistoryEntry(HistoryEntry *entry) {
+  if (!entry)
+    return;
+  if (entry->snapshot)
+    LayersDestroySnapshot(entry->snapshot);
+  free(entry->description);
+  free(entry);
+}
+
+static HistoryEntry *CreateEntryFromCurrentState(const char *description) {
+  HistoryEntry *entry = (HistoryEntry *)calloc(1, sizeof(HistoryEntry));
+  if (!entry)
+    return NULL;
+
+  entry->snapshot = LayersCreateSnapshot();
+  if (!entry->snapshot) {
+    free(entry);
+    return NULL;
+  }
+
+  entry->activeLayerIndex = LayersGetActiveIndex();
+
+  size_t descLen = strlen(description) + 1;
+  entry->description = (char *)malloc(descLen);
+  if (!entry->description) {
+    FreeHistoryEntry(entry);
+    return NULL;
+  }
+  strncpy_s(entry->description, descLen, description, _TRUNCATE);
+  return entry;
+}
+
+static void TrimRedoBranch(void) {
+  if (!s_currentEntry || !s_currentEntry->next)
+    return;
+
+  HistoryEntry *entry = s_currentEntry->next;
+  while (entry) {
+    HistoryEntry *next = entry->next;
+    FreeHistoryEntry(entry);
+    s_historyCount--;
+    entry = next;
+  }
+  s_currentEntry->next = NULL;
+  s_historyTail = s_currentEntry;
+}
+
+static void AppendEntry(HistoryEntry *entry) {
+  if (!entry)
+    return;
+
+  if (s_historyTail) {
+    s_historyTail->next = entry;
+    entry->prev = s_historyTail;
+  } else {
+    s_historyHead = entry;
+  }
+
+  s_historyTail = entry;
+  s_currentEntry = entry;
+  s_historyCount++;
+  s_currentPosition = s_historyCount - 1;
+}
+
+static void PruneHeadIfNeeded(void) {
+  while (s_historyCount > MAX_HISTORY_ENTRIES && s_historyHead) {
+    HistoryEntry *oldHead = s_historyHead;
+    s_historyHead = oldHead->next;
+    if (s_historyHead) {
+      s_historyHead->prev = NULL;
+    } else {
+      s_historyTail = NULL;
+    }
+
+    if (s_currentEntry == oldHead)
+      s_currentEntry = s_historyHead;
+
+    FreeHistoryEntry(oldHead);
+    s_historyCount--;
+    if (s_currentPosition > 0)
+      s_currentPosition--;
+  }
+}
+
 void HistoryInit(void) {
   HistoryDestroy();
-
-  HistoryEntry *initial = (HistoryEntry *)calloc(1, sizeof(HistoryEntry));
-  if (!initial)
-    return;
-
-  initial->snapshot = LayersCreateSnapshot();
-  if (!initial->snapshot) {
-    free(initial);
-    return;
-  }
-
-  initial->activeLayerIndex = LayersGetActiveIndex();
-
-  size_t descLen = strlen("Initial State") + 1;
-  char *desc = (char *)malloc(descLen);
-  if (!desc) {
-    LayersDestroySnapshot(initial->snapshot);
-    free(initial);
-    return;
-  }
-  strncpy_s(desc, descLen, "Initial State", _TRUNCATE);
-  initial->description = desc;
-
-  s_historyHead = initial;
-  s_historyTail = initial;
-  s_currentEntry = initial;
-  s_historyCount = 1;
-  s_currentPosition = 0;
+  AppendEntry(CreateEntryFromCurrentState("Initial State"));
 }
 
 void HistoryDestroy(void) {
   HistoryEntry *entry = s_historyHead;
   while (entry) {
     HistoryEntry *next = entry->next;
-    if (entry->snapshot)
-      LayersDestroySnapshot(entry->snapshot);
-    if (entry->description)
-      free(entry->description);
-    free(entry);
+    FreeHistoryEntry(entry);
     entry = next;
   }
   s_historyHead = NULL;
@@ -86,95 +139,9 @@ void HistoryPush(const char *description) {
   if (!description)
     description = "Action";
 
-  // Remove all entries after current if we're not at the end
-  if (s_currentEntry && s_currentEntry->next) {
-    int deletedCount = 0;
-    HistoryEntry *entry = s_currentEntry->next;
-    while (entry) {
-      HistoryEntry *next = entry->next;
-      if (entry->snapshot)
-        LayersDestroySnapshot(entry->snapshot);
-      if (entry->description)
-        free(entry->description);
-      free(entry);
-      deletedCount++;
-      entry = next;
-    }
-    s_currentEntry->next = NULL;
-    s_historyTail = s_currentEntry;
-    s_historyCount -= deletedCount;
-  }
-
-  // Create new entry
-  HistoryEntry *newEntry = (HistoryEntry *)calloc(1, sizeof(HistoryEntry));
-  if (!newEntry)
-    return;
-
-  newEntry->snapshot = LayersCreateSnapshot();
-  if (!newEntry->snapshot) {
-    free(newEntry);
-    return;
-  }
-
-  newEntry->activeLayerIndex = LayersGetActiveIndex();
-
-  size_t descLen = strlen(description) + 1;
-  newEntry->description = (char *)malloc(descLen);
-  if (!newEntry->description) {
-    LayersDestroySnapshot(newEntry->snapshot);
-    free(newEntry);
-    return;
-  }
-  strncpy_s(newEntry->description, descLen, description, _TRUNCATE);
-
-  // Link into list
-  if (s_historyTail) {
-    s_historyTail->next = newEntry;
-    newEntry->prev = s_historyTail;
-    s_historyTail = newEntry;
-  } else {
-    s_historyHead = newEntry;
-    s_historyTail = newEntry;
-  }
-
-  s_currentEntry = newEntry;
-  s_historyCount++;
-  s_currentPosition = s_historyCount - 1;
-
-    // Prune history if it exceeds the maximum allowed entries
-    int prunedCount = 0;
-    while (s_historyCount > MAX_HISTORY_ENTRIES && s_historyHead) {
-        HistoryEntry *oldStart = s_historyHead;
-        s_historyHead = oldStart->next;
-        if (s_historyHead) {
-            s_historyHead->prev = NULL;
-        }
-        
-        if (oldStart->snapshot)
-            LayersDestroySnapshot(oldStart->snapshot);
-        if (oldStart->description)
-            free(oldStart->description);
-        free(oldStart);
-        
-        s_historyCount--;
-        prunedCount++;
-    }
-    
-    // Adjust current position based on how many entries were pruned from the head
-    if (s_currentPosition >= prunedCount) {
-        s_currentPosition -= prunedCount;
-    } else {
-        // If we've pruned past the current position, reset to beginning
-        s_currentPosition = 0;
-    }
-    
-    // Ensure current position is valid
-    if (s_currentPosition >= s_historyCount) {
-        s_currentPosition = s_historyCount - 1;
-    }
-    if (s_currentPosition < 0) {
-        s_currentPosition = 0;
-    }
+  TrimRedoBranch();
+  AppendEntry(CreateEntryFromCurrentState(description));
+  PruneHeadIfNeeded();
 
   // Notify panels of history change
   HistoryNotifyPanels();
