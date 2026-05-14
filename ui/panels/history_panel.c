@@ -29,8 +29,12 @@ static void RefreshHistoryList(void) {
 
   int count = HistoryGetCount();
   int currentPos = HistoryGetPosition();
+  int maxTextPx = 0;
 
+  SendMessage(hHistoryList, WM_SETREDRAW, FALSE, 0);
   SendMessage(hHistoryList, LB_RESETCONTENT, 0, 0);
+
+  HDC hdc = GetDC(hHistoryList);
 
   for (int i = 0; i < count; i++) {
     char desc[128];
@@ -48,7 +52,21 @@ static void RefreshHistoryList(void) {
     }
 
     SendMessage(hHistoryList, LB_ADDSTRING, 0, (LPARAM)display);
+    if (hdc) {
+      SIZE sz;
+      if (GetTextExtentPoint32(hdc, display, lstrlen(display), &sz) &&
+          sz.cx > maxTextPx) {
+        maxTextPx = sz.cx;
+      }
+    }
   }
+
+  if (hdc)
+    ReleaseDC(hHistoryList, hdc);
+
+  SendMessage(hHistoryList, LB_SETHORIZONTALEXTENT, maxTextPx + 16, 0);
+  SendMessage(hHistoryList, WM_SETREDRAW, TRUE, 0);
+  InvalidateRect(hHistoryList, NULL, TRUE);
 
   // Select current position
   if (currentPos >= 0 && currentPos < count) {
@@ -113,10 +131,11 @@ static LRESULT CALLBACK HistoryPanelWndProc(HWND hwnd, UINT message,
       const char *text;
       DWORD style;
       int id;
-    } controls[] = {{&hGroupHistory, 0, "BUTTON", "History",
+    } controls[] = {{&hGroupHistory, 0, "BUTTON", "History (Last 100)",
                      WS_CHILD | WS_VISIBLE | BS_GROUPBOX, IDC_GROUP_HISTORY},
                     {&hHistoryList, WS_EX_CLIENTEDGE, "LISTBOX", "",
-                     WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_VSCROLL,
+                     WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_VSCROLL |
+                         WS_HSCROLL | LBS_NOINTEGRALHEIGHT,
                      IDC_HISTORY_LIST}};
 
     hUiFont = CreateSegoiUIFont(-11, FW_NORMAL);

@@ -11,7 +11,7 @@ A GDI-based painting application for Windows, inspired by classic paint programs
 - Image transforms (scale, skew, rotate, flip, invert)
 - Magnifier zoom (12.5% - 3200%)
 - Color palette with customizable colors
-- Undo/redo history
+- Undo/redo history (stores up to 100 most recent actions)
 - Tool presets
 - Drag-and-drop file opening
 - Status bar, color box, tool options panels
