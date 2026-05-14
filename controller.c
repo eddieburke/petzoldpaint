@@ -297,12 +297,17 @@ void Controller_HandleMouseMove(HWND hwnd, int screenX, int screenY, int wParam)
         StatusBarSetColor(c);
     }
 
-    if (xBitmap < 0) xBitmap = 0;
-    if (xBitmap >= Canvas_GetWidth()) xBitmap = Canvas_GetWidth() - 1;
-    if (yBitmap < 0) yBitmap = 0;
-    if (yBitmap >= Canvas_GetHeight()) yBitmap = Canvas_GetHeight() - 1;
+    int xTool = xBitmap;
+    int yTool = yBitmap;
 
-    ToolHandlePointerEvent(TOOL_POINTER_MOVE, hwnd, xBitmap, yBitmap, wParam);
+    if (!IsFreehandDrawing()) {
+        if (xTool < 0) xTool = 0;
+        if (xTool >= Canvas_GetWidth()) xTool = Canvas_GetWidth() - 1;
+        if (yTool < 0) yTool = 0;
+        if (yTool >= Canvas_GetHeight()) yTool = Canvas_GetHeight() - 1;
+    }
+
+    ToolHandlePointerEvent(TOOL_POINTER_MOVE, hwnd, xTool, yTool, wParam);
 }
 
 /*------------------------------------------------------------
@@ -335,12 +340,17 @@ void Controller_HandleMouseUp(HWND hwnd, int screenX, int screenY, int btn) {
     int xBitmap, yBitmap;
     CoordScrToBmp(screenX, screenY, &xBitmap, &yBitmap);
 
-    if (xBitmap < 0) xBitmap = 0;
-    if (xBitmap >= Canvas_GetWidth()) xBitmap = Canvas_GetWidth() - 1;
-    if (yBitmap < 0) yBitmap = 0;
-    if (yBitmap >= Canvas_GetHeight()) yBitmap = Canvas_GetHeight() - 1;
+    int xTool = xBitmap;
+    int yTool = yBitmap;
 
-    ToolHandlePointerEvent(TOOL_POINTER_UP, hwnd, xBitmap, yBitmap, btn);
+    if (!IsFreehandDrawing()) {
+        if (xTool < 0) xTool = 0;
+        if (xTool >= Canvas_GetWidth()) xTool = Canvas_GetWidth() - 1;
+        if (yTool < 0) yTool = 0;
+        if (yTool >= Canvas_GetHeight()) yTool = Canvas_GetHeight() - 1;
+    }
+
+    ToolHandlePointerEvent(TOOL_POINTER_UP, hwnd, xTool, yTool, btn);
 }
 
 /*------------------------------------------------------------
