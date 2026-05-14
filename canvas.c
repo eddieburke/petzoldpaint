@@ -121,14 +121,15 @@ BOOL CreateCanvas(int width, int height) {
   return TRUE;
 }
 
-void ResizeCanvas(int nNewWidth, int nNewHeight) {
+BOOL ResizeCanvas(int nNewWidth, int nNewHeight) {
   if (nNewWidth <= 0 || nNewHeight <= 0)
-    return;
+    return FALSE;
 
-  LayersResize(nNewWidth, nNewHeight);
+  if (!LayersResize(nNewWidth, nNewHeight))
+    return FALSE;
   Canvas_SetWidth(nNewWidth);
   Canvas_SetHeight(nNewHeight);
-  HistoryPush("Resize Canvas");
+  return TRUE;
 }
 
 void DestroyCanvas(void) {

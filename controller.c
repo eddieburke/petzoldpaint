@@ -319,12 +319,13 @@ void Controller_HandleMouseUp(HWND hwnd, int screenX, int screenY, int btn) {
                 "Resize Canvas: %dx%d -> %dx%d",
                 Canvas_GetWidth(), Canvas_GetHeight(),
                 s_resize.newW, s_resize.newH);
-            ResizeCanvas(s_resize.newW, s_resize.newH);
-            HistoryPush(desc);
-            Controller_UpdateScrollbars(hwnd);
-            InvalidateWindow(hwnd);
-            SetDocumentDirty();
-            LayersPanelSync();
+            if (ResizeCanvas(s_resize.newW, s_resize.newH)) {
+                HistoryPush(desc);
+                Controller_UpdateScrollbars(hwnd);
+                InvalidateWindow(hwnd);
+                SetDocumentDirty();
+                LayersPanelSync();
+            }
         }
         s_resize.active = FALSE;
         return;

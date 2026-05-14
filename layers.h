@@ -15,7 +15,7 @@ typedef enum {
 
 BOOL LayersInit(int width, int height);
 void LayersDestroy(void);
-void LayersResize(int newWidth, int newHeight);
+BOOL LayersResize(int newWidth, int newHeight);
 
 int LayersGetCount(void);
 int LayersGetActiveIndex(void);

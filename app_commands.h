@@ -13,5 +13,6 @@ void AppCommands_OnInitMenuPopup(HWND hwnd, WPARAM wParam, LPARAM lParam);
 // Document Lifecycle
 void DocumentNew(HWND hwnd);
 void DocumentOpen(HWND hwnd, const char *path);
+BOOL DocumentConfirmDiscardOrSave(HWND hwnd);
 
 #endif /* APP_COMMANDS_H */

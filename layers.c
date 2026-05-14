@@ -327,11 +327,24 @@ void LayersDestroy(void) {
 
 }
 
-void LayersResize(int newWidth, int newHeight) {
+BOOL LayersResize(int newWidth, int newHeight) {
   if (newWidth <= 0 || newHeight <= 0)
-    return;
+    return FALSE;
   if (s_layerCount <= 0)
-    return;
+    return FALSE;
+
+  BYTE **newBits = (BYTE **)calloc((size_t)s_layerCount, sizeof(BYTE *));
+  HBITMAP *newBmps = (HBITMAP *)calloc((size_t)s_layerCount, sizeof(HBITMAP));
+  if (!newBits || !newBmps) {
+    free(newBits);
+    free(newBmps);
+    return FALSE;
+  }
+
+  int srcW = Canvas_GetWidth();
+  int srcH = Canvas_GetHeight();
+  int copyW = (srcW < newWidth) ? srcW : newWidth;
+  int copyH = (srcH < newHeight) ? srcH : newHeight;
 
   for (int i = 0; i < s_layerCount; i++) {
     Layer *layer = &s_layers[i];
@@ -340,7 +353,13 @@ void LayersResize(int newWidth, int newHeight) {
     if (!hNewColor || !newColorBits) {
       if (hNewColor)
         DeleteObject(hNewColor);
-      return;
+      for (int j = 0; j < i; j++) {
+        if (newBmps[j])
+          DeleteObject(newBmps[j]);
+      }
+      free(newBits);
+      free(newBmps);
+      return FALSE;
     }
 
     // Fill with transparent white (alpha=0)
@@ -348,35 +367,35 @@ void LayersResize(int newWidth, int newHeight) {
 
     // Copy pixels with resizing (crop/pad)
     // Assume top-left alignment (0,0 to 0,0)
-    int srcW = Canvas_GetWidth();
-    int srcH = Canvas_GetHeight();
-    int dstW = newWidth;
-    int dstH = newHeight;
-
-    int copyW = (srcW < dstW) ? srcW : dstW;
-    int copyH = (srcH < dstH) ? srcH : dstH;
-
     DWORD *pSrcBits = (DWORD *)layer->colorBits;
     DWORD *pDstBits = (DWORD *)newColorBits;
 
     // Copy row by row
     for (int y = 0; y < copyH; y++) {
       // Check bounds just in case
-      if (y >= srcH || y >= dstH)
+      if (y >= srcH || y >= newHeight)
         continue;
 
       // Source and destination pointers for this row
       DWORD *rowSrc = pSrcBits + y * srcW;
-      DWORD *rowDst = pDstBits + y * dstW;
+      DWORD *rowDst = pDstBits + y * newWidth;
 
       // Memcpy the visible portion of the row
       memcpy(rowDst, rowSrc, copyW * 4);
     }
 
-    ClearLayerBitmaps(layer);
-    layer->colorBmp = hNewColor;
-    layer->colorBits = newColorBits;
+    newBmps[i] = hNewColor;
+    newBits[i] = newColorBits;
   }
+
+  for (int i = 0; i < s_layerCount; i++) {
+    Layer *layer = &s_layers[i];
+    ClearLayerBitmaps(layer);
+    layer->colorBmp = newBmps[i];
+    layer->colorBits = newBits[i];
+  }
+  free(newBits);
+  free(newBmps);
 
   /* Invalidate draft layer on resize — tools must re-draw if active */
   if (s_draftBmp) {
@@ -387,10 +406,8 @@ void LayersResize(int newWidth, int newHeight) {
   s_draftW = 0;
   s_draftH = 0;
 
-  Canvas_SetWidth(newWidth);
-  Canvas_SetHeight(newHeight);
-  
   s_compositeDirty = TRUE;
+  return TRUE;
 }
 
 int LayersGetCount(void) { return s_layerCount; }
@@ -701,12 +718,12 @@ COLORREF LayersSampleCompositeColor(int x, int y, COLORREF bgColor) {
   if (x < 0 || y < 0 || x >= Canvas_GetWidth() || y >= Canvas_GetHeight())
     return CLR_INVALID;
   EnsureCompositeBuffer(Canvas_GetWidth(), Canvas_GetHeight());
-  if (s_compositeDirty || s_lastCheckerboard || s_lastBgColor != Palette_GetSecondaryColor()) {
+  if (s_compositeDirty || s_lastCheckerboard || s_lastBgColor != bgColor) {
     CompositeLayersToBuffer(s_compositeBits, Canvas_GetWidth(), Canvas_GetHeight(), FALSE,
-                            Palette_GetSecondaryColor());
+                            bgColor);
     s_compositeDirty = FALSE;
     s_lastCheckerboard = FALSE;
-    s_lastBgColor = Palette_GetSecondaryColor();
+    s_lastBgColor = bgColor;
   }
   BYTE *px = s_compositeBits + (y * Canvas_GetWidth() + x) * 4;
   return RGB(px[2], px[1], px[0]);
