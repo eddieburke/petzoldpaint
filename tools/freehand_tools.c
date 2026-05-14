@@ -107,10 +107,6 @@ static const StrokePolicy *GetStrokePolicy(int tool) {
   return &policies[tool];
 }
 
-const FreehandStrokePolicy *FreehandGetPolicyForTool(int tool) {
-  return (const FreehandStrokePolicy *)GetStrokePolicy(tool);
-}
-
 static COLORREF ResolveStrokeColor(const StrokePolicy *policy, int button) {
   if (policy->composite == STROKE_COMPOSITE_ERASE ||
       policy->colorSource == STROKE_COLOR_BACKGROUND) {
@@ -150,8 +146,7 @@ static void FreehandDrawInterpolated(BYTE *bits, int width, int height,
  * Unified Event Handlers
  *----------------------------------------------------------------------------*/
 
-void BeginStroke(HWND hWnd, int x, int y, int nButton, const FreehandStrokePolicy *policy) {
-  const StrokePolicy *sp = (const StrokePolicy *)policy;
+static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy *sp) {
   int tool = sp ? sp->toolId : s_activeFreehandTool;
   if (s_bDrawing && nButton != s_nDrawButton) {
     CancelFreehandDrawing();
@@ -192,7 +187,7 @@ void BeginStroke(HWND hWnd, int x, int y, int nButton, const FreehandStrokePolic
   }
 }
 
-void AppendPoint(HWND hWnd, int x, int y, int nButton) {
+static void AppendPoint(HWND hWnd, int x, int y, int nButton) {
   int tool = s_activeFreehandTool;
   if (!s_bDrawing || !(nButton & (MK_LBUTTON | MK_RBUTTON)))
     return;
@@ -231,7 +226,7 @@ void AppendPoint(HWND hWnd, int x, int y, int nButton) {
   InvalidateCanvas();
 }
 
-void EndStroke(HWND hWnd, int x, int y, int nButton) {
+static void EndStroke(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd; (void)x; (void)y; (void)nButton;
   if (s_bDrawing && s_bPixelsModified) {
     HistoryPushToolActionById(s_activeFreehandTool, "Draw");
@@ -247,8 +242,23 @@ void EndStroke(HWND hWnd, int x, int y, int nButton) {
  * Airbrush Tool Public API
  *----------------------------------------------------------------------------*/
 
+
+void FreehandTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
+  BeginStroke(hWnd, x, y, nButton, GetStrokePolicy(toolId));
+}
+
+void FreehandTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
+  (void)toolId;
+  AppendPoint(hWnd, x, y, nButton);
+}
+
+void FreehandTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
+  (void)toolId;
+  EndStroke(hWnd, x, y, nButton);
+}
+
 void AirbrushToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  BeginStroke(hWnd, x, y, nButton, FreehandGetPolicyForTool(TOOL_AIRBRUSH));
+  BeginStroke(hWnd, x, y, nButton, GetStrokePolicy(TOOL_AIRBRUSH));
   SetTimer(hWnd, 101, 30, NULL);
 }
 
@@ -314,5 +324,3 @@ BOOL CancelFreehandDrawing(void) {
 
 int GetActiveFreehandTool(void) { return s_activeFreehandTool; }
 
-
-void CancelStroke(int reason) { (void)reason; CancelFreehandDrawing(); }

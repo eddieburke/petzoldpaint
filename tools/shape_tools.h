@@ -7,33 +7,9 @@
  * Line Tool
  *----------------------------------------------------------------------------*/
 
-void LineToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void LineToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void LineToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
-
-/*------------------------------------------------------------------------------
- * Rectangle Tool
- *----------------------------------------------------------------------------*/
-
-void RectToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void RectToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void RectToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
-
-/*------------------------------------------------------------------------------
- * Ellipse Tool
- *----------------------------------------------------------------------------*/
-
-void EllipseToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void EllipseToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void EllipseToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
-
-/*------------------------------------------------------------------------------
- * Rounded Rectangle Tool
- *----------------------------------------------------------------------------*/
-
-void RoundRectToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void RoundRectToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void RoundRectToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
+void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId);
+void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId);
+void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId);
 
 /*------------------------------------------------------------------------------
  * Shared State / Lifecycle
