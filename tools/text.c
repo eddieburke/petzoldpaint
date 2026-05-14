@@ -7,6 +7,7 @@
  *----------------------------------------------------------------------------*/
 
 #include "text_tool.h"
+#include "capture_guard.h"
 #include "text_font.h"
 #include "selection_tool.h"
 #include "text_toolbar.h"
@@ -303,16 +304,16 @@ static void OnTextFontChanged(void) {
 
 void TextToolOnMouseDown(HWND hwnd, int x, int y, int btn) {
     if (s_text.mode == TEXT_NONE) {
-        s_text.ptDragStart = (POINT){x, y}; s_text.rcBox = (RECT){x, y, x, y}; s_text.mode = TEXT_DRAWING; SetCapture(hwnd);
+        s_text.ptDragStart = (POINT){x, y}; s_text.rcBox = (RECT){x, y, x, y}; s_text.mode = TEXT_DRAWING; CaptureBegin(hwnd, TOOL_TEXT, btn);
     } else if (s_text.mode == TEXT_EDITING) {
         int h = Overlay_HitTestBoxHandles(&s_text.rcBox, x, y);
-        if (h >= 0) { s_text.nHandle = h; s_text.ptDragStart = (POINT){x, y}; s_text.rcBoxStart = s_text.rcBox; s_text.mode = TEXT_RESIZING; SetCapture(hwnd); }
+        if (h >= 0) { s_text.nHandle = h; s_text.ptDragStart = (POINT){x, y}; s_text.rcBoxStart = s_text.rcBox; s_text.mode = TEXT_RESIZING; CaptureBegin(hwnd, TOOL_TEXT, btn); }
         else if (!PtInRect(&s_text.rcBox, (POINT){x, y})) CommitText(hwnd);
     }
 }
 
 void TextToolOnMouseMove(HWND hwnd, int x, int y, int btn) {
-    if (GetCapture() != hwnd) return;
+    if (!IsCapturedByTool(TOOL_TEXT)) return;
     if (s_text.mode == TEXT_DRAWING) { 
         s_text.rcBox.left = min(s_text.ptDragStart.x, x);
         s_text.rcBox.top = min(s_text.ptDragStart.y, y);
@@ -334,7 +335,7 @@ void TextToolOnMouseMove(HWND hwnd, int x, int y, int btn) {
 }
 
 void TextToolOnMouseUp(HWND hwnd, int x, int y, int btn) {
-    if (GetCapture() == hwnd) ReleaseCapture();
+    CaptureEnd(hwnd, TOOL_TEXT, CAPTURE_END_NORMAL);
     if (s_text.mode == TEXT_DRAWING) {
         s_text.rcBox.left = min(s_text.ptDragStart.x, x);
         s_text.rcBox.top = min(s_text.ptDragStart.y, y);

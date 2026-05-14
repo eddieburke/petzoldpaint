@@ -1,6 +1,7 @@
 #include "stroke_session.h"
 #include "../helpers.h"
 #include "../history.h"
+#include "capture_guard.h"
 
 void StrokeSession_Begin(StrokeSession *s, HWND hWnd, int x, int y, int nButton, int toolId) {
   if (!s) return;
@@ -10,7 +11,7 @@ void StrokeSession_Begin(StrokeSession *s, HWND hWnd, int x, int y, int nButton,
   s->toolId = toolId;
   s->lastPoint.x = x;
   s->lastPoint.y = y;
-  SetCapture(hWnd);
+  CaptureBegin(hWnd, toolId, nButton);
 }
 
 void StrokeSession_UpdateLastPoint(StrokeSession *s, int x, int y) {
@@ -35,17 +36,20 @@ void StrokeSession_CommitIfNeeded(StrokeSession *s, const char *actionName) {
 void StrokeSession_End(StrokeSession *s) {
   if (!s || !s->isDrawing) return;
   s->isDrawing = FALSE;
-  ReleaseCapture();
+  CaptureEnd(NULL, s->toolId, CAPTURE_END_NORMAL);
   SetDocumentDirty();
 }
 
 void StrokeSession_Cancel(StrokeSession *s) {
   if (!s || !s->isDrawing) return;
   s->isDrawing = FALSE;
-  ReleaseCapture();
+  CaptureEnd(NULL, s->toolId, CAPTURE_END_CANCEL);
   InvalidateCanvas();
 }
 
 void StrokeSession_OnCaptureLost(StrokeSession *s, const char *actionName) {
+  if (!s || !s->isDrawing) return;
+  CaptureOnLost(NULL, s->toolId);
   StrokeSession_CommitIfNeeded(s, actionName);
+  s->isDrawing = FALSE;
 }

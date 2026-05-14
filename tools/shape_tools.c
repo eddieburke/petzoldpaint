@@ -28,6 +28,7 @@
 #include "../ui/widgets/colorbox.h"
 #include "tool_options/tool_options.h"
 #include "palette.h"
+#include "capture_guard.h"
 
 /*------------------------------------------------------------------------------
  * Tool State Definitions
@@ -160,9 +161,10 @@ static void ResetShapeState(void) {
 /* Called when tool is deactivated (tool switch, layer op, etc.) */
 static void ShapeTool_OnDeactivate(void) {
   if (s_Shape.state != SHAPE_STATE_IDLE) {
+    int toolId = s_Shape.activeToolId;
     LayersClearDraft();
     ResetShapeState();
-    ReleaseCapture();
+    CaptureEnd(GetCanvasWindow(), toolId, CAPTURE_END_DEACTIVATE);
     InvalidateCanvas();
   }
 }
@@ -216,7 +218,7 @@ static void OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
   s_Shape.ptStart.y = y;
   s_Shape.ptEnd = s_Shape.ptStart;
 
-  SetCapture(hWnd);
+  CaptureBegin(hWnd, toolId, nButton);
 }
 
 static void OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
@@ -242,9 +244,9 @@ static void OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
 static void OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
   if (s_Shape.state == SHAPE_STATE_IDLE)
     return;
-  if (GetCapture() == hWnd) {
+  if (IsCapturedByTool(s_Shape.activeToolId)) {
     bSuspendingCapture = TRUE;
-    ReleaseCapture();
+    CaptureEnd(hWnd, s_Shape.activeToolId, CAPTURE_END_NORMAL);
     bSuspendingCapture = FALSE;
   }
 

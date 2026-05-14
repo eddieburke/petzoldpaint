@@ -17,6 +17,7 @@
 #include "../ui/widgets/colorbox.h"
 #include "drawing_primitives.h"
 #include "tool_options/tool_options.h"
+#include "capture_guard.h"
 #include <stdlib.h>
 
 /*------------------------------------------------------------------------------
@@ -168,7 +169,7 @@ void BeginStroke(HWND hWnd, int x, int y, int nButton, const FreehandStrokePolic
   s_ptLast.x = x;
   s_ptLast.y = y;
   s_activeFreehandTool = tool;
-  SetCapture(hWnd);
+  CaptureBegin(hWnd, tool, nButton);
 
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
@@ -238,7 +239,7 @@ void EndStroke(HWND hWnd, int x, int y, int nButton) {
   }
   if (s_bDrawing) {
     s_bDrawing = FALSE;
-    ReleaseCapture();
+    CaptureEnd(hWnd, s_activeFreehandTool, CAPTURE_END_NORMAL);
     SetDocumentDirty();
   }
 }
@@ -289,7 +290,7 @@ void FreehandTool_Deactivate(void) {
    if (s_bDrawing) {
      KillAirbrushTimerIfNeeded(GetCanvasWindow());
      s_bDrawing = FALSE;
-     ReleaseCapture();
+     CaptureEnd(GetCanvasWindow(), s_activeFreehandTool, CAPTURE_END_DEACTIVATE);
      SetDocumentDirty();
    }
 }
@@ -299,6 +300,8 @@ void FreehandTool_OnCaptureLost(void) {
    if (s_bDrawing && s_bPixelsModified) {
      HistoryPushToolActionById(s_activeFreehandTool, "Draw");
    }
+   CaptureOnLost(GetCanvasWindow(), s_activeFreehandTool);
+   s_bDrawing = FALSE;
 }
 
 BOOL CancelFreehandDrawing(void) {
@@ -306,7 +309,7 @@ BOOL CancelFreehandDrawing(void) {
    if (s_bDrawing) {
      KillAirbrushTimerIfNeeded(GetCanvasWindow());
      s_bDrawing = FALSE;
-     ReleaseCapture();
+     CaptureEnd(GetCanvasWindow(), s_activeFreehandTool, CAPTURE_END_CANCEL);
      InvalidateCanvas();
    }
    return bWasDrawing;
