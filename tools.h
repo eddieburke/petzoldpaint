@@ -3,10 +3,26 @@
 #include "peztold_core.h"
 #include "tools/selection_tool.h"
 
-void ToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void ToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void ToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
-void ToolOnDoubleClick(HWND hWnd, int x, int y, int nButton);
+typedef enum ToolPointerEventType {
+  TOOL_POINTER_DOWN = 0,
+  TOOL_POINTER_MOVE,
+  TOOL_POINTER_UP,
+  TOOL_POINTER_DOUBLE_CLICK
+} ToolPointerEventType;
+
+typedef enum ToolLifecycleEventType {
+  TOOL_LIFECYCLE_CANCEL = 0,
+  TOOL_LIFECYCLE_CANCEL_SKIP_SELECTION,
+  TOOL_LIFECYCLE_CAPTURE_LOST,
+  TOOL_LIFECYCLE_VIEWPORT_CHANGED,
+  TOOL_LIFECYCLE_RESET_FOR_NEW_DOCUMENT,
+  TOOL_LIFECYCLE_TIMER_TICK
+} ToolLifecycleEventType;
+
+void ToolHandlePointerEvent(ToolPointerEventType type, HWND hWnd, int x, int y,
+                            int nButton);
+void ToolHandleLifecycleEvent(ToolLifecycleEventType type, HWND hWnd);
+
 void ToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
 void SetCurrentTool(int nTool);
 int GetCurrentTool(void);
@@ -15,10 +31,7 @@ void Tool_FinalizeCurrentState(void);
 void InitializeTools(void);
 void CommitCurrentSelection(void);
 void ClearSelection(void);
-void ToolTriggerAirbrush(HWND hWnd);
 void ToolCancel(void);
 void ToolCancelSkipSelection(void);
-void ToolOnCaptureLost(void);
-void ToolOnViewportChanged(HWND hWnd);
 void ResetToolStateForNewDocument(void);
 #endif

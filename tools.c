@@ -14,7 +14,6 @@
 #include "layers.h"
 #include "tools.h"
 
-
 // Tool implementations
 #include "tools/bezier_tool.h"
 #include "tools/crayon_tool.h"
@@ -45,9 +44,7 @@ int currentTool = TOOL_PENCIL;
    pressing modifier keys during active mouse operations
   ------------------------------------------------------------*/
 
-static int nActiveToolAtMouseDown =
-    -1; // Tool that was active when mouse was pressed
-static HWND hCapturedWindow = NULL; // Window that has mouse capture
+static struct { int activeToolAtMouseDown; HWND capturedWindow; } s_runtime = {-1, NULL};
 
 /*------------------------------------------------------------
    Tool VTable Type Definitions
@@ -76,6 +73,7 @@ typedef struct {
   ToolViewportChangedFn onViewportChanged;
   BOOL (*isBusy)(void);
   void (*onCaptureLost)(void);
+  void (*onTimerTick)(void);
 } ToolVTable;
 
 static const ToolVTable *GetToolVTable(int toolId);
@@ -86,36 +84,29 @@ static const ToolVTable *GetToolVTable(int toolId);
 
 // Resolve tool for mouse down - allows temporary tool switch
 static int ResolveActiveToolForMouseDown(void) {
-  // Only allow Alt for eyedropper if no tool has capture
-  if (IsAltDown() && GetCapture() == NULL) {
-    return TOOL_PICK;
-  }
-  return Tool_GetCurrent();
+  return ((IsAltDown() && GetCapture() == NULL) ? TOOL_PICK : Tool_GetCurrent());
 }
 
 // Resolve tool for mouse move/up - respects captured state
 static int ResolveActiveToolForMoveUp(HWND hWnd) {
-  // If we have an active tool from mouse down, use that regardless of modifier
-  // keys. This prevents Alt-key eyedropper from interfering with active mouse
-  // operations.
-  if (hWnd && GetCapture() == hWnd && nActiveToolAtMouseDown >= 0) {
-    return nActiveToolAtMouseDown;
-  }
-
-  // If no capture, allow Alt to temporarily switch to Pick only when no tool
-  // is in a drawing/pending state. Otherwise we would switch mid-stroke.
-  if (IsAltDown()) {
+  int resolved = ((hWnd && GetCapture()==hWnd && s_runtime.activeToolAtMouseDown>=0) ? s_runtime.activeToolAtMouseDown : (IsAltDown() ? TOOL_PICK : Tool_GetCurrent()));
+  if (resolved == TOOL_PICK && IsAltDown()) {
     const ToolVTable *tool = GetToolVTable(Tool_GetCurrent());
     if (tool && tool->isBusy && tool->isBusy()) {
       return Tool_GetCurrent();
     }
-    return TOOL_PICK;
   }
-
-  return Tool_GetCurrent();
+  return resolved;
 }
 
 
+
+static void ToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
+static void ToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
+static void ToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
+static void ToolOnDoubleClick(HWND hWnd, int x, int y, int nButton);
+static void ToolOnCaptureLost(void);
+static void ToolOnViewportChanged(HWND hWnd);
 
 /*------------------------------------------------------------
    Tool VTable Registry
@@ -156,7 +147,7 @@ static const ToolVTable s_ToolTable[] = {
     [TOOL_AIRBRUSH] = {AirbrushToolOnMouseDown, AirbrushToolOnMouseMove,
                        AirbrushToolOnMouseUp, NULL, NULL, NULL,
                        FreehandTool_Deactivate,
-                       CancelFreehandDrawing, NULL, IsFreehandDrawing, FreehandTool_OnCaptureLost},
+                       CancelFreehandDrawing, NULL, IsFreehandDrawing, FreehandTool_OnCaptureLost, FreehandTool_OnTimerTick},
     [TOOL_TEXT] = {TextToolOnMouseDown, TextToolOnMouseMove, TextToolOnMouseUp,
                    NULL, TextToolDrawOverlay, NULL,
                    TextTool_Deactivate, CancelText, TextToolOnViewportChanged},
@@ -214,9 +205,8 @@ static const ToolVTable *GetToolVTable(int toolId) {
 void ToolCancel(void) {
   const ToolVTable *tool = GetToolVTable(Tool_GetCurrent());
 
-  HWND hCap = hCapturedWindow;
-  hCapturedWindow = NULL;
-  nActiveToolAtMouseDown = -1;
+  HWND hCap = s_runtime.capturedWindow;
+  s_runtime.activeToolAtMouseDown = -1; s_runtime.capturedWindow = NULL;
 
   if (tool && tool->onCancel) {
     tool->onCancel();
@@ -234,14 +224,12 @@ void ToolCancelSkipSelection(void) {
   HWND hc = GetCanvasWindow();
 
   if ((t == TOOL_SELECT || t == TOOL_FREEFORM) && SelectionIsDragging() && hc) {
-    hCapturedWindow = NULL;
-    nActiveToolAtMouseDown = -1;
+    s_runtime.activeToolAtMouseDown = -1; s_runtime.capturedWindow = NULL;
     SelectionToolOnMouseUp(hc, 0, 0, 0);
   }
 
-  HWND hCap = hCapturedWindow;
-  hCapturedWindow = NULL;
-  nActiveToolAtMouseDown = -1;
+  HWND hCap = s_runtime.capturedWindow;
+  s_runtime.activeToolAtMouseDown = -1; s_runtime.capturedWindow = NULL;
 
   if (t != TOOL_SELECT && t != TOOL_FREEFORM) {
     const ToolVTable *tool = GetToolVTable(t);
@@ -257,15 +245,14 @@ void ToolCancelSkipSelection(void) {
   InvalidateCanvas();
 }
 
-void ToolOnCaptureLost(void) {
+static void ToolOnCaptureLost(void) {
   // If hCapturedWindow is NULL, it means we voluntarily released capture in ToolOnMouseUp.
   // In this case, we don't want to cancel the tool's state (e.g. selection/text box).
-  if (hCapturedWindow == NULL) {
+  if (s_runtime.capturedWindow == NULL) {
     return;
   }
 
-  nActiveToolAtMouseDown = -1;
-  hCapturedWindow = NULL;
+  s_runtime.activeToolAtMouseDown = -1; s_runtime.capturedWindow = NULL;
 
   const ToolVTable *tool = GetToolVTable(Tool_GetCurrent());
   if (tool && tool->onCaptureLost) {
@@ -280,6 +267,53 @@ void ResetToolStateForNewDocument(void) {
   ToolCancel();
 }
 
+void ToolHandlePointerEvent(ToolPointerEventType type, HWND hWnd, int x, int y,
+                            int nButton) {
+  switch (type) {
+  case TOOL_POINTER_DOWN:
+    ToolOnMouseDown(hWnd, x, y, nButton);
+    break;
+  case TOOL_POINTER_MOVE:
+    ToolOnMouseMove(hWnd, x, y, nButton);
+    break;
+  case TOOL_POINTER_UP:
+    ToolOnMouseUp(hWnd, x, y, nButton);
+    break;
+  case TOOL_POINTER_DOUBLE_CLICK:
+    ToolOnDoubleClick(hWnd, x, y, nButton);
+    break;
+  default:
+    break;
+  }
+}
+
+void ToolHandleLifecycleEvent(ToolLifecycleEventType type, HWND hWnd) {
+  switch (type) {
+  case TOOL_LIFECYCLE_CANCEL:
+    ToolCancel();
+    break;
+  case TOOL_LIFECYCLE_CANCEL_SKIP_SELECTION:
+    ToolCancelSkipSelection();
+    break;
+  case TOOL_LIFECYCLE_CAPTURE_LOST:
+    ToolOnCaptureLost();
+    break;
+  case TOOL_LIFECYCLE_VIEWPORT_CHANGED:
+    ToolOnViewportChanged(hWnd);
+    break;
+  case TOOL_LIFECYCLE_RESET_FOR_NEW_DOCUMENT:
+    ResetToolStateForNewDocument();
+    break;
+  case TOOL_LIFECYCLE_TIMER_TICK: {
+    const ToolVTable *tool = GetToolVTable(Tool_GetCurrent());
+    if (tool && tool->onTimerTick) tool->onTimerTick();
+    break;
+  }
+  default:
+    break;
+  }
+}
+
 /*------------------------------------------------------------
    Public Tool API Functions
   ------------------------------------------------------------*/
@@ -288,6 +322,7 @@ int GetCurrentTool(void) { return Tool_GetCurrent(); }
 
 void InitializeTools(void) {
   currentTool = TOOL_PENCIL;
+  s_runtime.activeToolAtMouseDown = -1; s_runtime.capturedWindow = NULL;
   srand(GetTickCount());
   CrayonTool_RegisterPresets();
   HighlighterTool_RegisterPresets();
@@ -301,20 +336,13 @@ void CommitCurrentSelection(void) {
 
 void ClearSelection(void) { SelectionDelete(); }
 
-void ToolTriggerAirbrush(HWND hWnd) {
-  if (currentTool == TOOL_AIRBRUSH && IsFreehandDrawing()) {
-    AirbrushToolTrigger(hWnd);
-  }
-}
-
-void ToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+static void ToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   int activeTool = ResolveActiveToolForMouseDown();
 
   // Store the active tool and window at mouse down to prevent state conflicts
   // This ensures that if the user presses Alt during a drag, we don't switch
   // to the eyedropper mid-operation
-  nActiveToolAtMouseDown = activeTool;
-  hCapturedWindow = NULL; // Will be set by SetCapture in tool handlers
+  s_runtime.activeToolAtMouseDown = activeTool; s_runtime.capturedWindow = NULL;
 
   const ToolVTable *tool = GetToolVTable(activeTool);
   if (tool && tool->onMouseDown) {
@@ -322,12 +350,10 @@ void ToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   }
 
   // Track if this tool captured the mouse
-  if (GetCapture() == hWnd) {
-    hCapturedWindow = hWnd;
-  }
+  if (GetCapture() == hWnd) s_runtime.capturedWindow = hWnd;
 }
 
-void ToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+static void ToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
   int activeTool = ResolveActiveToolForMoveUp(hWnd);
   const ToolVTable *tool = GetToolVTable(activeTool);
   if (tool && tool->onMouseMove) {
@@ -335,7 +361,7 @@ void ToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
   }
 }
 
-void ToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+static void ToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   int activeTool = ResolveActiveToolForMoveUp(hWnd);
   const ToolVTable *tool = GetToolVTable(activeTool);
 
@@ -344,15 +370,14 @@ void ToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   // state stale if a tool does not capture or capture is lost.
   // Clearing BEFORE dispatching prevents voluntary ReleaseCapture() inside
   // tools from triggering an abort via WM_CAPTURECHANGED.
-  nActiveToolAtMouseDown = -1;
-  hCapturedWindow = NULL;
+  s_runtime.activeToolAtMouseDown = -1; s_runtime.capturedWindow = NULL;
 
   if (tool && tool->onMouseUp) {
     tool->onMouseUp(hWnd, x, y, nButton);
   }
 }
 
-void ToolOnDoubleClick(HWND hWnd, int x, int y, int nButton) {
+static void ToolOnDoubleClick(HWND hWnd, int x, int y, int nButton) {
   const ToolVTable *tool = GetToolVTable(Tool_GetCurrent());
   if (tool && tool->onDoubleClick) {
     tool->onDoubleClick(hWnd, x, y, nButton);
@@ -377,7 +402,7 @@ void SetCurrentTool(int nTool) {
   if (currentTool == nTool)
     return;
 
-  if (hCapturedWindow != NULL) {
+  if (s_runtime.capturedWindow != NULL) {
     ToolCancel();
   }
 
@@ -399,7 +424,7 @@ void SetCurrentTool(int nTool) {
     InvalidateWindow(hToolbar);
 }
 
-void ToolOnViewportChanged(HWND hWnd) {
+static void ToolOnViewportChanged(HWND hWnd) {
   const ToolVTable *tool = GetToolVTable(Tool_GetCurrent());
   if (tool && tool->onViewportChanged) {
     tool->onViewportChanged(hWnd);

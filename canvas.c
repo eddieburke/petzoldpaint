@@ -466,7 +466,7 @@ void Canvas_ApplyZoomCentered(double newZoom) {
     SetScrollInfo(hCanvasWnd, SB_VERT, &si, TRUE);
 
     SendMessage(GetParent(hCanvasWnd), WM_SIZE, 0, 0);
-    ToolOnViewportChanged(hCanvasWnd);
+    ToolHandleLifecycleEvent(TOOL_LIFECYCLE_VIEWPORT_CHANGED, hCanvasWnd);
     InvalidateWindow(hCanvasWnd);
   }
 }

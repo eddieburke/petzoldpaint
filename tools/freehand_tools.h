@@ -34,7 +34,7 @@ void EraserToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
 void AirbrushToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
 void AirbrushToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
 void AirbrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
-void AirbrushToolTrigger(HWND hWnd);
+void FreehandTool_OnTimerTick(void);
 
 /*------------------------------------------------------------------------------
  * Shared State Accessors
