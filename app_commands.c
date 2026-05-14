@@ -54,6 +54,16 @@ static BOOL CanPasteFromClipboard(void) {
          IsClipboardFormatAvailable(CF_BITMAP);
 }
 
+static void SyncAfterDocumentLoadOrReset(HWND hwnd) {
+  ResetCanvasScroll();
+  HWND hCv = GetCanvasWindow();
+  if (hCv)
+    Controller_UpdateScrollbars(hCv);
+  LayersPanelSync();
+  InvalidateCanvas();
+  ResizeLayout(hwnd);
+}
+
 /*------------------------------------------------------------
    Document Lifecycle Helpers
 ------------------------------------------------------------*/
@@ -66,15 +76,7 @@ void DocumentNew(HWND hwnd) {
   HistoryClear();
   Doc_ClearDirty();
   Doc_ClearFile();
-  ResetCanvasScroll();
-  {
-    HWND hCv = GetCanvasWindow();
-    if (hCv)
-      Controller_UpdateScrollbars(hCv);
-  }
-  LayersPanelSync();
-  InvalidateCanvas();
-  ResizeLayout(hwnd);
+  SyncAfterDocumentLoadOrReset(hwnd);
 }
 
 void DocumentOpen(HWND hwnd, const char *path) {
@@ -90,15 +92,7 @@ void DocumentOpen(HWND hwnd, const char *path) {
     ResetToolStateForNewDocument();
     HistoryClear();
     Doc_ClearDirty();
-    ResetCanvasScroll();
-    {
-      HWND hCv = GetCanvasWindow();
-      if (hCv)
-        Controller_UpdateScrollbars(hCv);
-    }
-    LayersPanelSync();
-    InvalidateCanvas();
-    ResizeLayout(hwnd);
+    SyncAfterDocumentLoadOrReset(hwnd);
   }
 }
 
