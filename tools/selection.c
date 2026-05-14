@@ -160,11 +160,10 @@ static void LiftSelectionPixels(void) {
     HDC hFloatDC = CreateTempDC(hdcScreen);
     HBITMAP hOldFloat = (HBITMAP)SelectObject(hFloatDC, s_sel.pixels.hFloatBmp);
 
-    // Initial fill with secondary color (BG)
-    HBRUSH hBgBr = CreateSolidBrush(Palette_GetSecondaryColor());
-    RECT rcTmp = {0, 0, w, h};
-    FillRect(hFloatDC, &rcTmp, hBgBr);
-    DeleteObject(hBgBr);
+    // Initialize as fully transparent (never key transparency off secondary color)
+    if (s_sel.pixels.pFloatBits) {
+        memset(s_sel.pixels.pFloatBits, 0, (size_t)w * (size_t)h * 4u);
+    }
 
     // Copy clipped region or rectangle
     if (s_sel.hRegion) {
@@ -404,10 +403,14 @@ static void SelectionHelpers_SampleRotated(BYTE* pSrcBits, int srcW, int srcH,
                                           int canvasWidth, int canvasHeight,
                                           BOOL bCheckTrans, COLORREF bgColor) {
     if (!pSrcBits || !pDstBits || srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0) return;
+    (void)bCheckTrans;
     double angleRad = angleDegrees * M_PI / 180.0;
     double cosA = cos(angleRad), sinA = sin(angleRad);
     double hwSrc = srcW / 2.0, hhSrc = srcH / 2.0;
     BYTE bgB = GetBValue(bgColor), bgG = GetGValue(bgColor), bgR = GetRValue(bgColor);
+    (void)bgR;
+    (void)bgG;
+    (void)bgB;
     
     if (dstStartX < 0) dstStartX = 0; if (dstStartY < 0) dstStartY = 0;
     if (dstEndX > canvasWidth) dstEndX = canvasWidth; if (dstEndY > canvasHeight) dstEndY = canvasHeight;
@@ -425,7 +428,6 @@ static void SelectionHelpers_SampleRotated(BYTE* pSrcBits, int srcW, int srcH,
                 int srcIdx = (sy * srcW + sx) * 4;
                 BYTE sb = pSrcBits[srcIdx + 0], sg = pSrcBits[srcIdx + 1], sr = pSrcBits[srcIdx + 2], sa = pSrcBits[srcIdx + 3];
                 if (sa == 0) continue;
-                if (bCheckTrans && sb == bgB && sg == bgG && sr == bgR) continue;
                 int canvasIdx = (y * canvasWidth + x) * 4;
                 PixelOps_BlendPixel((int)sr, (int)sg, (int)sb, (int)sa, pDstBits + canvasIdx, 0);
             }
