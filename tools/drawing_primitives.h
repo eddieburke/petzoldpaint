@@ -11,7 +11,7 @@
 
 int DrawPrim_GetBrushSize(int brushWidthIndex);
 int DrawPrim_GetBrushRow(int brushWidthIndex);
-int DrawPrim_GetSprayRadius(int sprayRadiusIndex);
+
 
 /*------------------------------------------------------------------------------
  * Pencil Primitives
