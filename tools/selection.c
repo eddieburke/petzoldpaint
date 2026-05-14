@@ -568,7 +568,15 @@ void SelectionPaste(HWND hWnd) {
         BYTE* p = (BYTE*)GlobalLock(hDat); BITMAPV5HEADER* v5 = (BITMAPV5HEADER*)p;
         w = v5->bV5Width; h = abs(v5->bV5Height);
         s_sel.pixels.hFloatBmp = CreateDibSection32(w, h, &s_sel.pixels.pFloatBits);
-        if (s_sel.pixels.hFloatBmp) memcpy(s_sel.pixels.pFloatBits, p + v5->bV5Size, w * h * 4);
+        if (s_sel.pixels.hFloatBmp) {
+            memcpy(s_sel.pixels.pFloatBits, p + v5->bV5Size, w * h * 4);
+            if (v5->bV5AlphaMask == 0) {
+                int pixelCount = w * h;
+                for (int i = 0; i < pixelCount; i++) {
+                    s_sel.pixels.pFloatBits[i * 4 + 3] = 255;
+                }
+            }
+        }
         GlobalUnlock(hDat);
     }
     CloseClipboard();

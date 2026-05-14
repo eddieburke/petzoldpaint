@@ -77,7 +77,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         wndclass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
     wndclass.hCursor = LoadCursor(NULL, IDC_ARROW);
     wndclass.hbrBackground = (HBRUSH)(COLOR_APPWORKSPACE + 1);
-    wndclass.lpszMenuName = MAKEINTRESOURCE(IDM_MAINMENU);
+    wndclass.lpszMenuName = MAKEINTRESOURCEW(IDM_MAINMENU);
     wndclass.lpszClassName = szAppName;
 
     if (!RegisterClassW(&wndclass)) {

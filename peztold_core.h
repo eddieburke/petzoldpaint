@@ -8,6 +8,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#include <windowsx.h>
 #include <shellapi.h>
 #include <commctrl.h>
 #include <stdio.h>
@@ -61,4 +62,3 @@ void SetDocumentDirty(void);
 #include "document.h"
 
 #endif /* PEZTOLD_CORE_H */
-

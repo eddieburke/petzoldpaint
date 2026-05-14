@@ -31,6 +31,14 @@ int DrawPrim_GetBrushRow(int brushWidthIndex) {
    return (brushWidthIndex - 1) / 3;
 }
 
+int DrawPrim_GetSprayRadius(int sprayRadiusIndex) {
+  int radii[] = {5, 8, 12};
+  int idx = sprayRadiusIndex - 1;
+  if (idx < 0) idx = 0;
+  if (idx > 2) idx = 2;
+  return radii[idx];
+}
+
 
 /*------------------------------------------------------------------------------
  * Pencil Implementation
@@ -145,12 +153,11 @@ void DrawPrim_DrawBrushLine(BYTE *bits, int width, int height, int x1, int y1,
 
 void DrawPrim_DrawSprayPoint(BYTE *bits, int width, int height, int x, int y,
                               COLORREF color, int sprayRadiusIndex) {
-   int radii[] = {5, 8, 12};
    int densities[] = {10, 20, 30};
    int idx = sprayRadiusIndex - 1;
    if (idx < 0) idx = 0;
    if (idx > 2) idx = 2;
-   int radius = radii[idx % 3];
+   int radius = DrawPrim_GetSprayRadius(sprayRadiusIndex);
    int density = densities[idx % 3];
 
   for (int i = 0; i < density; i++) {

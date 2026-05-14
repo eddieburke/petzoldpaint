@@ -11,6 +11,7 @@
 #include "../canvas.h"
 #include "../geom.h"       /* <-- Added for RectBmpToScr */
 #include "../helpers.h"
+#include "../controller.h"
 #include "../palette.h"
 #include "../layers.h"
 #include "../ui/widgets/colorbox.h"

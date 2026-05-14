@@ -487,10 +487,10 @@ BOOL LoadBitmapFromFile(const wchar_t* szPath)
 
 BOOL SaveBitmapToFile(HBITMAP hBmp, LPCWSTR lpszFileName)
 {
-    if (HasExtension(lpszFileName, ".png")) {
+    if (HasExtension(lpszFileName, L".png")) {
         return SaveWicImage(lpszFileName, &GUID_ContainerFormatPng);
     }
-    if (HasExtension(lpszFileName, ".jpg") || HasExtension(lpszFileName, ".jpeg")) {
+    if (HasExtension(lpszFileName, L".jpg") || HasExtension(lpszFileName, L".jpeg")) {
         return SaveWicImage(lpszFileName, &GUID_ContainerFormatJpeg);
     }
 
