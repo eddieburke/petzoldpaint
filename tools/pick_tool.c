@@ -15,39 +15,48 @@
 #include "../palette.h"
 
 /*------------------------------------------------------------------------------
- * Pick Tool Public API
+ * Pick Tool Internals
  *----------------------------------------------------------------------------*/
 
-void PickToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  COLORREF color = LayersSampleCompositeColor(x, y, Palette_GetSecondaryColor());
-  if (color == CLR_INVALID)
-    return;
+static COLORREF SampleColorAtPoint(int x, int y) {
+  return LayersSampleCompositeColor(x, y, Palette_GetSecondaryColor());
+}
 
+static void ApplyPickedColor(COLORREF color, int nButton) {
   if (nButton & MK_LBUTTON) {
     Palette_SetPrimaryColor(color);
   } else if (nButton & MK_RBUTTON) {
     Palette_SetSecondaryColor(color);
   }
 
-  // Also handle cases where nButton might be passed as a specific ID instead of
-  // flags (though standard WM_ messages use flags) Logic above assumes nButton
-  // contains MK_ flags.
-
   InvalidateWindow(GetColorboxWindow());
 }
 
-void PickToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  if (!(nButton & (MK_LBUTTON | MK_RBUTTON)))
-    return;
-
-  COLORREF color = LayersSampleCompositeColor(x, y, Palette_GetSecondaryColor());
+static void HandlePickInteraction(int x, int y, int nButton) {
+  COLORREF color = SampleColorAtPoint(x, y);
   if (color == CLR_INVALID)
     return;
 
-  if (nButton & MK_LBUTTON) {
-    Palette_SetPrimaryColor(color);
-  } else {
-    Palette_SetSecondaryColor(color);
-  }
-  InvalidateWindow(GetColorboxWindow());
+  ApplyPickedColor(color, nButton);
+}
+
+/*------------------------------------------------------------------------------
+ * Pick Tool Public API
+ *----------------------------------------------------------------------------*/
+
+void PickToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  (void)hWnd;
+
+  // Also handle cases where nButton might be passed as a specific ID instead of
+  // flags (though standard WM_ messages use flags).
+  HandlePickInteraction(x, y, nButton);
+}
+
+void PickToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+  (void)hWnd;
+
+  if (!(nButton & (MK_LBUTTON | MK_RBUTTON)))
+    return;
+
+  HandlePickInteraction(x, y, nButton);
 }
