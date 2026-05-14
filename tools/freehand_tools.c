@@ -28,6 +28,15 @@ static int   s_nDrawButton = 0;
 static BOOL  s_bPixelsModified = FALSE;
 static int   s_activeFreehandTool = 0;
 
+static void MarkAndInvalidateBitmapDirtyRect(const RECT *rcDirtyBitmap) {
+  RECT rcDirtyLocal = *rcDirtyBitmap;
+  RECT rcScreen;
+  LayersMarkDirtyRect(&rcDirtyLocal);
+  RectBmpToScr(&rcDirtyLocal, &rcScreen);
+  InflateRect(&rcScreen, 2, 2);
+  InvalidateCanvasRect(&rcScreen);
+}
+
 /*------------------------------------------------------------------------------
  * Drawing Wrappers
  *
@@ -148,12 +157,7 @@ static void FreehandOnMouseDown(HWND hWnd, int x, int y, int nButton,
     rcDirty.top = y - radius;
     rcDirty.right = x + radius;
     rcDirty.bottom = y + radius;
-    LayersMarkDirtyRect(&rcDirty);
-
-    RECT rcScreen;
-    RectBmpToScr(&rcDirty, &rcScreen);
-    InflateRect(&rcScreen, 2, 2);
-    InvalidateCanvasRect(&rcScreen);
+    MarkAndInvalidateBitmapDirtyRect(&rcDirty);
   }
 }
 
@@ -181,15 +185,9 @@ static void FreehandOnMouseMove(HWND hWnd, int x, int y, int nButton,
     rcDirty.right = max(s_ptLast.x, x) + radius;
     rcDirty.bottom = max(s_ptLast.y, y) + radius;
 
-    // Send bitmap space to layer engine
-    LayersMarkDirtyRect(&rcDirty);
+    // Send bitmap space to layer engine and invalidate only the changed area.
+    MarkAndInvalidateBitmapDirtyRect(&rcDirty);
     s_bPixelsModified = TRUE;
-
-    // Translate to Screen Space for OS Redraw
-    RECT rcScreen;
-    RectBmpToScr(&rcDirty, &rcScreen);
-    InflateRect(&rcScreen, 2, 2); // Pad for zoom rounding margins
-    InvalidateCanvasRect(&rcScreen);
   }
   s_ptLast.x = x;
   s_ptLast.y = y;
