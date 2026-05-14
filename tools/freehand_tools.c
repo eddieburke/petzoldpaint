@@ -11,23 +11,19 @@
 #include "../canvas.h"
 #include "../geom.h"       /* <-- Added for RectBmpToScr */
 #include "../helpers.h"
-#include "../history.h"
 #include "../palette.h"
 #include "../layers.h"
 #include "../ui/widgets/colorbox.h"
 #include "drawing_primitives.h"
 #include "tool_options/tool_options.h"
+#include "stroke_session.h"
 #include <stdlib.h>
 
 /*------------------------------------------------------------------------------
  * Localized Drawing State
  *----------------------------------------------------------------------------*/
 
-static BOOL  s_bDrawing = FALSE;
-static POINT s_ptLast = {0};
-static int   s_nDrawButton = 0;
-static BOOL  s_bPixelsModified = FALSE;
-static int   s_activeFreehandTool = 0;
+static StrokeSession s_session = {0};
 
 typedef void (*PointDrawSizedFn)(BYTE *bits, int width, int height, int x, int y,
                                  COLORREF color, int size);
@@ -147,8 +143,8 @@ static void FreehandDrawInterpolated(BYTE *bits, int width, int height,
  *----------------------------------------------------------------------------*/
 
 static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy *sp) {
-  int tool = sp ? sp->toolId : s_activeFreehandTool;
-  if (s_bDrawing && nButton != s_nDrawButton) {
+  int tool = sp ? sp->toolId : s_session.toolId;
+  if (s_session.isDrawing && nButton != s_session.drawButton) {
     CancelFreehandDrawing();
     return;
   }
@@ -157,20 +153,14 @@ static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy
   if (!sp || !sp->pfnPoint)
     return;
 
-  s_bDrawing = TRUE;
-  s_bPixelsModified = FALSE;
-  s_nDrawButton = nButton;
-  s_ptLast.x = x;
-  s_ptLast.y = y;
-  s_activeFreehandTool = tool;
-  SetCapture(hWnd);
+  StrokeSession_Begin(&s_session, hWnd, x, y, nButton, tool);
 
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
     sp->pfnPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(), x, y,
                      ResolveStrokeColor(sp, nButton), sp->pfnGetSize());
     LayersMarkDirty();
-    s_bPixelsModified = TRUE;
+    StrokeSession_MarkPixelsModified(&s_session);
 
     int radius = DrawPrim_GetBrushSize(sp->pfnGetSize()) + 10;
     RECT rcDirty;
@@ -188,29 +178,29 @@ static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy
 }
 
 static void AppendPoint(HWND hWnd, int x, int y, int nButton) {
-  if (!s_bDrawing || !(nButton & (MK_LBUTTON | MK_RBUTTON)))
+  if (!s_session.isDrawing || !StrokeSession_IsActiveButton(nButton))
     return;
 
-  const StrokePolicy *sp = GetStrokePolicy(s_activeFreehandTool);
+  const StrokePolicy *sp = GetStrokePolicy(s_session.toolId);
   if (!sp || !sp->pfnPoint)
     return;
 
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
-    FreehandDrawInterpolated(bits, Canvas_GetWidth(), Canvas_GetHeight(), sp, s_ptLast.x,
-                             s_ptLast.y, x, y, ResolveStrokeColor(sp, s_nDrawButton));
+    FreehandDrawInterpolated(bits, Canvas_GetWidth(), Canvas_GetHeight(), sp, s_session.lastPoint.x,
+                             s_session.lastPoint.y, x, y, ResolveStrokeColor(sp, s_session.drawButton));
 
     // Calculate dirty rect in BITMAP space
     int radius = DrawPrim_GetBrushSize(sp->pfnGetSize()) + 2;
     RECT rcDirty;
-    rcDirty.left = min(s_ptLast.x, x) - radius;
-    rcDirty.top = min(s_ptLast.y, y) - radius;
-    rcDirty.right = max(s_ptLast.x, x) + radius;
-    rcDirty.bottom = max(s_ptLast.y, y) + radius;
+    rcDirty.left = min(s_session.lastPoint.x, x) - radius;
+    rcDirty.top = min(s_session.lastPoint.y, y) - radius;
+    rcDirty.right = max(s_session.lastPoint.x, x) + radius;
+    rcDirty.bottom = max(s_session.lastPoint.y, y) + radius;
 
     // Send bitmap space to layer engine
     LayersMarkDirtyRect(&rcDirty);
-    s_bPixelsModified = TRUE;
+    StrokeSession_MarkPixelsModified(&s_session);
 
     // Translate to Screen Space for OS Redraw
     RECT rcScreen;
@@ -218,8 +208,7 @@ static void AppendPoint(HWND hWnd, int x, int y, int nButton) {
     InflateRect(&rcScreen, 2, 2); // Pad for zoom rounding margins
     InvalidateCanvasRect(&rcScreen);
   }
-  s_ptLast.x = x;
-  s_ptLast.y = y;
+  StrokeSession_UpdateLastPoint(&s_session, x, y);
   InvalidateCanvas();
 }
 
@@ -228,14 +217,8 @@ static void EndStroke(HWND hWnd, int x, int y, int nButton) {
   (void)x;
   (void)y;
   (void)nButton;
-  if (s_bDrawing && s_bPixelsModified) {
-    HistoryPushToolActionById(s_activeFreehandTool, "Draw");
-  }
-  if (s_bDrawing) {
-    s_bDrawing = FALSE;
-    ReleaseCapture();
-    SetDocumentDirty();
-  }
+  StrokeSession_CommitIfNeeded(&s_session, "Draw");
+  StrokeSession_End(&s_session);
 }
 
 /*------------------------------------------------------------------------------
@@ -272,13 +255,13 @@ void AirbrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
 }
 
 void FreehandTool_OnTimerTick(void) {
-  if (!s_bDrawing || s_activeFreehandTool != TOOL_AIRBRUSH) return;
+  if (!s_session.isDrawing || s_session.toolId != TOOL_AIRBRUSH) return;
 
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
     DrawPrim_DrawSprayPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(),
-                            s_ptLast.x, s_ptLast.y,
-                            GetColorForButton(s_nDrawButton), nSprayRadius);
+                            s_session.lastPoint.x, s_session.lastPoint.y,
+                            GetColorForButton(s_session.drawButton), nSprayRadius);
   }
   InvalidateCanvas();
 }
@@ -293,33 +276,23 @@ static void KillAirbrushTimerIfNeeded(HWND hWnd) {
     }
 }
 
-BOOL IsFreehandDrawing(void) { return s_bDrawing; }
+BOOL IsFreehandDrawing(void) { return s_session.isDrawing; }
 
 void FreehandTool_Deactivate(void) {
-   if (s_bDrawing) {
+   if (s_session.isDrawing) {
      KillAirbrushTimerIfNeeded(GetCanvasWindow());
-     s_bDrawing = FALSE;
-     ReleaseCapture();
-     SetDocumentDirty();
+     StrokeSession_End(&s_session);
    }
 }
 
-void FreehandTool_OnCaptureLost(void) {
-   KillAirbrushTimerIfNeeded(GetCanvasWindow());
-   if (s_bDrawing && s_bPixelsModified) {
-     HistoryPushToolActionById(s_activeFreehandTool, "Draw");
-   }
-}
 
 BOOL CancelFreehandDrawing(void) {
-   BOOL bWasDrawing = s_bDrawing;
-   if (s_bDrawing) {
+   BOOL bWasDrawing = s_session.isDrawing;
+   if (s_session.isDrawing) {
      KillAirbrushTimerIfNeeded(GetCanvasWindow());
-     s_bDrawing = FALSE;
-     ReleaseCapture();
-     InvalidateCanvas();
+     StrokeSession_Cancel(&s_session);
    }
    return bWasDrawing;
 }
 
-int GetActiveFreehandTool(void) { return s_activeFreehandTool; }
+int GetActiveFreehandTool(void) { return s_session.toolId; }

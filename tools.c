@@ -26,6 +26,7 @@
 #include "tools/polygon_tool.h"
 #include "tools/selection_tool.h"
 #include "tools/shape_tools.h"
+#include "tools/stroke_session.h"
 #include "tools/text_tool.h"
 #include "tools/tool_options/presets.h"
 #include "tools/tool_options/tool_options.h"
@@ -79,7 +80,7 @@ typedef struct {
 #define TOOL_LIFECYCLE_FREEHAND_COMMON                                           \
   .onActivate = NULL, .onDeactivate = FreehandTool_Deactivate,                  \
   .onCancel = CancelFreehandDrawing, .onViewportChanged = NULL,                 \
-  .isBusy = IsFreehandDrawing, .onCaptureLost = FreehandTool_OnCaptureLost
+  .isBusy = IsFreehandDrawing, .onCaptureLost = NULL
 
 #define TOOL_LIFECYCLE_SHAPE_COMMON                                              \
   .onActivate = NULL, .onDeactivate = ShapeTool_Deactivate,                      \
@@ -225,7 +226,7 @@ static const ToolVTable s_ToolTable[] = {
                   .onMouseUp = PenToolOnMouseUp,
                   TOOL_LIFECYCLE_MODAL_COMMON(PenTool_Deactivate,
                                               CancelPenDrawing, IsPenDrawing,
-                                              PenTool_OnCaptureLost)},
+                                              NULL)},
     [TOOL_HIGHLIGHTER] = {
         .onMouseDown = HighlighterToolOnMouseDown,
         .onMouseMove = HighlighterToolOnMouseMove,
@@ -233,14 +234,14 @@ static const ToolVTable s_ToolTable[] = {
         TOOL_LIFECYCLE_MODAL_COMMON(HighlighterTool_Deactivate,
                                     CancelHighlighterDrawing,
                                     IsHighlighterDrawing,
-                                    HighlighterTool_OnCaptureLost)},
+                                    NULL)},
     [TOOL_CRAYON] = {.onMouseDown = CrayonToolOnMouseDown,
                      .onMouseMove = CrayonToolOnMouseMove,
                      .onMouseUp = CrayonToolOnMouseUp,
                      TOOL_LIFECYCLE_MODAL_COMMON(CrayonTool_Deactivate,
                                                  CancelCrayonDrawing,
                                                  IsCrayonDrawing,
-                                                 CrayonTool_OnCaptureLost)}};
+                                                 NULL)}};
 
 static const ToolVTable *GetToolVTable(int toolId) {
   if (toolId < 0 ||
@@ -312,9 +313,14 @@ static void ToolOnCaptureLost(void) {
 
   s_runtime.activeToolAtMouseDown = -1; s_runtime.capturedWindow = NULL;
 
-  const ToolVTable *tool = GetToolVTable(Tool_GetCurrent());
-  if (tool && tool->onCaptureLost) {
-    tool->onCaptureLost();
+  {
+    int activeStrokeTool = StrokeSession_GetActiveToolId();
+    if (activeStrokeTool >= 0) {
+      const char *action = (activeStrokeTool == TOOL_LINE || activeStrokeTool == TOOL_RECT ||
+                            activeStrokeTool == TOOL_ELLIPSE || activeStrokeTool == TOOL_ROUNDRECT)
+                               ? "Draw Shape" : "Draw";
+      StrokeSession_OnActiveCaptureLost(action);
+    }
   }
 
   ToolCancel(); /* abort any in-progress tool that never got MouseUp */

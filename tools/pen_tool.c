@@ -61,6 +61,7 @@ void PenToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
 }
 
 void PenToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+  (void)hWnd;
   if (!s_session.isDrawing || !StrokeSession_IsActiveButton(nButton))
     return;
 
@@ -71,19 +72,17 @@ void PenToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
     LayersMarkDirty();
     StrokeSession_MarkPixelsModified(&s_session);
   }
-  s_session.lastPoint.x = x;
-  s_session.lastPoint.y = y;
+  StrokeSession_UpdateLastPoint(&s_session, x, y);
   InvalidateCanvas();
 }
 
 void PenToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+  (void)hWnd;
+  (void)x;
+  (void)y;
+  (void)nButton;
   StrokeSession_CommitIfNeeded(&s_session, "Draw");
   StrokeSession_End(&s_session);
-}
-
-void PenTool_OnCaptureLost(void)
-{
-     StrokeSession_OnCaptureLost(&s_session, "Draw");
 }
 
 BOOL IsPenDrawing(void) { return s_session.isDrawing; }

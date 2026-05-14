@@ -139,6 +139,7 @@ void HighlighterToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
 }
 
 void HighlighterToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+  (void)hWnd;
   if (!s_session.isDrawing || !StrokeSession_IsActiveButton(nButton))
     return;
 
@@ -154,12 +155,15 @@ void HighlighterToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
     LayersMarkDirty();
     StrokeSession_MarkPixelsModified(&s_session);
   }
-  s_session.lastPoint.x = x;
-  s_session.lastPoint.y = y;
+  StrokeSession_UpdateLastPoint(&s_session, x, y);
   InvalidateCanvas();
 }
 
 void HighlighterToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+  (void)hWnd;
+  (void)x;
+  (void)y;
+  (void)nButton;
   StrokeSession_CommitIfNeeded(&s_session, "Draw");
   StrokeSession_End(&s_session);
 }
@@ -176,6 +180,3 @@ BOOL CancelHighlighterDrawing(void) {
   return TRUE;
 }
 
-void HighlighterTool_OnCaptureLost(void) {
-  StrokeSession_OnCaptureLost(&s_session, "Draw");
-}

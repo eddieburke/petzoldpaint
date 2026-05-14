@@ -744,6 +744,7 @@ void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   // Reset stroke points
   s_strokePointCount = 0;
   AddStrokePoint(x, y);
+  StrokeSession_UpdateLastPoint(&s_session, x, y);
 
   // Draw initial point
   BYTE *bits = LayersGetActiveColorBits();
@@ -759,6 +760,7 @@ void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
 }
 
 void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+  (void)hWnd;
   if (!s_session.isDrawing || !StrokeSession_IsActiveButton(nButton))
     return;
 
@@ -793,10 +795,13 @@ void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
     }
   }
 
+  StrokeSession_UpdateLastPoint(&s_session, x, y);
   InvalidateCanvas();
 }
 
 void CrayonToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+  (void)hWnd;
+  (void)nButton;
   // Add final point
   if (s_session.isDrawing) {
     AddStrokePoint(x, y);
@@ -823,9 +828,11 @@ void CrayonToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
                                color, size, pressure);
       }
       LayersMarkDirty();
+      StrokeSession_MarkPixelsModified(&s_session);
     }
   }
 
+  StrokeSession_UpdateLastPoint(&s_session, x, y);
   StrokeSession_CommitIfNeeded(&s_session, "Draw");
   StrokeSession_End(&s_session);
   s_strokePointCount = 0;
@@ -850,6 +857,3 @@ BOOL CancelCrayonDrawing(void) {
   return TRUE;
 }
 
-void CrayonTool_OnCaptureLost(void) {
-  StrokeSession_OnCaptureLost(&s_session, "Draw");
-}

@@ -18,6 +18,5 @@ void PenToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
 BOOL IsPenDrawing(void);
 void PenTool_Deactivate(void);
 BOOL CancelPenDrawing(void);
-void PenTool_OnCaptureLost(void);
 
 #endif

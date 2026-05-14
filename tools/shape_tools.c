@@ -21,13 +21,13 @@
 #include "../draw.h"
 #include "../geom.h"
 #include "../helpers.h"
-#include "../history.h"
 #include "../layers.h"
 #include "../overlay.h"
 #include "../tools.h"
 #include "../ui/widgets/colorbox.h"
 #include "tool_options/tool_options.h"
 #include "palette.h"
+#include "stroke_session.h"
 
 /*------------------------------------------------------------------------------
  * Tool State Definitions
@@ -49,8 +49,7 @@ static struct {
   POINT ptEnd;
   int drawButton;
 } s_Shape = {SHAPE_STATE_IDLE, 0, {0, 0}, {0, 0}, 0};
-
-static BOOL bSuspendingCapture = FALSE;
+static StrokeSession s_shapeSession = {0};
 
 /*------------------------------------------------------------------------------
  * DrawShapeToBits
@@ -160,8 +159,8 @@ static void ResetShapeState(void) {
 static void CommitShapeAction(int toolId, const char *actionName) {
   LayersMergeDraftToActive();
   LayersMarkDirty();
-  SetDocumentDirty();
-  HistoryPushToolActionById(toolId, actionName);
+  StrokeSession_CommitIfNeeded(&s_shapeSession, actionName);
+  StrokeSession_End(&s_shapeSession);
   ResetShapeState();
   InvalidateCanvas();
 }
@@ -170,8 +169,8 @@ static void CommitShapeAction(int toolId, const char *actionName) {
 static void ShapeTool_OnDeactivate(void) {
   if (s_Shape.state != SHAPE_STATE_IDLE) {
     LayersClearDraft();
+    StrokeSession_Cancel(&s_shapeSession);
     ResetShapeState();
-    ReleaseCapture();
     InvalidateCanvas();
   }
 }
@@ -179,8 +178,6 @@ static void ShapeTool_OnDeactivate(void) {
 /* Called on explicit cancel (Escape key, right-click cancel) */
 static BOOL ShapeTool_OnCancel(void) {
   if (s_Shape.state == SHAPE_STATE_IDLE)
-    return FALSE;
-  if (bSuspendingCapture)
     return FALSE;
   ShapeTool_OnDeactivate();
   return TRUE;
@@ -219,11 +216,12 @@ void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
   s_Shape.ptStart.x = x;
   s_Shape.ptStart.y = y;
   s_Shape.ptEnd = s_Shape.ptStart;
-
-  SetCapture(hWnd);
+  StrokeSession_Begin(&s_shapeSession, hWnd, x, y, nButton, toolId);
 }
 
 void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
+  (void)hWnd;
+  (void)nButton;
   if (s_Shape.state == SHAPE_STATE_IDLE || s_Shape.activeToolId != toolId)
     return;
 
@@ -239,19 +237,16 @@ void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
     s_Shape.ptEnd.x = endX;
     s_Shape.ptEnd.y = endY;
     UpdateDraftLayer();
+    StrokeSession_MarkModified(&s_shapeSession);
     InvalidateCanvas();
   }
 }
 
 void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
+  (void)hWnd;
+  (void)nButton;
   if (s_Shape.state == SHAPE_STATE_IDLE)
     return;
-  if (GetCapture() == hWnd) {
-    bSuspendingCapture = TRUE;
-    ReleaseCapture();
-    bSuspendingCapture = FALSE;
-  }
-
   if (s_Shape.state == SHAPE_STATE_CREATING && s_Shape.activeToolId == toolId) {
     int endX = x, endY = y;
     if (IsShiftDown()) {
@@ -265,6 +260,7 @@ void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
 
     /* Draw final shape directly to draft, then merge into active layer */
     UpdateDraftLayer();
+    StrokeSession_MarkModified(&s_shapeSession);
     CommitShapeAction(toolId, "Draw Shape");
   }
 }
