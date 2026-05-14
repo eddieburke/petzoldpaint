@@ -53,7 +53,7 @@ HBITMAP LayersFlattenToBitmap(COLORREF bgColor);
 HBITMAP LayersFlattenToBitmapWithAlpha(BYTE **outBits);
 COLORREF LayersSampleCompositeColor(int x, int y, COLORREF bgColor);
 void LayersMarkDirty(void);
-void LayersMarkDirtyRect(RECT *pRect);
+void LayersMarkDirtyRect(const RECT *pRect);
 
 /* Draft Layer API — tools draw previews here; compositor renders above active
  */
