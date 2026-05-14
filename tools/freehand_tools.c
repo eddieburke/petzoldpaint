@@ -44,7 +44,7 @@ typedef enum {
   STROKE_COMPOSITE_ERASE
 } StrokeCompositeMode;
 
-typedef struct {
+struct FreehandStrokePolicy {
   PointDrawSizedFn pfnPoint;
   LineDrawSizedFn pfnLine;
   int (*pfnGetSize)(void);
@@ -53,7 +53,9 @@ typedef struct {
   BOOL bInterpolate;
   BOOL bSmooth;
   BOOL bSpacing;
-} StrokePolicy;
+  int toolId;
+};
+typedef struct FreehandStrokePolicy StrokePolicy;
 
 static void DrawPencilPointSized(BYTE *bits, int width, int height, int x, int y,
                                  COLORREF color, int size) {
@@ -89,13 +91,13 @@ static int GetSprayRadiusSize(void) { return nSprayRadius; }
 static const StrokePolicy *GetStrokePolicy(int tool) {
   static const StrokePolicy policies[] = {
       [TOOL_PENCIL] = {DrawPencilPointSized, DrawPencilLineSized, GetUnitSize,
-                       STROKE_COLOR_FROM_BUTTON, STROKE_COMPOSITE_NORMAL, TRUE, FALSE, FALSE},
+                       STROKE_COLOR_FROM_BUTTON, STROKE_COMPOSITE_NORMAL, TRUE, FALSE, FALSE, TOOL_PENCIL},
       [TOOL_BRUSH] = {DrawBrushPointSized, DrawBrushLineSized, GetBrushWidthSize,
-                      STROKE_COLOR_FROM_BUTTON, STROKE_COMPOSITE_NORMAL, TRUE, TRUE, FALSE},
+                      STROKE_COLOR_FROM_BUTTON, STROKE_COMPOSITE_NORMAL, TRUE, TRUE, FALSE, TOOL_BRUSH},
       [TOOL_ERASER] = {DrawEraserPointSized, NULL, GetBrushWidthSize,
-                       STROKE_COLOR_BACKGROUND, STROKE_COMPOSITE_ERASE, TRUE, FALSE, FALSE},
+                       STROKE_COLOR_BACKGROUND, STROKE_COMPOSITE_ERASE, TRUE, FALSE, FALSE, TOOL_ERASER},
       [TOOL_AIRBRUSH] = {NULL, NULL, GetSprayRadiusSize,
-                         STROKE_COLOR_FROM_BUTTON, STROKE_COMPOSITE_NORMAL, FALSE, FALSE, TRUE},
+                         STROKE_COLOR_FROM_BUTTON, STROKE_COMPOSITE_NORMAL, FALSE, FALSE, TRUE, TOOL_AIRBRUSH},
   };
   typedef char StrokePolicyCoverage[(TOOL_AIRBRUSH < (int)(sizeof(policies) / sizeof(policies[0]))) ? 1 : -1];
   (void)sizeof(StrokePolicyCoverage);
@@ -103,6 +105,10 @@ static const StrokePolicy *GetStrokePolicy(int tool) {
   if (tool < 0 || tool >= (int)(sizeof(policies) / sizeof(policies[0]))) return NULL;
   if (!policies[tool].pfnGetSize) return NULL;
   return &policies[tool];
+}
+
+const FreehandStrokePolicy *FreehandGetPolicyForTool(int tool) {
+  return (const FreehandStrokePolicy *)GetStrokePolicy(tool);
 }
 
 static COLORREF ResolveStrokeColor(const StrokePolicy *policy, int button) {
@@ -144,15 +150,16 @@ static void FreehandDrawInterpolated(BYTE *bits, int width, int height,
  * Unified Event Handlers
  *----------------------------------------------------------------------------*/
 
-void FreehandOnMouseDown(HWND hWnd, int x, int y, int nButton,
-                         int tool) {
+void BeginStroke(HWND hWnd, int x, int y, int nButton, const FreehandStrokePolicy *policy) {
+  const StrokePolicy *sp = (const StrokePolicy *)policy;
+  int tool = sp ? sp->toolId : s_activeFreehandTool;
   if (s_bDrawing && nButton != s_nDrawButton) {
     CancelFreehandDrawing();
     return;
   }
 
-  const StrokePolicy *policy = GetStrokePolicy(tool);
-  if (!policy || !policy->pfnPoint)
+  if (!sp) sp = GetStrokePolicy(tool);
+  if (!sp || !sp->pfnPoint)
     return;
 
   s_bDrawing = TRUE;
@@ -165,12 +172,12 @@ void FreehandOnMouseDown(HWND hWnd, int x, int y, int nButton,
 
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
-    policy->pfnPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(), x, y,
-                     ResolveStrokeColor(policy, nButton), policy->pfnGetSize());
+    sp->pfnPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(), x, y,
+                     ResolveStrokeColor(sp, nButton), sp->pfnGetSize());
     LayersMarkDirty();
     s_bPixelsModified = TRUE;
 
-    int radius = DrawPrim_GetBrushSize(policy->pfnGetSize()) + 10;
+    int radius = DrawPrim_GetBrushSize(sp->pfnGetSize()) + 10;
     RECT rcDirty;
     rcDirty.left = x - radius;
     rcDirty.top = y - radius;
@@ -185,24 +192,24 @@ void FreehandOnMouseDown(HWND hWnd, int x, int y, int nButton,
   }
 }
 
-void FreehandOnMouseMove(HWND hWnd, int x, int y, int nButton,
-                         int tool) {
+void AppendPoint(HWND hWnd, int x, int y, int nButton) {
+  int tool = s_activeFreehandTool;
   if (!s_bDrawing || !(nButton & (MK_LBUTTON | MK_RBUTTON)))
     return;
   if (s_activeFreehandTool != tool)
     return;
 
-  const StrokePolicy *policy = GetStrokePolicy(tool);
-  if (!policy || !policy->pfnPoint)
+  const StrokePolicy *sp = GetStrokePolicy(tool);
+  if (!sp || !sp->pfnPoint)
     return;
 
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
-    FreehandDrawInterpolated(bits, Canvas_GetWidth(), Canvas_GetHeight(), policy, s_ptLast.x,
-                             s_ptLast.y, x, y, ResolveStrokeColor(policy, s_nDrawButton));
+    FreehandDrawInterpolated(bits, Canvas_GetWidth(), Canvas_GetHeight(), sp, s_ptLast.x,
+                             s_ptLast.y, x, y, ResolveStrokeColor(sp, s_nDrawButton));
 
     // Calculate dirty rect in BITMAP space
-    int radius = DrawPrim_GetBrushSize(policy->pfnGetSize()) + 2;
+    int radius = DrawPrim_GetBrushSize(sp->pfnGetSize()) + 2;
     RECT rcDirty;
     rcDirty.left = min(s_ptLast.x, x) - radius;
     rcDirty.top = min(s_ptLast.y, y) - radius;
@@ -224,8 +231,8 @@ void FreehandOnMouseMove(HWND hWnd, int x, int y, int nButton,
   InvalidateCanvas();
 }
 
-void FreehandOnMouseUp(HWND hWnd, int x, int y, int nButton, int tool) {
-  (void)tool;
+void EndStroke(HWND hWnd, int x, int y, int nButton) {
+  (void)hWnd; (void)x; (void)y; (void)nButton;
   if (s_bDrawing && s_bPixelsModified) {
     HistoryPushToolActionById(s_activeFreehandTool, "Draw");
   }
@@ -241,17 +248,17 @@ void FreehandOnMouseUp(HWND hWnd, int x, int y, int nButton, int tool) {
  *----------------------------------------------------------------------------*/
 
 void AirbrushToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseDown(hWnd, x, y, nButton, TOOL_AIRBRUSH);
+  BeginStroke(hWnd, x, y, nButton, FreehandGetPolicyForTool(TOOL_AIRBRUSH));
   SetTimer(hWnd, 101, 30, NULL);
 }
 
 void AirbrushToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
-  FreehandOnMouseMove(hWnd, x, y, nButton, TOOL_AIRBRUSH);
+  (void)hWnd; AppendPoint(hWnd, x, y, nButton);
 }
 
 void AirbrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   KillTimer(hWnd, 101);
-  FreehandOnMouseUp(hWnd, x, y, nButton, TOOL_AIRBRUSH);
+  EndStroke(hWnd, x, y, nButton);
 }
 
 void FreehandTool_OnTimerTick(void) {
@@ -306,3 +313,6 @@ BOOL CancelFreehandDrawing(void) {
 }
 
 int GetActiveFreehandTool(void) { return s_activeFreehandTool; }
+
+
+void CancelStroke(int reason) { (void)reason; CancelFreehandDrawing(); }

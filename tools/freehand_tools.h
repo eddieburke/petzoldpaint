@@ -7,9 +7,13 @@
  * Shared Freehand Stroke Controller API
  *----------------------------------------------------------------------------*/
 
-void FreehandOnMouseDown(HWND hWnd, int x, int y, int nButton, int tool);
-void FreehandOnMouseMove(HWND hWnd, int x, int y, int nButton, int tool);
-void FreehandOnMouseUp(HWND hWnd, int x, int y, int nButton, int tool);
+typedef struct FreehandStrokePolicy FreehandStrokePolicy;
+
+const FreehandStrokePolicy *FreehandGetPolicyForTool(int tool);
+void BeginStroke(HWND hWnd, int x, int y, int nButton, const FreehandStrokePolicy *policy);
+void AppendPoint(HWND hWnd, int x, int y, int nButton);
+void EndStroke(HWND hWnd, int x, int y, int nButton);
+void CancelStroke(int reason);
 
 /*------------------------------------------------------------------------------
  * Airbrush Tool
