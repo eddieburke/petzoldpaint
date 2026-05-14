@@ -61,6 +61,11 @@ static HistoryEntry *CreateEntryFromCurrentState(const char *description) {
 static void TrimRedoBranch(void) {
   if (!s_currentEntry || !s_currentEntry->next)
     return;
+  if (entry->snapshot)
+    LayersDestroySnapshot(entry->snapshot);
+  free(entry->description);
+  free(entry);
+}
 
   HistoryEntry *entry = s_currentEntry->next;
   while (entry) {
@@ -73,9 +78,9 @@ static void TrimRedoBranch(void) {
   s_historyTail = s_currentEntry;
 }
 
-static BOOL AppendEntry(HistoryEntry *entry) {
+static void AppendEntry(HistoryEntry *entry) {
   if (!entry)
-    return FALSE;
+    return;
 
   if (s_historyTail) {
     s_historyTail->next = entry;
@@ -88,7 +93,6 @@ static BOOL AppendEntry(HistoryEntry *entry) {
   s_currentEntry = entry;
   s_historyCount++;
   s_currentPosition = s_historyCount - 1;
-  return TRUE;
 }
 
 static void PruneHeadIfNeeded(void) {
@@ -111,22 +115,9 @@ static void PruneHeadIfNeeded(void) {
   }
 }
 
-static HistoryEntry *FindEntryAtIndex(int index) {
-  if (index < 0 || index >= s_historyCount)
-    return NULL;
-
-  HistoryEntry *entry = s_historyHead;
-  for (int i = 0; i < index && entry; i++) {
-    entry = entry->next;
-  }
-  return entry;
-}
-
 void HistoryInit(void) {
   HistoryDestroy();
-  if (!AppendEntry(CreateEntryFromCurrentState("Initial State"))) {
-    s_currentPosition = -1;
-  }
+  AppendEntry(CreateEntryFromCurrentState("Initial State"));
 }
 
 void HistoryDestroy(void) {
@@ -148,8 +139,7 @@ void HistoryPush(const char *description) {
     description = "Action";
 
   TrimRedoBranch();
-  if (!AppendEntry(CreateEntryFromCurrentState(description)))
-    return;
+  AppendEntry(CreateEntryFromCurrentState(description));
   PruneHeadIfNeeded();
 
   // Notify panels of history change
