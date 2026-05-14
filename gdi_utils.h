@@ -18,11 +18,11 @@ void DeleteTempDC(HDC hdc);
 HPEN CreatePenAndSelect(HDC hdc, int style, int width, COLORREF color,
                         HPEN *phOld);
 void RestorePen(HDC hdc, HPEN hOld);
-void DeletePen(HPEN hPen);
+void Gdi_DeletePen(HPEN hPen);
 HBRUSH CreateBrushAndSelect(HDC hdc, COLORREF color, HBRUSH *phOld);
 void RestoreBrush(HDC hdc, HBRUSH hOld);
-void DeleteBrush(HBRUSH hBrush);
-void DeleteFont(HFONT hFont);
+void Gdi_DeleteBrush(HBRUSH hBrush);
+void Gdi_DeleteFont(HFONT hFont);
 
 HDC GetCanvasBitmapDC(HBITMAP *phOld);
 void ReleaseCanvasBitmapDC(HDC hdc, HBITMAP hOld);
