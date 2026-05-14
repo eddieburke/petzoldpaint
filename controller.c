@@ -139,7 +139,7 @@ static void HandleScroll(HWND hwnd, int nBar, int nScrollCode) {
         si.fMask = SIF_POS;
         si.nPos = nPos;
         SetScrollInfo(hwnd, nBar, &si, TRUE);
-        ToolOnViewportChanged(hwnd);
+        ToolHandleLifecycleEvent(TOOL_LIFECYCLE_VIEWPORT_CHANGED, hwnd);
         InvalidateWindow(hwnd);
     }
 }
@@ -235,7 +235,7 @@ void Controller_HandleMouseDown(HWND hwnd, int screenX, int screenY, int btn) {
     if (!BmpCoordInBounds(screenX, screenY, &xBitmap, &yBitmap))
         return;
 
-    ToolOnMouseDown(hwnd, xBitmap, yBitmap, btn);
+    ToolHandlePointerEvent(TOOL_POINTER_DOWN, hwnd, xBitmap, yBitmap, btn);
 }
 
 /*------------------------------------------------------------
@@ -246,7 +246,7 @@ void Controller_HandleDoubleClick(HWND hwnd, int screenX, int screenY, int btn) 
     int xBitmap, yBitmap;
     if (!BmpCoordInBounds(screenX, screenY, &xBitmap, &yBitmap))
         return;
-    ToolOnDoubleClick(hwnd, xBitmap, yBitmap, btn);
+    ToolHandlePointerEvent(TOOL_POINTER_DOUBLE_CLICK, hwnd, xBitmap, yBitmap, btn);
 }
 
 /*------------------------------------------------------------
@@ -302,7 +302,7 @@ void Controller_HandleMouseMove(HWND hwnd, int screenX, int screenY, int wParam)
     if (yBitmap < 0) yBitmap = 0;
     if (yBitmap >= Canvas_GetHeight()) yBitmap = Canvas_GetHeight() - 1;
 
-    ToolOnMouseMove(hwnd, xBitmap, yBitmap, wParam);
+    ToolHandlePointerEvent(TOOL_POINTER_MOVE, hwnd, xBitmap, yBitmap, wParam);
 }
 
 /*------------------------------------------------------------
@@ -340,7 +340,7 @@ void Controller_HandleMouseUp(HWND hwnd, int screenX, int screenY, int btn) {
     if (yBitmap < 0) yBitmap = 0;
     if (yBitmap >= Canvas_GetHeight()) yBitmap = Canvas_GetHeight() - 1;
 
-    ToolOnMouseUp(hwnd, xBitmap, yBitmap, btn);
+    ToolHandlePointerEvent(TOOL_POINTER_UP, hwnd, xBitmap, yBitmap, btn);
 }
 
 /*------------------------------------------------------------
@@ -351,7 +351,7 @@ void Controller_HandleCaptureLost(HWND hwnd) {
     if (s_resize.active) {
         s_resize.active = FALSE;
     }
-    ToolOnCaptureLost();
+    ToolHandleLifecycleEvent(TOOL_LIFECYCLE_CAPTURE_LOST, hwnd);
 }
 
 /*------------------------------------------------------------
@@ -411,7 +411,7 @@ void Controller_HandleKey(HWND hwnd, WPARAM wParam, BOOL down) {
 
 void Controller_HandleTimer(HWND hwnd, WPARAM id) {
     if (id == TIMER_AIRBRUSH) {
-        ToolTriggerAirbrush(hwnd);
+        ToolHandleLifecycleEvent(TOOL_LIFECYCLE_TIMER_TICK, hwnd);
     }
 }
 
@@ -471,7 +471,7 @@ void Controller_HandleMouseWheel(HWND hwnd, WPARAM wParam, LPARAM lParam) {
             SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
 
             SendMessage(GetParent(hwnd), WM_SIZE, 0, 0);
-            ToolOnViewportChanged(hwnd);
+            ToolHandleLifecycleEvent(TOOL_LIFECYCLE_VIEWPORT_CHANGED, hwnd);
             InvalidateWindow(hwnd);
         }
         return;

@@ -273,13 +273,13 @@ void AirbrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   FreehandOnMouseUp(hWnd, x, y, nButton);
 }
 
-void AirbrushToolTrigger(HWND hWnd) {
-  if (!s_bDrawing || s_activeFreehandTool != TOOL_AIRBRUSH)
-    return;
+void FreehandTool_OnTimerTick(void) {
+  if (!s_bDrawing || s_activeFreehandTool != TOOL_AIRBRUSH) return;
 
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
-    DrawPrim_DrawSprayPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(), s_ptLast.x, s_ptLast.y,
+    DrawPrim_DrawSprayPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(),
+                            s_ptLast.x, s_ptLast.y,
                             GetColorForButton(s_nDrawButton), nSprayRadius);
   }
   InvalidateCanvas();
