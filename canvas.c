@@ -319,33 +319,33 @@ LRESULT CALLBACK CanvasWndProc(HWND hwnd, UINT message, WPARAM wParam,
     break;
 
   case WM_LBUTTONDOWN:
-    Controller_HandleMouseDown(hwnd, (short)LOWORD(lParam),
-                               (short)HIWORD(lParam), MK_LBUTTON);
+    Controller_HandleMouseDown(hwnd, GET_X_LPARAM(lParam),
+                               GET_Y_LPARAM(lParam), MK_LBUTTON);
     return 0;
 
   case WM_LBUTTONDBLCLK:
-    Controller_HandleDoubleClick(hwnd, (short)LOWORD(lParam),
-                                 (short)HIWORD(lParam), MK_LBUTTON);
+    Controller_HandleDoubleClick(hwnd, GET_X_LPARAM(lParam),
+                                 GET_Y_LPARAM(lParam), MK_LBUTTON);
     return 0;
 
   case WM_RBUTTONDOWN:
-    Controller_HandleMouseDown(hwnd, (short)LOWORD(lParam),
-                               (short)HIWORD(lParam), MK_RBUTTON);
+    Controller_HandleMouseDown(hwnd, GET_X_LPARAM(lParam),
+                               GET_Y_LPARAM(lParam), MK_RBUTTON);
     return 0;
 
   case WM_MOUSEMOVE:
-    Controller_HandleMouseMove(hwnd, (short)LOWORD(lParam),
-                               (short)HIWORD(lParam), (int)wParam);
+    Controller_HandleMouseMove(hwnd, GET_X_LPARAM(lParam),
+                               GET_Y_LPARAM(lParam), (int)wParam);
     return 0;
 
   case WM_LBUTTONUP:
-    Controller_HandleMouseUp(hwnd, (short)LOWORD(lParam),
-                             (short)HIWORD(lParam), MK_LBUTTON);
+    Controller_HandleMouseUp(hwnd, GET_X_LPARAM(lParam),
+                             GET_Y_LPARAM(lParam), MK_LBUTTON);
     return 0;
 
   case WM_RBUTTONUP:
-    Controller_HandleMouseUp(hwnd, (short)LOWORD(lParam),
-                             (short)HIWORD(lParam), MK_RBUTTON);
+    Controller_HandleMouseUp(hwnd, GET_X_LPARAM(lParam),
+                             GET_Y_LPARAM(lParam), MK_RBUTTON);
     return 0;
 
   case WM_CAPTURECHANGED:
