@@ -10,9 +10,8 @@ COLORREF GetColorForButton(int nButton);
 BYTE GetOpacityForButton(int nButton);
 BYTE ComposeOpacity(BYTE baseAlpha, BYTE colorOpacity);
 
-/* Ensure canvas updates properly after pixel modifications */
 void UpdateCanvasAfterModification(void);
 
 
 
-#endif /* HELPERS_H */
+#endif

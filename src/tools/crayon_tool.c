@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include "interaction.h"
 
-/* LCG Random Constants */
 #define LCG_A 1103515245
 #define LCG_C 12345
 #define LCG_M 0x7fffffff
@@ -68,7 +67,6 @@ void CrayonTool_RegisterPresets(void) {
 
   BrushPresetData c;
 
-  // Soft Preset
   c.crayon.density = 30;
   c.crayon.textureIntensity = 40;
   c.crayon.sprayAmount = 20;
@@ -79,7 +77,6 @@ void CrayonTool_RegisterPresets(void) {
   c.size = 2;
   BrushPreset_Add(PRESET_SLOT_CRAYON, "Soft", &c, TRUE);
 
-  // Medium Preset
   c.crayon.density = 50;
   c.crayon.textureIntensity = 60;
   c.crayon.sprayAmount = 40;
@@ -90,7 +87,6 @@ void CrayonTool_RegisterPresets(void) {
   c.size = 3;
   BrushPreset_Add(PRESET_SLOT_CRAYON, "Medium", &c, TRUE);
 
-  // Bold Preset
   c.crayon.density = 80;
   c.crayon.textureIntensity = 85;
   c.crayon.sprayAmount = 60;
@@ -101,7 +97,6 @@ void CrayonTool_RegisterPresets(void) {
   c.size = 4;
   BrushPreset_Add(PRESET_SLOT_CRAYON, "Bold", &c, TRUE);
 
-  // Rough Preset
   c.crayon.density = 70;
   c.crayon.textureIntensity = 95;
   c.crayon.sprayAmount = 80;
@@ -112,7 +107,6 @@ void CrayonTool_RegisterPresets(void) {
   c.size = 3;
   BrushPreset_Add(PRESET_SLOT_CRAYON, "Rough", &c, TRUE);
 
-  // Smooth Preset
   c.crayon.density = 40;
   c.crayon.textureIntensity = 25;
   c.crayon.sprayAmount = 15;
@@ -158,7 +152,6 @@ static void InitNoiseTextures(void) {
         s_noiseTexHue[i] = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
         s_noiseTexSat[i] = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
     }
-    // Apply simple smoothing to make noise less blocky
     float blurred[NOISE_TEX_SIZE * NOISE_TEX_SIZE];
     for (int iter = 0; iter < 2; iter++) {
         for (int y = 0; y < NOISE_TEX_SIZE; y++) {
@@ -217,7 +210,6 @@ static float FastNoise2D(float x, float y) {
     return v;
 }
 
-// Rough grain noise - fast hash per pixel
 static float GrainNoise(int x, int y, int seed) {
    int n = x * 73856093 + y * 19349663 + seed * 83492791;
    n = (n << 13) ^ n;
@@ -225,29 +217,23 @@ static float GrainNoise(int x, int y, int seed) {
    return ((float)n / 2147483647.0f);
 }
 
-// Directional noise - follows stroke direction with very rough texture
 static float DirectionalNoise(float x, float y, float dirX, float dirY,
                                int seed) {
-   // High-frequency base noise for rough grain
    float baseNoise = FastNoise2D(x, y);
 
-   // Directional component - creates texture that follows stroke
    float dirLen = sqrtf(dirX * dirX + dirY * dirY);
    if (dirLen > 0.001f) {
      float ndx = dirX / dirLen;
      float ndy = dirY / dirLen;
 
-     // Sample noise along perpendicular direction for stroke-like texture
      float perpX = -ndy;
      float perpY = ndx;
      float perpNoise = SampleNoise(
          x * 0.3f + perpX * 3.0f, y * 0.3f + perpY * 3.0f, s_noiseTex);
 
-     // Combine base and directional noise
      baseNoise = baseNoise * 0.5f + perpNoise * 0.5f;
    }
 
-   // Add multi-octave noise for rough texture
    float value = baseNoise;
    float amplitude = 0.6f;
    float frequency = 0.3f;
@@ -262,20 +248,17 @@ static float DirectionalNoise(float x, float y, float dirX, float dirY,
      frequency *= 2.0f;
    }
 
-   // Add pixel-level grain for extra roughness
    int ix = (int)floorf(x);
    int iy = (int)floorf(y);
    float grain = GrainNoise(ix, iy, seed + 20000);
    value += (grain - 0.5f) * 0.2f;
 
-   // Normalize to 0-1
    value = (value + 1.5f) / 3.0f;
    if (value < 0.0f) value = 0.0f;
    if (value > 1.0f) value = 1.0f;
    return value;
 }
 
-// Get separate noise values for color variation (brightness, hue shift)
 static void GetColorVariationNoise(float x, float y, int seed,
                                     float *brightnessNoise, float *hueNoise,
                                     float *saturationNoise) {
@@ -299,7 +282,6 @@ static void GetColorVariationNoise(float x, float y, int seed,
    *saturationNoise = (*saturationNoise + 1.0f) / 2.0f;
 }
 
-// Modify color with crayon-like texture variation
 static COLORREF ApplyCrayonColorVariation(COLORREF baseColor,
                                           float brightnessNoise, float hueNoise,
                                           float saturationNoise) {
@@ -307,13 +289,11 @@ static COLORREF ApplyCrayonColorVariation(COLORREF baseColor,
   int g = GetGValue(baseColor);
   int b = GetBValue(baseColor);
 
-  // Use color variation setting to scale effect
   float variationScale = (float)nCrayonColorVariation / 100.0f;
   float brightnessRange = (float)nCrayonBrightnessRange / 100.0f;
   float saturationRange = (float)nCrayonSaturationRange / 100.0f;
   float hueShiftRange = (float)nCrayonHueShiftRange / 100.0f;
 
-  // Brightness variation: scaled by brightness range setting
   float brightnessMin = 1.0f - brightnessRange * 0.3f;
   float brightnessMax = 1.0f + brightnessRange * 0.4f;
   float brightness =
@@ -323,7 +303,6 @@ static COLORREF ApplyCrayonColorVariation(COLORREF baseColor,
   g = (int)(g * brightness);
   b = (int)(b * brightness);
 
-  // Saturation variation: scaled by saturation range setting
   float saturationMin = 1.0f - saturationRange * 0.4f;
   float saturation = saturationMin + saturationNoise * (1.0f - saturationMin);
   saturation = 1.0f + (saturation - 1.0f) * variationScale;
@@ -332,18 +311,14 @@ static COLORREF ApplyCrayonColorVariation(COLORREF baseColor,
   g = (int)(gray + (g - gray) * saturation);
   b = (int)(gray + (b - gray) * saturation);
 
-  // Hue shift: scaled by hue shift range setting
   float hueShift = (hueNoise - 0.5f) * hueShiftRange * 0.2f * variationScale;
   if (hueShift > 0) {
-    // Shift slightly warmer (more red/yellow)
     r = (int)(r + (255 - r) * hueShift * 0.3f);
     g = (int)(g + (255 - g) * hueShift * 0.2f);
   } else {
-    // Shift slightly cooler (more blue)
     b = (int)(b + (255 - b) * (-hueShift) * 0.2f);
   }
 
-  // Clamp values
   if (r < 0)
     r = 0;
   if (r > 255)
@@ -361,7 +336,6 @@ static COLORREF ApplyCrayonColorVariation(COLORREF baseColor,
 }
 
 
-// Catmull-Rom spline interpolation for smooth curves
 static void CatmullRomSpline(float t, float p0x, float p0y, float p1x,
                              float p1y, float p2x, float p2y, float p3x,
                              float p3y, float *outX, float *outY) {
@@ -378,7 +352,6 @@ static void CatmullRomSpline(float t, float p0x, float p0y, float p1x,
 }
 
 
-// Calculate pressure based on stroke speed
 static float CalculatePressure(StrokePoint *p1, StrokePoint *p2) {
   if (p1->time == 0 || p2->time == 0)
     return 1.0f;
@@ -391,17 +364,13 @@ static float CalculatePressure(StrokePoint *p1, StrokePoint *p2) {
   if (timeDelta == 0)
     timeDelta = 1;
 
-  // Speed in pixels per millisecond
   float speed = distance / (float)timeDelta;
 
-  // Inverse relationship: slower = higher pressure
-  // Clamp speed to reasonable range (0.01 to 2.0 px/ms)
   if (speed < 0.01f)
     speed = 0.01f;
   if (speed > 2.0f)
     speed = 2.0f;
 
-  // Pressure: 0.3 (fast) to 1.0 (slow)
   float pressure = 0.3f + (2.0f - speed) / 2.0f * 0.7f;
   if (pressure < 0.3f)
     pressure = 0.3f;
@@ -423,7 +392,6 @@ static int GetCrayonSize(void) {
 }
 
 
-// Forward declaration for renderer
 static void ApplySprayEffect(BYTE *bits, int width, int height, float centerX,
                              float centerY, float radius, COLORREF color,
                              BYTE colorAlpha, float pressure, int seed);
@@ -431,8 +399,6 @@ static void ApplySprayEffect(BYTE *bits, int width, int height, float centerX,
 static BYTE CalcCrayonBaseAlpha(void) {
   float densityFactor = (float)nCrayonDensity / 100.0f;
   float textureFactor = (float)nCrayonTextureIntensity / 100.0f;
-  // Higher base alpha for more visible rough texture, scaled by texture
-  // intensity
   return (BYTE)(20 + densityFactor * 100 * textureFactor);
 }
 
@@ -464,30 +430,25 @@ static void DrawCrayonSpot(BYTE *bits, int width, int height, float sx,
 
       float dist = sqrtf(distSq);
 
-      // Get directional noise texture for opacity
       float noise =
           DirectionalNoise(pixelX, pixelY, dirX, dirY, s_currentNoiseSeed);
 
-      // Get color variation noise for realistic crayon texture
       float brightnessNoise, hueNoise, saturationNoise;
       GetColorVariationNoise(pixelX, pixelY, s_currentNoiseSeed,
                              &brightnessNoise, &hueNoise, &saturationNoise);
 
-      // Apply color variation to create textured crayon appearance
       COLORREF variedColor = ApplyCrayonColorVariation(
           color, brightnessNoise, hueNoise, saturationNoise);
 
-      // Noise modulation scaled by texture intensity
       float textureFactor = (float)nCrayonTextureIntensity / 100.0f;
       float textureMod =
           noise *
-          (0.5f + textureFactor * 1.3f); // Texture intensity controls range
+          (0.5f + textureFactor * 1.3f);
       if (textureMod > 1.0f)
         textureMod = 1.0f;
       if (textureMod < 0.0f)
         textureMod = 0.0f;
 
-      // Edge falloff with smooth transition
       float edgeFactor = 1.0f;
       if (dist > radius - 1.0f) {
         edgeFactor = (radius + 0.5f - dist) / 1.5f;
@@ -496,7 +457,6 @@ static void DrawCrayonSpot(BYTE *bits, int width, int height, float sx,
         edgeFactor = SmoothStep(edgeFactor);
       }
 
-      // Calculate final alpha with pressure, noise, and edge
       BYTE alpha = ComposeOpacity((BYTE)(baseAlpha * pressure * textureMod * edgeFactor),
                                   colorAlpha);
 
@@ -506,13 +466,11 @@ static void DrawCrayonSpot(BYTE *bits, int width, int height, float sx,
     }
   }
 
-  // Apply aliased spraybrush effect at the end for extra texture
   ApplySprayEffect(bits, width, height, sx, sy, radius, color, colorAlpha, pressure,
                    s_currentNoiseSeed);
 }
 
 
-// Draw a smooth stroke segment using spline interpolation
 static void DrawCrayonStrokeSmooth(BYTE *bits, int width, int height,
                                    StrokePoint *p0, StrokePoint *p1,
                                    StrokePoint *p2, StrokePoint *p3,
@@ -522,7 +480,6 @@ static void DrawCrayonStrokeSmooth(BYTE *bits, int width, int height,
 
   float radius = (size / 2.0f) * pressure;
 
-  // Calculate direction for directional noise
   float dirX = p2->x - p1->x;
   float dirY = p2->y - p1->y;
   float dirLen = sqrtf(dirX * dirX + dirY * dirY);
@@ -534,7 +491,6 @@ static void DrawCrayonStrokeSmooth(BYTE *bits, int width, int height,
     dirY /= dirLen;
   }
 
-  // Determine number of spline steps based on distance
   float dist = sqrtf((p2->x - p1->x) * (p2->x - p1->x) +
                      (p2->y - p1->y) * (p2->y - p1->y));
   int steps = (int)(dist * 2.0f) + 1;
@@ -543,7 +499,6 @@ static void DrawCrayonStrokeSmooth(BYTE *bits, int width, int height,
   if (steps > 50)
     steps = 50;
 
-  // Draw spline curve
   for (int i = 0; i <= steps; i++) {
     float t = (float)i / (float)steps;
 
@@ -567,30 +522,25 @@ static void DrawCrayonStrokeSmooth(BYTE *bits, int width, int height,
   }
 }
 
-// Aliased spraybrush effect - adds scattered pixels at the end for texture
 static void ApplySprayEffect(BYTE *bits, int width, int height, float centerX,
                              float centerY, float radius, COLORREF color,
                              BYTE colorAlpha, float pressure, int seed) {
-  // Number of spray particles based on area, pressure, and spray amount setting
   float sprayFactor = (float)nCrayonSprayAmount / 100.0f;
   int sprayCount = (int)(radius * radius * 0.15f * pressure * sprayFactor);
   if (sprayCount < 1)
     sprayCount = 1;
   if (sprayCount > 100)
-    sprayCount = 100; // Increased max for more spray options
+    sprayCount = 100;
 
-  // Use seed for deterministic randomness
   int localSeed = seed + (int)(centerX * 1000.0f) + (int)(centerY * 1000.0f);
 
   for (int i = 0; i < sprayCount; i++) {
-    // Generate random offset within radius
-    // Simple LCG for deterministic randomness
     localSeed = (localSeed * LCG_A + LCG_C) & LCG_M;
-    float angle = ((float)(localSeed % (int)TWO_PI_10K) / 10000.0f); // 0 to 2*PI
+    float angle = ((float)(localSeed % (int)TWO_PI_10K) / 10000.0f);
     localSeed = (localSeed * LCG_A + LCG_C) & LCG_M;
-    float dist = ((float)(localSeed % 10000) / 10000.0f); // 0 to 1
-    dist = dist * dist;    // Square for more center-weighted distribution
-    dist *= radius * 1.2f; // Extend slightly beyond radius
+    float dist = ((float)(localSeed % 10000) / 10000.0f);
+    dist = dist * dist;
+    dist *= radius * 1.2f;
 
     int px = (int)(centerX + cosf(angle) * dist + 0.5f);
     int py = (int)(centerY + sinf(angle) * dist + 0.5f);
@@ -598,7 +548,6 @@ static void ApplySprayEffect(BYTE *bits, int width, int height, float centerX,
     if (px < 0 || px >= width || py < 0 || py >= height)
       continue;
 
-    // Get color variation for spray particles
     float brightnessNoise, hueNoise, saturationNoise;
     GetColorVariationNoise((float)px, (float)py, seed + i * 1000,
                            &brightnessNoise, &hueNoise, &saturationNoise);
@@ -606,11 +555,9 @@ static void ApplySprayEffect(BYTE *bits, int width, int height, float centerX,
     COLORREF variedColor = ApplyCrayonColorVariation(color, brightnessNoise,
                                                      hueNoise, saturationNoise);
 
-    // Random alpha for spray particles (aliased - full opacity or low)
     localSeed = (localSeed * LCG_A + LCG_C) & LCG_M;
-    BYTE sprayAlpha = ComposeOpacity((BYTE)(80 + (localSeed % 100)), colorAlpha); // 80-180 alpha range
+    BYTE sprayAlpha = ComposeOpacity((BYTE)(80 + (localSeed % 100)), colorAlpha);
 
-    // Draw aliased pixel (no anti-aliasing, hard edge)
     DrawPixelAlpha(bits, width, height, px, py, variedColor, sprayAlpha,
                    LAYER_BLEND_NORMAL);
   }
@@ -620,7 +567,6 @@ static void ApplySprayEffect(BYTE *bits, int width, int height, float centerX,
 static void AddStrokePoint(int x, int y) {
   DWORD currentTime = GetTickCount();
 
-  // Shift points if buffer is full
   if (s_strokePointCount >= MAX_STROKE_POINTS) {
     for (int i = 0; i < MAX_STROKE_POINTS - 1; i++) {
       s_strokePoints[i] = s_strokePoints[i + 1];
@@ -628,13 +574,11 @@ static void AddStrokePoint(int x, int y) {
     s_strokePointCount = MAX_STROKE_POINTS - 1;
   }
 
-  // Add new point
   StrokePoint *pt = &s_strokePoints[s_strokePointCount];
   pt->x = (float)x;
   pt->y = (float)y;
   pt->time = currentTime;
 
-  // Calculate pressure based on previous point
   if (s_strokePointCount > 0) {
     pt->pressure =
         CalculatePressure(&s_strokePoints[s_strokePointCount - 1], pt);
@@ -653,17 +597,14 @@ static void DrawCrayonStroke(BYTE *bits, int width, int height,
 
   int size = GetCrayonSize();
 
-  // Draw smooth strokes between points
   for (int i = 0; i < s_strokePointCount - 1; i++) {
     StrokePoint *p1 = &s_strokePoints[i];
     StrokePoint *p2 = &s_strokePoints[i + 1];
 
-    // Get control points for spline
     StrokePoint *p0 = (i > 0) ? &s_strokePoints[i - 1] : NULL;
     StrokePoint *p3 =
         (i < s_strokePointCount - 2) ? &s_strokePoints[i + 2] : NULL;
 
-    // Use average pressure
     float pressure = (p1->pressure + p2->pressure) * 0.5f;
 
     DrawCrayonStrokeSmooth(bits, width, height, p0, p1, p2, p3, color, colorAlpha, size,
@@ -682,15 +623,12 @@ void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
     return;
   }
 
-  // Generate new random seed for this stroke
   s_currentNoiseSeed = (int)GetTickCount() + (x * 1619) + (y * 31337);
 
-  // Reset stroke points
   s_strokePointCount = 0;
   AddStrokePoint(x, y);
   Interaction_UpdateLastPoint(x, y);
 
-  // Draw initial point
   int size = GetCrayonSize();
   float radius = size / 2.0f;
   BYTE colorAlpha = GetOpacityForButton(Interaction_GetDrawButton());
@@ -706,13 +644,10 @@ void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
   if (!Interaction_IsActive() || !Interaction_IsActiveButton(nButton))
     return;
 
-  // Add new point to stroke
   AddStrokePoint(x, y);
 
-  // Draw stroke from last few points (keep it smooth and responsive)
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
-    // Only draw the most recent segment to avoid redrawing entire stroke
     int startIdx = (s_strokePointCount >= 3) ? s_strokePointCount - 3 : 0;
     int endIdx = s_strokePointCount - 1;
 
@@ -745,11 +680,9 @@ void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
 void CrayonToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   (void)nButton;
-  // Add final point
   if (Interaction_IsActive()) {
     AddStrokePoint(x, y);
 
-    // Draw final stroke segment
     BYTE *bits = LayersGetActiveColorBits();
     if (bits && s_strokePointCount >= 2) {
       int size = GetCrayonSize();

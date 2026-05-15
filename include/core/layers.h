@@ -3,7 +3,7 @@
 #include <windows.h>
 #include "palette.h"
 
-#define MAX_LAYERS 32 /* matches LayerSnapshot.layers[] */
+#define MAX_LAYERS 32
 
 typedef enum { LAYER_BLEND_NORMAL=0, LAYER_BLEND_MULTIPLY, LAYER_BLEND_SCREEN, LAYER_BLEND_OVERLAY, LAYER_BLEND_COUNT } LayerBlendMode;
 

@@ -24,7 +24,6 @@ void DrawPrim_DrawEraserPoint(BYTE *bits, int width, int height, int x, int y,
 
 void DrawPrim_DrawBrushPoint(BYTE *bits, int width, int height, int x, int y,
                              COLORREF color, BYTE alpha, int brushWidthIndex);
-/* Same integer spine as pencil; stamps brush shape at each spine pixel. */
 void DrawPrim_DrawBrushLine(BYTE *bits, int width, int height, int x1, int y1,
                             int x2, int y2, COLORREF color, BYTE alpha,
                             int brushWidthIndex);
@@ -33,4 +32,4 @@ void DrawPrim_DrawBrushLine(BYTE *bits, int width, int height, int x1, int y1,
 void DrawPrim_DrawSprayPoint(BYTE *bits, int width, int height, int x, int y,
                              COLORREF color, BYTE alpha, int sprayRadiusIndex);
 
-#endif /* DRAWING_PRIMITIVES_H */
+#endif

@@ -5,19 +5,16 @@
 
 
 typedef struct {
-    int width;              /* Canvas width  (pixels)        */
-    int height;             /* Canvas height (pixels)        */
-    BOOL dirty;             /* Unsaved changes flag          */
-    wchar_t currentFile[MAX_PATH]; /* Current file path (or L"") */
-    int scrollX;            /* Horizontal scroll offset      */
-    int scrollY;            /* Vertical scroll offset        */
-    double zoomPercent;     /* Zoom level (12.5 – 800.0)    */
+    int width;
+    int height;
+    BOOL dirty;
+    wchar_t currentFile[MAX_PATH];
+    int scrollX;
+    int scrollY;
+    double zoomPercent;
 } Document;
 
-/* Return the singleton document instance */
 Document* GetDocument(void);
-
-/* Convenience accessors */
 int         Doc_GetWidth(void);
 int         Doc_GetHeight(void);
 void        Doc_SetSize(int w, int h);
@@ -33,4 +30,4 @@ int         Doc_GetScrollY(void);
 double      Doc_GetZoom(void);
 void        Doc_SetZoom(double z);
 
-#endif /* DOCUMENT_H */
+#endif

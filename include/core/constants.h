@@ -11,4 +11,4 @@ typedef enum ToolCancelReason {
 #define SNAP_ANGLE_DEG     45
 #define DEFAULT_BRUSH_SIZE 1
 
-#endif /* CONSTANTS_H */
+#endif

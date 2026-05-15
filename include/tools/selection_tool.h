@@ -13,7 +13,7 @@ void SelectionToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
 void SelectionToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
 void SelectionTool_OnCaptureLost(void);
 
-void SelectionToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY); // Draw handles/frame
+void SelectionToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
 void SelectionTool_Deactivate(void);
 BOOL SelectionTool_Cancel(ToolCancelReason reason);
 
@@ -44,19 +44,19 @@ void SelectionMove(int dx, int dy);
 #include "poly_store.h"
 
 typedef struct SelectionSnapshot {
-    int mode;                  // Captured mode (SEL_NONE, SEL_REGION_ONLY, SEL_FLOATING)
-    RECT rcBounds;            // Selection bounds
-    HRGN hRegion;            // Copy of region (FreeType)
-    HBITMAP hFloatBmp;       // Copy of floating bitmap
-    BYTE *pFloatBits;        // Pixel data
-    int nFloatW, nFloatH;     // Dimensions
-    HBITMAP hBackupBmp;       // Backup bitmap used for cancel
-    BYTE *pBackupBits;        // Backup pixel data
-    HRGN hBackupRegion;       // Backup selection region
-    RECT rcLiftOrigin;        // Bounds where lift happened
-    double fRotationAngle;       // Rotation angle
-    POINT ptRotateCenter;      // Rotation center
-    PolyStore freeformPts;      // Polygon points (for reconstructing region/editing)
+    int mode;
+    RECT rcBounds;
+    HRGN hRegion;
+    HBITMAP hFloatBmp;
+    BYTE *pFloatBits;
+    int nFloatW, nFloatH;
+    HBITMAP hBackupBmp;
+    BYTE *pBackupBits;
+    HRGN hBackupRegion;
+    RECT rcLiftOrigin;
+    double fRotationAngle;
+    POINT ptRotateCenter;
+    PolyStore freeformPts;
 } SelectionSnapshot;
 
 SelectionSnapshot *Selection_CreateSnapshot(void);

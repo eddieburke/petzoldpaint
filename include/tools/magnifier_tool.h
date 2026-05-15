@@ -9,4 +9,4 @@ void MagnifierToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
 void MagnifierToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
 void MagnifierToolDeactivate(void);
 
-#endif // MAGNIFIER_TOOL_H
+#endif
