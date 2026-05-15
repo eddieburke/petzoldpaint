@@ -17,14 +17,13 @@
 #include "../ui/widgets/colorbox.h"
 #include "drawing_primitives.h"
 #include "tool_options/tool_options.h"
-#include "stroke_session.h"
+#include "../interaction.h"
 #include <stdlib.h>
 
 /*------------------------------------------------------------------------------
  * Localized Drawing State
  *----------------------------------------------------------------------------*/
 
-static StrokeSession s_session = {0};
 typedef struct {
   BYTE *bits;
   int width;
@@ -32,9 +31,9 @@ typedef struct {
 } ActiveSurface;
 
 typedef void (*PointDrawSizedFn)(BYTE *bits, int width, int height, int x, int y,
-                                 COLORREF color, int size);
+                                 COLORREF color, BYTE alpha, int size);
 typedef void (*LineDrawSizedFn)(BYTE *bits, int width, int height, int x1, int y1,
-                                int x2, int y2, COLORREF color, int size);
+                                int x2, int y2, COLORREF color, BYTE alpha, int size);
 
 typedef enum {
   STROKE_COLOR_FROM_BUTTON = 0,
@@ -60,35 +59,36 @@ struct FreehandStrokePolicy {
 typedef struct FreehandStrokePolicy StrokePolicy;
 
 static void DrawPencilPointSized(BYTE *bits, int width, int height, int x, int y,
-                                 COLORREF color, int size) {
+                                 COLORREF color, BYTE alpha, int size) {
   (void)size;
-  DrawPrim_DrawPencilPoint(bits, width, height, x, y, color);
+  DrawPrim_DrawPencilPoint(bits, width, height, x, y, color, alpha);
 }
 
 static void DrawPencilLineSized(BYTE *bits, int width, int height, int x1, int y1,
-                                int x2, int y2, COLORREF color, int size) {
+                                int x2, int y2, COLORREF color, BYTE alpha, int size) {
   (void)size;
-  DrawPrim_DrawPencilLine(bits, width, height, x1, y1, x2, y2, color);
+  DrawPrim_DrawPencilLine(bits, width, height, x1, y1, x2, y2, color, alpha);
 }
 
 static void DrawBrushPointSized(BYTE *bits, int width, int height, int x, int y,
-                                COLORREF color, int size) {
-  DrawPrim_DrawBrushPoint(bits, width, height, x, y, color, size);
+                                COLORREF color, BYTE alpha, int size) {
+  DrawPrim_DrawBrushPoint(bits, width, height, x, y, color, alpha, size);
 }
 
 static void DrawBrushLineSized(BYTE *bits, int width, int height, int x1, int y1,
-                               int x2, int y2, COLORREF color, int size) {
-  DrawPrim_DrawBrushLine(bits, width, height, x1, y1, x2, y2, color, size);
+                               int x2, int y2, COLORREF color, BYTE alpha, int size) {
+  DrawPrim_DrawBrushLine(bits, width, height, x1, y1, x2, y2, color, alpha, size);
 }
 
 static void DrawEraserPointSized(BYTE *bits, int width, int height, int x, int y,
-                                 COLORREF color, int size) {
+                                 COLORREF color, BYTE alpha, int size) {
+  (void)alpha;
   DrawPrim_DrawEraserPoint(bits, width, height, x, y, color, size);
 }
 
 static void DrawSprayPointSized(BYTE *bits, int width, int height, int x, int y,
-                                COLORREF color, int size) {
-  DrawPrim_DrawSprayPoint(bits, width, height, x, y, color, size);
+                                COLORREF color, BYTE alpha, int size) {
+  DrawPrim_DrawSprayPoint(bits, width, height, x, y, color, alpha, size);
 }
 
 static int GetUnitSize(void) { return 1; }
@@ -122,6 +122,12 @@ static COLORREF ResolveStrokeColor(const StrokePolicy *policy, int button) {
   return GetColorForButton(button);
 }
 
+static BYTE ResolveStrokeAlpha(const StrokePolicy *policy, int button) {
+  if (policy->composite == STROKE_COMPOSITE_ERASE)
+    return 255;
+  return GetOpacityForButton(button);
+}
+
 static ActiveSurface ActiveSurface_Get(void) {
   ActiveSurface s = {0};
   s.bits = LayersGetActiveColorBits();
@@ -141,28 +147,28 @@ static void InvalidateDirtyBitmapRect(const RECT *rcDirty) {
 
 static void FreehandDrawInterpolated(BYTE *bits, int width, int height,
                                      const StrokePolicy *policy, int x1, int y1,
-                                     int x2, int y2, COLORREF color) {
+                                     int x2, int y2, COLORREF color, BYTE alpha) {
   const int size = policy->pfnGetSize();
   // Use the optimized line primitive if available for this configuration
   if (policy->pfnLine) {
-    policy->pfnLine(bits, width, height, x1, y1, x2, y2, color, size);
+    policy->pfnLine(bits, width, height, x1, y1, x2, y2, color, alpha, size);
   } else if (policy->bInterpolate) {
     int dx = x2 - x1;
     int dy = y2 - y1;
     int steps = abs(dx) + abs(dy); // Manhattan distance for 4-connectivity
 
     if (steps == 0) {
-      policy->pfnPoint(bits, width, height, x2, y2, color, size);
+      policy->pfnPoint(bits, width, height, x2, y2, color, alpha, size);
     } else {
       // High-density stepping loop fall-back
       for (int i = 1; i <= steps; i++) {
         int ix = x1 + (dx * i + (steps / 2 * (dx < 0 ? -1 : 1))) / steps;
         int iy = y1 + (dy * i + (steps / 2 * (dy < 0 ? -1 : 1))) / steps;
-        policy->pfnPoint(bits, width, height, ix, iy, color, size);
+        policy->pfnPoint(bits, width, height, ix, iy, color, alpha, size);
       }
     }
   } else {
-    policy->pfnPoint(bits, width, height, x2, y2, color, size);
+    policy->pfnPoint(bits, width, height, x2, y2, color, alpha, size);
   }
 }
 
@@ -171,8 +177,8 @@ static void FreehandDrawInterpolated(BYTE *bits, int width, int height,
  *----------------------------------------------------------------------------*/
 
 static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy *sp) {
-  int tool = sp ? sp->toolId : s_session.toolId;
-  if (s_session.isDrawing && nButton != s_session.drawButton) {
+  int tool = sp ? sp->toolId : Interaction_GetActiveToolId();
+  if (Interaction_IsActive() && nButton != Interaction_GetDrawButton()) {
     CancelFreehandDrawing();
     return;
   }
@@ -181,14 +187,15 @@ static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy
   if (!sp || !sp->pfnPoint)
     return;
 
-  StrokeSession_Begin(&s_session, hWnd, x, y, nButton, tool);
+  Interaction_Begin(hWnd, x, y, nButton, tool);
 
   ActiveSurface surface = ActiveSurface_Get();
   if (surface.bits) {
+    BYTE alpha = ResolveStrokeAlpha(sp, nButton);
     sp->pfnPoint(surface.bits, surface.width, surface.height, x, y,
-                     ResolveStrokeColor(sp, nButton), sp->pfnGetSize());
+                     ResolveStrokeColor(sp, nButton), alpha, sp->pfnGetSize());
     LayersMarkDirty();
-    StrokeSession_MarkPixelsModified(&s_session);
+    Interaction_MarkModified();
 
     int radius = DrawPrim_GetBrushSize(sp->pfnGetSize()) + 10;
     RECT rcDirty;
@@ -201,31 +208,34 @@ static void BeginStroke(HWND hWnd, int x, int y, int nButton, const StrokePolicy
 }
 
 static void AppendPoint(HWND hWnd, int x, int y, int nButton) {
-  if (!s_session.isDrawing || !StrokeSession_IsActiveButton(nButton))
+  if (!Interaction_IsActive() || !Interaction_IsActiveButton(nButton))
     return;
 
-  const StrokePolicy *sp = GetStrokePolicy(s_session.toolId);
+  const StrokePolicy *sp = GetStrokePolicy(Interaction_GetActiveToolId());
   if (!sp || !sp->pfnPoint)
     return;
 
   ActiveSurface surface = ActiveSurface_Get();
   if (surface.bits) {
-    FreehandDrawInterpolated(surface.bits, surface.width, surface.height, sp, s_session.lastPoint.x,
-                             s_session.lastPoint.y, x, y, ResolveStrokeColor(sp, s_session.drawButton));
+    POINT lp;
+    Interaction_GetLastPoint(&lp);
+    BYTE alpha = ResolveStrokeAlpha(sp, Interaction_GetDrawButton());
+    FreehandDrawInterpolated(surface.bits, surface.width, surface.height, sp, lp.x,
+                             lp.y, x, y, ResolveStrokeColor(sp, Interaction_GetDrawButton()), alpha);
 
     // Calculate dirty rect in BITMAP space
     int radius = DrawPrim_GetBrushSize(sp->pfnGetSize()) + 2;
     RECT rcDirty;
-    rcDirty.left = min(s_session.lastPoint.x, x) - radius;
-    rcDirty.top = min(s_session.lastPoint.y, y) - radius;
-    rcDirty.right = max(s_session.lastPoint.x, x) + radius;
-    rcDirty.bottom = max(s_session.lastPoint.y, y) + radius;
+    rcDirty.left = min(lp.x, x) - radius;
+    rcDirty.top = min(lp.y, y) - radius;
+    rcDirty.right = max(lp.x, x) + radius;
+    rcDirty.bottom = max(lp.y, y) + radius;
 
     // Send bitmap space to layer engine
     InvalidateDirtyBitmapRect(&rcDirty);
-    StrokeSession_MarkPixelsModified(&s_session);
+    Interaction_MarkModified();
   }
-  StrokeSession_UpdateLastPoint(&s_session, x, y);
+  Interaction_UpdateLastPoint(x, y);
   InvalidateCanvas();
 }
 
@@ -234,8 +244,7 @@ static void EndStroke(HWND hWnd, int x, int y, int nButton) {
   (void)x;
   (void)y;
   (void)nButton;
-  StrokeSession_CommitIfNeeded(&s_session, "Draw");
-  StrokeSession_End(&s_session);
+  Interaction_Commit("Draw");
 }
 
 /*------------------------------------------------------------------------------
@@ -259,7 +268,7 @@ void FreehandTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
 
 void AirbrushToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   BeginStroke(hWnd, x, y, nButton, GetStrokePolicy(TOOL_AIRBRUSH));
-  if (s_session.isDrawing && hWnd) {
+  if (Interaction_IsActive() && hWnd) {
     SetTimer(hWnd, TIMER_AIRBRUSH, 30, NULL);
   }
 }
@@ -276,19 +285,24 @@ void AirbrushToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
 }
 
 void FreehandTool_OnTimerTick(void) {
-  if (!s_session.isDrawing || s_session.toolId != TOOL_AIRBRUSH) return;
+  if (!Interaction_IsActive() || Interaction_GetActiveToolId() != TOOL_AIRBRUSH)
+    return;
 
   ActiveSurface surface = ActiveSurface_Get();
   if (surface.bits) {
+    POINT lp;
+    Interaction_GetLastPoint(&lp);
     int radius = DrawPrim_GetSprayRadius(nSprayRadius) + 2;
-    RECT rcDirty = {s_session.lastPoint.x - radius, s_session.lastPoint.y - radius,
-                    s_session.lastPoint.x + radius, s_session.lastPoint.y + radius};
+    RECT rcDirty = {lp.x - radius, lp.y - radius,
+                    lp.x + radius, lp.y + radius};
 
     DrawPrim_DrawSprayPoint(surface.bits, surface.width, surface.height,
-                            s_session.lastPoint.x, s_session.lastPoint.y,
-                            GetColorForButton(s_session.drawButton), nSprayRadius);
+                            lp.x, lp.y,
+                            GetColorForButton(Interaction_GetDrawButton()),
+                            GetOpacityForButton(Interaction_GetDrawButton()),
+                            nSprayRadius);
     InvalidateDirtyBitmapRect(&rcDirty);
-    StrokeSession_MarkPixelsModified(&s_session);
+    Interaction_MarkModified();
   }
 }
 
@@ -302,23 +316,23 @@ static void KillAirbrushTimerIfNeeded(HWND hWnd) {
   }
 }
 
-BOOL IsFreehandDrawing(void) { return s_session.isDrawing; }
+BOOL IsFreehandDrawing(void) { return Interaction_IsActive(); }
 
 void FreehandTool_Deactivate(void) {
-   if (s_session.isDrawing) {
-     KillAirbrushTimerIfNeeded(GetCanvasWindow());
-     StrokeSession_End(&s_session);
-   }
+  if (Interaction_IsActive()) {
+    KillAirbrushTimerIfNeeded(GetCanvasWindow());
+    Interaction_EndQuiet();
+  }
 }
 
 
 BOOL CancelFreehandDrawing(void) {
-   BOOL bWasDrawing = s_session.isDrawing;
-   if (s_session.isDrawing) {
-     KillAirbrushTimerIfNeeded(GetCanvasWindow());
-     StrokeSession_Cancel(&s_session);
-   }
-   return bWasDrawing;
+  BOOL bWasDrawing = Interaction_IsActive();
+  if (Interaction_IsActive()) {
+    KillAirbrushTimerIfNeeded(GetCanvasWindow());
+    Interaction_Abort();
+  }
+  return bWasDrawing;
 }
 
-int GetActiveFreehandTool(void) { return s_session.toolId; }
+int GetActiveFreehandTool(void) { return Interaction_GetActiveToolId(); }

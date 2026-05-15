@@ -20,8 +20,9 @@
 #include "../palette.h"
 #include "../resource.h"
 #include "../gdi_utils.h"
+#include "../commit_bar.h"
 #include "tool_options/tool_options.h"
-#include "tool_session.h"
+#include "../interaction.h"
 #include <commctrl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -97,7 +98,6 @@ typedef struct {
 } TextState;
 
 static TextState s_text = {0};
-static ToolSession s_textSession = {0};
 
 // Forward decls
 void TextToolbar_Show(BOOL bShow);
@@ -105,6 +105,7 @@ void TextToolbar_UpdateButtonStates(void);
 static void TextEdit_UpdatePosition(void);
 static void OnTextFontChanged(void);
 static void TextEdit_Destroy(void);
+static char* TextTool_DuplicateCurrentText(void);
 
 void ApplyTextFont(void) {
     TextFont_Apply();
@@ -124,12 +125,14 @@ void ApplyTextFont(void) {
 
 void TextRender_Blend(BYTE* dst, int dw, int dh, BYTE* src, int sw, int sh, int x, int y, COLORREF color) {
     BYTE r = GetRValue(color), g = GetGValue(color), b = GetBValue(color);
+    BYTE colorAlpha = Palette_GetPrimaryOpacity();
     for (int sy=0; sy<sh; sy++) {
         int dy = y + sy; if (dy<0 || dy>=dh) continue;
         for (int sx=0; sx<sw; sx++) {
             int dx = x + sx; if (dx<0 || dx>=dw) continue;
             BYTE cov = src[(sy*sw+sx)*4 + 2]; if (cov == 0) continue;
-            if (!IsSelectionActive() || IsPointInSelection(dx, dy)) PixelOps_BlendPixel(r, g, b, cov, dst + (dy*dw+dx)*4, 0);
+            BYTE alpha = ComposeOpacity(cov, colorAlpha);
+            if (!IsSelectionActive() || IsPointInSelection(dx, dy)) PixelOps_BlendPixel(r, g, b, alpha, dst + (dy*dw+dx)*4, 0);
         }
     }
 }
@@ -160,22 +163,21 @@ void CommitText(HWND hParent) {
             GetWindowTextA(s_text.hEdit, buf, len + 1);
             BYTE* bits = LayersGetActiveColorBits();
             if (bits) {
-                if (s_text.bOpaque) DrawRectAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), s_text.rcBox.left, s_text.rcBox.top, s_text.rcBox.right-s_text.rcBox.left, s_text.rcBox.bottom-s_text.rcBox.top, Palette_GetSecondaryColor(), 255, LAYER_BLEND_NORMAL);
+                if (s_text.bOpaque) DrawRectAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), s_text.rcBox.left, s_text.rcBox.top, s_text.rcBox.right-s_text.rcBox.left, s_text.rcBox.bottom-s_text.rcBox.top, Palette_GetSecondaryColor(), Palette_GetSecondaryOpacity(), LAYER_BLEND_NORMAL);
                 int ins = TEXT_MARGIN + TEXT_EDIT_INSET;
                 TextRender_ToActive(buf, len, (s_text.rcBox.right-s_text.rcBox.left)-ins*2, (s_text.rcBox.bottom-s_text.rcBox.top)-ins*2, s_text.rcBox.left+ins, s_text.rcBox.top+ins, bits);
-                ToolSession_MarkModified(&s_textSession);
-                ToolSession_CommitIfNeeded(&s_textSession, "Text Placement");
-                ToolSession_End(&s_textSession);
+                Interaction_MarkModified();
+                Interaction_Commit("Text Placement");
             }
             free(buf);
         }
     }
-    LayersClearDraft(); TextEdit_Destroy(); TextToolbar_Show(FALSE); s_text.mode = TEXT_NONE; ToolSession_End(&s_textSession); InvalidateCanvas();
+    LayersClearDraft(); TextEdit_Destroy(); TextToolbar_Show(FALSE); s_text.mode = TEXT_NONE; Interaction_EndQuiet(); InvalidateCanvas();
 }
 
 BOOL CancelText(void) {
     if (s_text.mode == TEXT_NONE) return FALSE;
-    LayersClearDraft(); TextEdit_Destroy(); TextToolbar_Show(FALSE); s_text.mode = TEXT_NONE; ToolSession_Cancel(&s_textSession); InvalidateCanvas();
+    LayersClearDraft(); TextEdit_Destroy(); TextToolbar_Show(FALSE); s_text.mode = TEXT_NONE; Interaction_Abort(); InvalidateCanvas();
     return TRUE;
 }
 
@@ -306,10 +308,12 @@ static void OnTextFontChanged(void) {
 
 void TextToolOnMouseDown(HWND hwnd, int x, int y, int btn) {
     if (s_text.mode == TEXT_NONE) {
-        s_text.ptDragStart = (POINT){x, y}; s_text.rcBox = (RECT){x, y, x, y}; s_text.mode = TEXT_DRAWING; ToolSession_Begin(&s_textSession, hwnd, x, y, MK_LBUTTON, TOOL_TEXT);
+        s_text.ptDragStart = (POINT){x, y}; s_text.rcBox = (RECT){x, y, x, y}; s_text.mode = TEXT_DRAWING; Interaction_Begin(hwnd, x, y, MK_LBUTTON, TOOL_TEXT);
     } else if (s_text.mode == TEXT_EDITING) {
+        COMMIT_BAR_HANDLE_CLICK(&s_text.rcBox, x, y, CommitText(hwnd), CancelText());
+
         int h = Overlay_HitTestBoxHandles(&s_text.rcBox, x, y);
-        if (h >= 0) { s_text.nHandle = h; s_text.ptDragStart = (POINT){x, y}; s_text.rcBoxStart = s_text.rcBox; s_text.mode = TEXT_RESIZING; ToolSession_Begin(&s_textSession, hwnd, x, y, MK_LBUTTON, TOOL_TEXT); }
+        if (h >= 0) { s_text.nHandle = h; s_text.ptDragStart = (POINT){x, y}; s_text.rcBoxStart = s_text.rcBox; s_text.mode = TEXT_RESIZING; Interaction_Begin(hwnd, x, y, MK_LBUTTON, TOOL_TEXT); }
         else if (!PtInRect(&s_text.rcBox, (POINT){x, y})) CommitText(hwnd);
     }
 }
@@ -355,8 +359,13 @@ void TextToolOnMouseUp(HWND hwnd, int x, int y, int btn) {
             TextEdit_UpdatePosition(); s_text.mode = TEXT_EDITING; 
             TextToolbar_Show(TRUE);
             TextToolbar_UpdateButtonStates(); 
+            HistoryPushToolSessionById(TOOL_TEXT, "Create Text Box");
         }
-    } else if (s_text.mode == TEXT_RESIZING) { s_text.mode = TEXT_EDITING; TextEdit_UpdatePosition(); }
+    } else if (s_text.mode == TEXT_RESIZING) {
+        s_text.mode = TEXT_EDITING;
+        TextEdit_UpdatePosition();
+        HistoryPushToolSessionById(TOOL_TEXT, "Adjust Text Box");
+    }
     InvalidateCanvas();
 }
 
@@ -367,7 +376,7 @@ void TextToolDrawGhost(HDC hdc) {
     LayersClearDraft();
     char* buf = malloc(len + 1); if (buf) {
         GetWindowTextA(s_text.hEdit, buf, len + 1);
-        if (s_text.bOpaque) DrawRectAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), s_text.rcBox.left, s_text.rcBox.top, s_text.rcBox.right-s_text.rcBox.left, s_text.rcBox.bottom-s_text.rcBox.top, Palette_GetSecondaryColor(), 255, LAYER_BLEND_NORMAL);
+        if (s_text.bOpaque) DrawRectAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), s_text.rcBox.left, s_text.rcBox.top, s_text.rcBox.right-s_text.rcBox.left, s_text.rcBox.bottom-s_text.rcBox.top, Palette_GetSecondaryColor(), Palette_GetSecondaryOpacity(), LAYER_BLEND_NORMAL);
         int ins = TEXT_MARGIN + TEXT_EDIT_INSET;
         TextRender_ToActive(buf, len, (s_text.rcBox.right-s_text.rcBox.left)-ins*2, (s_text.rcBox.bottom-s_text.rcBox.top)-ins*2, s_text.rcBox.left+ins, s_text.rcBox.top+ins, bits);
         free(buf);
@@ -380,6 +389,8 @@ void TextToolDrawOverlay(HDC hdc, double scale, int dx, int dy) {
     OverlayContext ctx; Overlay_Init(&ctx, hdc, scale, dx, dy);
     Overlay_DrawSelectionFrame(&ctx, &s_text.rcBox, (s_text.mode == TEXT_DRAWING));
     if (s_text.mode == TEXT_EDITING || s_text.mode == TEXT_RESIZING) Overlay_DrawBoxHandles(&ctx, &s_text.rcBox);
+    if (s_text.mode == TEXT_EDITING || s_text.mode == TEXT_RESIZING)
+        CommitBar_Draw(&ctx, &s_text.rcBox);
 }
 
 void TextToolOnKeyDown(HWND hwnd, WPARAM wp) {}
@@ -402,4 +413,85 @@ void TextToolbar_Destroy(void) { if(hToolbar) { DestroyWindow(hToolbar); hToolba
 void TextToolbar_Show(BOOL bNum) { if(bNum) { if(!hToolbar) { WNDCLASSEX wc={0}; wc.cbSize=sizeof(WNDCLASSEX); wc.lpfnWndProc=TextToolbarWndProc; wc.hInstance=hInst; wc.hbrBackground=(HBRUSH)(COLOR_BTNFACE+1); wc.lpszClassName="PeztoldTextToolbar"; wc.hCursor=LoadCursor(NULL, IDC_ARROW); RegisterClassEx(&wc); hToolbar=CreateWindowEx(WS_EX_TOOLWINDOW,"PeztoldTextToolbar","Fonts",WS_POPUP|WS_CAPTION|WS_SYSMENU,100,100,430,80,hMainWnd,NULL,hInst,NULL); } ShowWindow(hToolbar, SW_SHOWNOACTIVATE); } else if(hToolbar) ShowWindow(hToolbar, SW_HIDE); }
 BOOL TextToolbar_IsVisible(void) { return hToolbar && IsWindowVisible(hToolbar); }
 HWND TextToolbar_GetHwnd(void) { return hToolbar; }
+
+static char* TextTool_DuplicateCurrentText(void) {
+    if (!s_text.hEdit) return NULL;
+    int len = GetWindowTextLengthA(s_text.hEdit);
+    char *text = (char*)calloc((size_t)len + 1u, 1u);
+    if (!text) return NULL;
+    if (len > 0) GetWindowTextA(s_text.hEdit, text, len + 1);
+    return text;
+}
+
+TextToolSnapshot *TextTool_CreateSnapshot(void) {
+    if (s_text.mode == TEXT_NONE) return NULL;
+
+    TextToolSnapshot *snapshot = (TextToolSnapshot*)calloc(1, sizeof(TextToolSnapshot));
+    if (!snapshot) return NULL;
+
+    snapshot->mode = s_text.mode;
+    snapshot->rcBox = s_text.rcBox;
+    snapshot->bOpaque = s_text.bOpaque;
+    snapshot->font = s_font;
+    snapshot->font.hFont = NULL;
+    snapshot->text = TextTool_DuplicateCurrentText();
+    return snapshot;
+}
+
+void TextTool_DestroySnapshot(TextToolSnapshot *snapshot) {
+    if (!snapshot) return;
+    free(snapshot->text);
+    free(snapshot);
+}
+
+void TextTool_ApplySnapshot(const TextToolSnapshot *snapshot) {
+    if (Interaction_IsActive()) Interaction_EndQuiet();
+    LayersClearDraft();
+    TextEdit_Destroy();
+    TextToolbar_Show(FALSE);
+    s_text.mode = TEXT_NONE;
+
+    if (!snapshot) {
+        InvalidateCanvas();
+        return;
+    }
+
+    s_text.bOpaque = snapshot->bOpaque;
+    s_text.rcBox = snapshot->rcBox;
+    s_font = snapshot->font;
+    if (s_font.hFont) {
+        DeleteObject(s_font.hFont);
+        s_font.hFont = NULL;
+    }
+    TextFont_Apply();
+
+    if (snapshot->mode == TEXT_DRAWING) {
+        s_text.mode = TEXT_DRAWING;
+        InvalidateCanvas();
+        return;
+    }
+
+    HWND hCanvas = GetCanvasWindow();
+    if (!hCanvas) {
+        InvalidateCanvas();
+        return;
+    }
+
+    s_text.hEdit = CreateWindowEx(0, "EDIT", snapshot->text ? snapshot->text : "",
+                                  WS_CHILD|ES_MULTILINE|ES_AUTOVSCROLL|ES_WANTRETURN|ES_LEFT,
+                                  0, 0, 0, 0, hCanvas, NULL, hInst, NULL);
+    if (!s_text.hEdit) {
+        InvalidateCanvas();
+        return;
+    }
+
+    s_text.wpOldEdit = (WNDPROC)SetWindowLongPtr(s_text.hEdit, GWLP_WNDPROC, (LONG_PTR)TextEditProc);
+    SetWindowSubclass(hCanvas, CanvasSubclassText, 1, 0);
+    ApplyTextFont();
+    TextEdit_UpdatePosition();
+    s_text.mode = TEXT_EDITING;
+    TextToolbar_Show(TRUE);
+    TextToolbar_UpdateButtonStates();
+    InvalidateCanvas();
+}
 

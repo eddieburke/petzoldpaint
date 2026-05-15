@@ -26,7 +26,7 @@
 #include "tools/polygon_tool.h"
 #include "tools/selection_tool.h"
 #include "tools/shape_tools.h"
-#include "tools/stroke_session.h"
+#include "interaction.h"
 #include "tools/text_tool.h"
 #include "tools/tool_options/presets.h"
 #include "tools/tool_options/tool_options.h"
@@ -320,12 +320,12 @@ static void ToolOnCaptureLost(void) {
   s_runtime.activeToolAtMouseDown = -1; s_runtime.capturedWindow = NULL;
 
   {
-    int activeStrokeTool = StrokeSession_GetActiveToolId();
+    int activeStrokeTool = Interaction_GetActiveToolId();
     if (activeStrokeTool >= 0) {
       const char *action = (activeStrokeTool == TOOL_LINE || activeStrokeTool == TOOL_RECT ||
                             activeStrokeTool == TOOL_ELLIPSE || activeStrokeTool == TOOL_ROUNDRECT)
                                ? "Draw Shape" : "Draw";
-      StrokeSession_OnActiveCaptureLost(action);
+      Interaction_OnCaptureLost(action);
     }
   }
 

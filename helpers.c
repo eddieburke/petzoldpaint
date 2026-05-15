@@ -17,6 +17,16 @@ COLORREF GetColorForButton(int nButton)
     return (nButton == MK_RBUTTON) ? Palette_GetSecondaryColor() : Palette_GetPrimaryColor();
 }
 
+BYTE GetOpacityForButton(int nButton)
+{
+    return (nButton == MK_RBUTTON) ? Palette_GetSecondaryOpacity() : Palette_GetPrimaryOpacity();
+}
+
+BYTE ComposeOpacity(BYTE baseAlpha, BYTE colorOpacity)
+{
+    return (BYTE)(((int)baseAlpha * (int)colorOpacity + 127) / 255);
+}
+
 /*------------------------------------------------------------
     Invalidation
 ------------------------------------------------------------*/
@@ -72,12 +82,7 @@ void HistoryPushFormatted(const char* format, ...)
 void HistoryPushToolAction(const char* toolName, const char* action)
 {
     if (!toolName || !action) return;
-
-    char layerName[32];
-    int activeIdx = LayersGetActiveIndex();
-    LayersGetName(activeIdx, layerName, sizeof(layerName));
-
-    HistoryPushFormatted("%s: %s [%s]", toolName, action, layerName);
+    HistoryPushToolActionForActiveLayer(toolName, action);
 }
 
 const char* GetToolName(int toolId)

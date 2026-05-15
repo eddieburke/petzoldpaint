@@ -47,6 +47,8 @@ void HistoryPushLayerMove(int fromIndex, int toIndex);
 
 HBITMAP LayersGetActiveColorBitmap(void);
 BYTE *LayersGetActiveColorBits(void);
+BYTE *LayersGetLayerColorBits(int layerIndex);
+BYTE *Layers_BeginWrite(void);
 HDC LayersGetActiveColorDC(HBITMAP *phOld);
 
 HBITMAP LayersGetCompositeBitmap(BOOL bCheckerboard);

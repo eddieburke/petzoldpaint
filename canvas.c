@@ -156,7 +156,7 @@ void UpdateCanvas(HDC hdc, int x, int y, int w, int h) {
 }
 
 void ClearCanvas(COLORREF color) {
-  BYTE *bits = LayersGetActiveColorBits();
+  BYTE *bits = Layers_BeginWrite();
   if (!bits)
     return;
 

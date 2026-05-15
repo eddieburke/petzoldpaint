@@ -10,6 +10,14 @@
 
 static HWND hColorboxWnd = NULL;
 static HFONT hColorboxFont = NULL;
+static BOOL s_opacityDrag = FALSE;
+
+typedef enum {
+  COLOR_TARGET_PRIMARY = 0,
+  COLOR_TARGET_SECONDARY = 1
+} ColorTarget;
+
+static ColorTarget s_activeTarget = COLOR_TARGET_PRIMARY;
 
 static COLORREF paletteColors[28] = {
     RGB(0, 0, 0),       RGB(128, 128, 128), RGB(128, 0, 0),
@@ -71,6 +79,8 @@ static const COLORREF paletteWin7[28] = {
 #define BTN_WIDTH 44
 #define BTN_HEIGHT 14
 #define BTN_GAP 2
+#define OPACITY_BAR_HEIGHT 8
+#define OPACITY_BAR_BOTTOM_MARGIN 5
 
 void ColorboxSyncCustomColors(void) { SetCustomColors(paletteColors); }
 
@@ -99,6 +109,142 @@ static BOOL IsFgBgBoxHit(int x, int y) {
           y <= nVertCenter + 24);
 }
 
+static BOOL IsPrimaryBoxHit(int x, int y) {
+  int nVertCenter = (COLORBOX_HEIGHT - (CELL_SIZE * 2 + CELL_GAP)) / 2;
+  return (x >= FGBG_OFFSET && x < FGBG_OFFSET + FGBG_BOX_SIZE &&
+          y >= nVertCenter && y < nVertCenter + FGBG_BOX_SIZE);
+}
+
+static BOOL IsSecondaryBoxHit(int x, int y) {
+  int nVertCenter = (COLORBOX_HEIGHT - (CELL_SIZE * 2 + CELL_GAP)) / 2;
+  return (x >= FGBG_OFFSET + 7 && x < FGBG_OFFSET + 7 + FGBG_BOX_SIZE &&
+          y >= nVertCenter + 7 && y < nVertCenter + 7 + FGBG_BOX_SIZE);
+}
+
+static RECT GetOpacityBarRect(HWND hWnd) {
+  RECT rcClient;
+  GetClientRect(hWnd, &rcClient);
+  RECT rc;
+  rc.left = PALETTE_START_X;
+  rc.right = rcClient.right - 6;
+  if (rc.right < rc.left + 32)
+    rc.right = rc.left + 32;
+  rc.bottom = COLORBOX_HEIGHT - OPACITY_BAR_BOTTOM_MARGIN;
+  rc.top = rc.bottom - OPACITY_BAR_HEIGHT;
+  return rc;
+}
+
+static BYTE GetTargetOpacity(ColorTarget target) {
+  return (target == COLOR_TARGET_SECONDARY) ? Palette_GetSecondaryOpacity()
+                                            : Palette_GetPrimaryOpacity();
+}
+
+static void SetTargetOpacity(ColorTarget target, BYTE opacity) {
+  if (target == COLOR_TARGET_SECONDARY)
+    Palette_SetSecondaryOpacity(opacity);
+  else
+    Palette_SetPrimaryOpacity(opacity);
+}
+
+static COLORREF GetTargetColor(ColorTarget target) {
+  return (target == COLOR_TARGET_SECONDARY) ? Palette_GetSecondaryColor()
+                                            : Palette_GetPrimaryColor();
+}
+
+static BYTE BlendChan(BYTE src, BYTE bg, BYTE alpha) {
+  return (BYTE)(((int)src * (int)alpha + (int)bg * (255 - (int)alpha) + 127) / 255);
+}
+
+static COLORREF BlendColorOnBg(COLORREF color, BYTE alpha, COLORREF bg) {
+  return RGB(BlendChan(GetRValue(color), GetRValue(bg), alpha),
+             BlendChan(GetGValue(color), GetGValue(bg), alpha),
+             BlendChan(GetBValue(color), GetBValue(bg), alpha));
+}
+
+static void DrawChecker(HDC hdc, const RECT *rc, int cellSize) {
+  for (int y = rc->top; y < rc->bottom; y += cellSize) {
+    for (int x = rc->left; x < rc->right; x += cellSize) {
+      RECT tile = {x, y, min(x + cellSize, rc->right), min(y + cellSize, rc->bottom)};
+      BOOL dark = (((x - rc->left) / cellSize) + ((y - rc->top) / cellSize)) & 1;
+      HBRUSH h = CreateSolidBrush(dark ? RGB(180, 180, 180) : RGB(230, 230, 230));
+      if (h) {
+        FillRect(hdc, &tile, h);
+        DeleteObject(h);
+      }
+    }
+  }
+}
+
+static void DrawAlphaSwatch(HDC hdc, const RECT *rc, COLORREF color, BYTE alpha) {
+  DrawChecker(hdc, rc, 4);
+  for (int y = rc->top; y < rc->bottom; y += 4) {
+    for (int x = rc->left; x < rc->right; x += 4) {
+      RECT tile = {x, y, min(x + 4, rc->right), min(y + 4, rc->bottom)};
+      BOOL dark = (((x - rc->left) / 4) + ((y - rc->top) / 4)) & 1;
+      COLORREF bg = dark ? RGB(180, 180, 180) : RGB(230, 230, 230);
+      HBRUSH h = CreateSolidBrush(BlendColorOnBg(color, alpha, bg));
+      if (h) {
+        FillRect(hdc, &tile, h);
+        DeleteObject(h);
+      }
+    }
+  }
+}
+
+static void DrawOpacityBar(HDC hdc, HWND hWnd) {
+  RECT rc = GetOpacityBarRect(hWnd);
+  if (rc.right <= rc.left || rc.bottom <= rc.top)
+    return;
+
+  int width = rc.right - rc.left;
+  DrawChecker(hdc, &rc, 4);
+  COLORREF color = GetTargetColor(s_activeTarget);
+  for (int i = 0; i < width; i++) {
+    BYTE alpha = (width <= 1) ? 255 : (BYTE)((i * 255) / (width - 1));
+    int x = rc.left + i;
+    for (int y = rc.top; y < rc.bottom; y += 4) {
+      RECT px = {x, y, x + 1, min(y + 4, rc.bottom)};
+      BOOL dark = (((x - rc.left) / 4) + ((y - rc.top) / 4)) & 1;
+      COLORREF bg = dark ? RGB(180, 180, 180) : RGB(230, 230, 230);
+      HBRUSH h = CreateSolidBrush(BlendColorOnBg(color, alpha, bg));
+      if (h) {
+        FillRect(hdc, &px, h);
+        DeleteObject(h);
+      }
+    }
+  }
+
+  DrawEdge(hdc, &rc, BDR_SUNKENOUTER, BF_RECT);
+
+  BYTE currentAlpha = GetTargetOpacity(s_activeTarget);
+  int thumbX = rc.left + (int)(((rc.right - rc.left - 1) * (int)currentAlpha) / 255);
+  RECT rcThumb = {thumbX - 1, rc.top - 2, thumbX + 2, rc.bottom + 2};
+  HBRUSH hThumb = CreateSolidBrush(RGB(0, 0, 0));
+  if (hThumb) {
+    FillRect(hdc, &rcThumb, hThumb);
+    DeleteObject(hThumb);
+  }
+}
+
+static BOOL IsOpacityBarHit(HWND hWnd, int x, int y) {
+  RECT rc = GetOpacityBarRect(hWnd);
+  return x >= rc.left && x < rc.right && y >= rc.top && y < rc.bottom;
+}
+
+static void SetOpacityFromPoint(HWND hWnd, int x, ColorTarget target) {
+  RECT rc = GetOpacityBarRect(hWnd);
+  int width = rc.right - rc.left;
+  if (width <= 0)
+    return;
+  if (x < rc.left)
+    x = rc.left;
+  if (x > rc.right - 1)
+    x = rc.right - 1;
+  BYTE alpha = (width <= 1) ? 255 : (BYTE)(((x - rc.left) * 255) / (width - 1));
+  SetTargetOpacity(target, alpha);
+  InvalidateWindow(hWnd);
+}
+
 void ColorboxOnPaint(HWND hWnd) {
   PAINTSTRUCT ps;
   HDC hdc;
@@ -118,24 +264,20 @@ void ColorboxOnPaint(HWND hWnd) {
   rc.top = nVertCenter + 7;
   rc.right = rc.left + FGBG_BOX_SIZE;
   rc.bottom = rc.top + FGBG_BOX_SIZE;
-  HBRUSH hBgBr = CreateSolidBrush(Palette_GetSecondaryColor());
-  if (hBgBr) {
-    FillRect(hdc, &rc, hBgBr);
-    DeleteObject(hBgBr);
-  }
+  DrawAlphaSwatch(hdc, &rc, Palette_GetSecondaryColor(), Palette_GetSecondaryOpacity());
   DrawEdge(hdc, &rc, BDR_SUNKENOUTER, BF_RECT);
+  if (s_activeTarget == COLOR_TARGET_SECONDARY)
+    DrawFocusRect(hdc, &rc);
 
   // Draw FG color box
   rc.left = FGBG_OFFSET;
   rc.top = nVertCenter;
   rc.right = rc.left + FGBG_BOX_SIZE;
   rc.bottom = rc.top + FGBG_BOX_SIZE;
-  HBRUSH hFgBr = CreateSolidBrush(Palette_GetPrimaryColor());
-  if (hFgBr) {
-    FillRect(hdc, &rc, hFgBr);
-    DeleteObject(hFgBr);
-  }
+  DrawAlphaSwatch(hdc, &rc, Palette_GetPrimaryColor(), Palette_GetPrimaryOpacity());
   DrawEdge(hdc, &rc, BDR_RAISEDINNER, BF_RECT);
+  if (s_activeTarget == COLOR_TARGET_PRIMARY)
+    DrawFocusRect(hdc, &rc);
 
   // Draw Palette
   for (i = 0; i < 28; i++) {
@@ -179,11 +321,38 @@ void ColorboxOnPaint(HWND hWnd) {
              DT_CENTER | DT_VCENTER | DT_SINGLELINE);
   }
 
+  DrawOpacityBar(hdc, hWnd);
+  RECT rcOpacityText = GetOpacityBarRect(hWnd);
+  rcOpacityText.left = 2;
+  rcOpacityText.right = PALETTE_START_X - 4;
+  char alphaLabel[24];
+  _snprintf(alphaLabel, sizeof(alphaLabel), "A:%3d", (int)GetTargetOpacity(s_activeTarget));
+  alphaLabel[sizeof(alphaLabel) - 1] = '\0';
+  DrawText(hdc, alphaLabel, -1, &rcOpacityText,
+           DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
   SelectObject(hdc, hOldFont);
   EndPaint(hWnd, &ps);
 }
 
 void ColorboxOnLButtonDown(HWND hWnd, int x, int y) {
+  if (IsPrimaryBoxHit(x, y)) {
+    s_activeTarget = COLOR_TARGET_PRIMARY;
+    InvalidateWindow(hWnd);
+    return;
+  }
+  if (IsSecondaryBoxHit(x, y)) {
+    s_activeTarget = COLOR_TARGET_SECONDARY;
+    InvalidateWindow(hWnd);
+    return;
+  }
+  if (IsOpacityBarHit(hWnd, x, y)) {
+    s_opacityDrag = TRUE;
+    SetCapture(hWnd);
+    SetOpacityFromPoint(hWnd, x, s_activeTarget);
+    return;
+  }
+
   if (x >= BTN_START_X && x <= BTN_START_X + BTN_WIDTH) {
     int btnIdx = (y - 2) / (BTN_HEIGHT + BTN_GAP);
     if (btnIdx >= 0 && btnIdx < 3 && y >= 2 + btnIdx * (BTN_HEIGHT + BTN_GAP) &&
@@ -202,14 +371,34 @@ void ColorboxOnLButtonDown(HWND hWnd, int x, int y) {
   int idx = GetColorIndexAt(x, y);
   if (idx != -1) {
     Palette_SetPrimaryColor(paletteColors[idx]);
+    s_activeTarget = COLOR_TARGET_PRIMARY;
     InvalidateWindow(hWnd);
   }
 }
 
 void ColorboxOnRButtonDown(HWND hWnd, int x, int y) {
+  if (IsPrimaryBoxHit(x, y)) {
+    s_activeTarget = COLOR_TARGET_PRIMARY;
+    InvalidateWindow(hWnd);
+    return;
+  }
+  if (IsSecondaryBoxHit(x, y)) {
+    s_activeTarget = COLOR_TARGET_SECONDARY;
+    InvalidateWindow(hWnd);
+    return;
+  }
+  if (IsOpacityBarHit(hWnd, x, y)) {
+    s_activeTarget = COLOR_TARGET_SECONDARY;
+    s_opacityDrag = TRUE;
+    SetCapture(hWnd);
+    SetOpacityFromPoint(hWnd, x, s_activeTarget);
+    return;
+  }
+
   int idx = GetColorIndexAt(x, y);
   if (idx != -1) {
     Palette_SetSecondaryColor(paletteColors[idx]);
+    s_activeTarget = COLOR_TARGET_SECONDARY;
     InvalidateWindow(hWnd);
   }
 }
@@ -221,6 +410,7 @@ void ColorboxOnDoubleClick(HWND hWnd, int x, int y) {
     BOOL bHitFG = (x >= FGBG_OFFSET && x < FGBG_OFFSET + FGBG_BOX_SIZE &&
                    y >= nVertCenter && y < nVertCenter + FGBG_BOX_SIZE);
     COLORREF *pColor = bHitFG ? Palette_GetPrimaryColorPtr() : Palette_GetSecondaryColorPtr();
+    s_activeTarget = bHitFG ? COLOR_TARGET_PRIMARY : COLOR_TARGET_SECONDARY;
     COLORREF crNew = *pColor;
     if (ChooseColorDialog(hWnd, &crNew)) {
       *pColor = crNew;
@@ -233,10 +423,26 @@ void ColorboxOnDoubleClick(HWND hWnd, int x, int y) {
       if (ChooseColorDialog(hWnd, &crNew)) {
         paletteColors[idx] = crNew;
         Palette_SetPrimaryColor(crNew);
+        s_activeTarget = COLOR_TARGET_PRIMARY;
         InvalidateWindow(hWnd);
       }
     }
   }
+}
+
+void ColorboxOnMouseMove(HWND hWnd, int x, int y, int wParam) {
+  (void)wParam;
+  if (!s_opacityDrag)
+    return;
+  SetOpacityFromPoint(hWnd, x, s_activeTarget);
+}
+
+void ColorboxOnButtonUp(HWND hWnd) {
+  if (!s_opacityDrag)
+    return;
+  s_opacityDrag = FALSE;
+  if (GetCapture() == hWnd)
+    ReleaseCapture();
 }
 
 LRESULT CALLBACK ColorboxWndProc(HWND hwnd, UINT message, WPARAM wParam,
@@ -252,6 +458,16 @@ LRESULT CALLBACK ColorboxWndProc(HWND hwnd, UINT message, WPARAM wParam,
     return 0;
   case WM_RBUTTONDOWN:
     ColorboxOnRButtonDown(hwnd, (short)LOWORD(lParam), (short)HIWORD(lParam));
+    return 0;
+  case WM_MOUSEMOVE:
+    ColorboxOnMouseMove(hwnd, (short)LOWORD(lParam), (short)HIWORD(lParam), (int)wParam);
+    return 0;
+  case WM_LBUTTONUP:
+  case WM_RBUTTONUP:
+    ColorboxOnButtonUp(hwnd);
+    return 0;
+  case WM_CAPTURECHANGED:
+    s_opacityDrag = FALSE;
     return 0;
   case WM_LBUTTONDBLCLK:
     ColorboxOnDoubleClick(hwnd, (short)LOWORD(lParam), (short)HIWORD(lParam));

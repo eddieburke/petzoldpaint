@@ -9,11 +9,11 @@
 #include "history.h"
 #include "image_transforms.h"
 #include "layers.h"
+#include "commit_bar.h"
 
 #include "tools/selection_tool.h"
 #include "tools/text_tool.h"
 #include "tools/tool_options/tool_options.h"
-#include "ui/panels/layers_panel.h"
 #include "ui/widgets/colorbox.h"
 #include "ui/widgets/statusbar.h"
 #include "tools.h"
@@ -59,7 +59,7 @@ static void SyncAfterDocumentLoadOrReset(HWND hwnd) {
   HWND hCv = GetCanvasWindow();
   if (hCv)
     Controller_UpdateScrollbars(hCv);
-  LayersPanelSync();
+  Core_Notify(EV_DOC_RESET);
   InvalidateCanvas();
   ResizeLayout(hwnd);
 }
@@ -213,6 +213,11 @@ BOOL AppCommands_OnCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     ResizeLayout(hwnd);
     return TRUE;
 
+  case IDM_SHOW_COMMIT_BAR:
+    CommitBar_SetEnabled(!CommitBar_IsEnabled());
+    InvalidateCanvas();
+    return TRUE;
+
   case IDM_TEXTTOOLBAR:
     TextToolbar_Show(!TextToolbar_IsVisible());
     return TRUE;
@@ -285,4 +290,7 @@ void AppCommands_OnInitMenuPopup(HWND hwnd, WPARAM wParam, LPARAM lParam) {
   EnableMenuItem(hMenu, IDM_FLIP_HORZ, enableSelection | MF_BYCOMMAND);
   EnableMenuItem(hMenu, IDM_FLIP_VERT, enableSelection | MF_BYCOMMAND);
   EnableMenuItem(hMenu, IDM_PASTE, enablePaste | MF_BYCOMMAND);
+
+  CheckMenuItem(hMenu, IDM_SHOW_COMMIT_BAR,
+                MF_BYCOMMAND | (CommitBar_IsEnabled() ? MF_CHECKED : MF_UNCHECKED));
 }

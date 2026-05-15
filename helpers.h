@@ -16,6 +16,8 @@
 ------------------------------------------------------------*/
 
 COLORREF GetColorForButton(int nButton);
+BYTE GetOpacityForButton(int nButton);
+BYTE ComposeOpacity(BYTE baseAlpha, BYTE colorOpacity);
 
 /*------------------------------------------------------------
     Invalidation

@@ -66,11 +66,17 @@ void SetCustomColors(const COLORREF* colors)
 
 static COLORREF g_primaryColor = RGB(0, 0, 0);
 static COLORREF g_secondaryColor = RGB(255, 255, 255);
+static BYTE g_primaryOpacity = 255;
+static BYTE g_secondaryOpacity = 255;
 
 COLORREF Palette_GetPrimaryColor(void) { return g_primaryColor; }
 void Palette_SetPrimaryColor(COLORREF c) { g_primaryColor = c; }
 COLORREF* Palette_GetPrimaryColorPtr(void) { return &g_primaryColor; }
+BYTE Palette_GetPrimaryOpacity(void) { return g_primaryOpacity; }
+void Palette_SetPrimaryOpacity(BYTE opacity) { g_primaryOpacity = opacity; }
 
 COLORREF Palette_GetSecondaryColor(void) { return g_secondaryColor; }
 void Palette_SetSecondaryColor(COLORREF c) { g_secondaryColor = c; }
 COLORREF* Palette_GetSecondaryColorPtr(void) { return &g_secondaryColor; }
+BYTE Palette_GetSecondaryOpacity(void) { return g_secondaryOpacity; }
+void Palette_SetSecondaryOpacity(BYTE opacity) { g_secondaryOpacity = opacity; }

@@ -24,7 +24,6 @@
 #include "tools/shape_tools.h"
 #include "tools/text_tool.h"
 #include "ui/widgets/statusbar.h"
-#include "ui/panels/layers_panel.h"
 
 #include <math.h>
 
@@ -351,7 +350,7 @@ void Controller_HandleMouseUp(HWND hwnd, int screenX, int screenY, int btn) {
                 Controller_UpdateScrollbars(hwnd);
                 InvalidateWindow(hwnd);
                 SetDocumentDirty();
-                LayersPanelSync();
+                Core_Notify(EV_LAYER_CONFIG);
             }
         }
         s_resize.active = FALSE;

@@ -18,6 +18,15 @@
 extern HINSTANCE hInst;
 extern HWND hMainWnd;
 
+typedef enum {
+  EV_PIXELS_CHANGED,
+  EV_LAYER_CONFIG,
+  EV_DOC_RESET
+} CoreEvent;
+
+void Core_RegisterObserver(void (*fn)(CoreEvent ev));
+void Core_Notify(CoreEvent ev);
+
 /* ---- Core Lifecycle & Global State Helpers ---- */
 void SetDocumentDirty(void);
 

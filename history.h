@@ -3,13 +3,27 @@
 #include <windows.h>
 #include "layers.h"
 
+typedef struct ToolSessionSnapshot ToolSessionSnapshot;
+
+typedef enum HistoryEntryKind {
+  HIST_ENTRY_FULL,
+  HIST_ENTRY_LAYER_PIXELS,
+  HIST_ENTRY_TOOL_SESSION
+} HistoryEntryKind;
+
 // History entry structure
 typedef struct HistoryEntry {
-    LayerSnapshot* snapshot;
-    int activeLayerIndex;    // Layer active when entry was created
-    char* description;
-    struct HistoryEntry* next;
-    struct HistoryEntry* prev;
+  HistoryEntryKind kind;
+  LayerSnapshot *snapshot;
+  int activeLayerIndex;
+  int deltaLayerIndex;
+  size_t deltaByteCount;
+  BYTE *deltaBefore;
+  BYTE *deltaAfter;
+  ToolSessionSnapshot *toolSession;
+  char *description;
+  struct HistoryEntry *next;
+  struct HistoryEntry *prev;
 } HistoryEntry;
 
 // History system functions
@@ -28,7 +42,11 @@ int HistoryGetCount(void);
 const char* HistoryGetDescription(int index);
 void HistoryGetDescriptionAt(int index, char* out, int outSize);
 
-// Internal: Notify panels of history changes (call after HistoryPush/Undo/Redo/Clear/Jump)
-void HistoryNotifyPanels(void);
+void History_SnapshotLayer(int layerIndex);
+void History_AbortPendingLayerWrite(void);
+void History_ClearPendingLayerSnapshot(void);
+void HistoryPushToolActionForActiveLayer(const char *toolName,
+                                         const char *action);
+void HistoryPushToolSessionById(int toolId, const char *action);
 
 #endif

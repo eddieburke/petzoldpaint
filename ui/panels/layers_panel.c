@@ -7,7 +7,6 @@
 #include "../../layers.h"
 #include "../../resource.h"
 #include "../../tools.h"
-#include "history_panel.h"
 #include <commctrl.h>
 #include <stdio.h>
 #include <uxtheme.h>
@@ -283,6 +282,11 @@ static void HandleVisibleToggle(void) {
   }
 }
 
+static void LayersPanel_OnCoreEvent(CoreEvent ev) {
+  if (ev == EV_LAYER_CONFIG || ev == EV_DOC_RESET || ev == EV_PIXELS_CHANGED)
+    LayersPanelSync();
+}
+
 static LRESULT CALLBACK LayersPanelWndProc(HWND hwnd, UINT message,
                                            WPARAM wParam, LPARAM lParam) {
   switch (message) {
@@ -347,6 +351,7 @@ static LRESULT CALLBACK LayersPanelWndProc(HWND hwnd, UINT message,
 
     RefreshLayerList();
     LayoutControls(hwnd);
+    Core_RegisterObserver(LayersPanel_OnCoreEvent);
     return 0;
   }
 

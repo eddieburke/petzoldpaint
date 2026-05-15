@@ -17,6 +17,7 @@
 #include "../history.h"
 #include "../layers.h"
 #include "../overlay.h"
+#include "../commit_bar.h"
 #include "../poly_store.h"
 #include "../file_io.h"
 #include "tool_options/tool_options.h"
@@ -87,8 +88,7 @@ static void SelectionHelpers_SampleRotated(BYTE* pSrcBits, int srcW, int srcH,
                                           BYTE* pDstBits, int dstW, int dstH,
                                           double angleDegrees, double centerX, double centerY,
                                           int dstStartX, int dstStartY, int dstEndX, int dstEndY,
-                                          int canvasWidth, int canvasHeight,
-                                          BOOL bCheckTrans, COLORREF bgColor);
+                                          int canvasWidth, int canvasHeight);
 static void Selection_ComputeRotatedSampleExtents(const RECT *rcBounds,
                                                   double angleDeg, int *pDstW,
                                                   int *pDstH, double *pCx,
@@ -153,8 +153,8 @@ static void LiftSelectionPixels(void) {
 
     HBITMAP hOldCanvas;
     HDC hCanvas = GetCanvasBitmapDC(&hOldCanvas);
-    if (!hCanvas) return;
-    BYTE* canvasBits = LayersGetActiveColorBits();
+    if (!hCanvas)
+      return;
 
     HDC hdcScreen = GetScreenDC();
     HDC hFloatDC = CreateTempDC(hdcScreen);
@@ -182,6 +182,9 @@ static void LiftSelectionPixels(void) {
     DeleteTempDC(hFloatDC);
     ReleaseScreenDC(hdcScreen);
     ReleaseCanvasBitmapDC(hCanvas, hOldCanvas);
+
+    Layers_BeginWrite();
+    BYTE *canvasBits = LayersGetActiveColorBits();
 
     // Transfer alpha and clear source
     if (canvasBits) {
@@ -285,6 +288,7 @@ static void Selection_GetOverlayFrameRect(RECT *out) {
 void CommitSelection(void) {
     if (s_sel.mode == SEL_NONE) return;
     if (s_sel.mode == SEL_FLOATING && s_sel.pixels.pFloatBits) {
+        Layers_BeginWrite();
         BYTE* pBits = LayersGetActiveColorBits();
         if (pBits) {
             int dstW, dstH, sx, sy, ex, ey;
@@ -295,8 +299,7 @@ void CommitSelection(void) {
             if (dstW > 0 && dstH > 0) {
                 SelectionHelpers_SampleRotated(s_sel.pixels.pFloatBits, s_sel.pixels.nWidth, s_sel.pixels.nHeight,
                                               pBits, dstW, dstH, s_sel.rot.fAngle, cx, cy,
-                                              sx, sy, ex, ey, Canvas_GetWidth(), Canvas_GetHeight(),
-                                              (nSelectionMode == SELECTION_TRANSPARENT), Palette_GetSecondaryColor());
+                                              sx, sy, ex, ey, Canvas_GetWidth(), Canvas_GetHeight());
             }
         }
         UpdateCanvasAfterModification();
@@ -400,17 +403,11 @@ static void SelectionHelpers_SampleRotated(BYTE* pSrcBits, int srcW, int srcH,
                                           BYTE* pDstBits, int dstW, int dstH,
                                           double angleDegrees, double centerX, double centerY,
                                           int dstStartX, int dstStartY, int dstEndX, int dstEndY,
-                                          int canvasWidth, int canvasHeight,
-                                          BOOL bCheckTrans, COLORREF bgColor) {
+                                          int canvasWidth, int canvasHeight) {
     if (!pSrcBits || !pDstBits || srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0) return;
-    (void)bCheckTrans;
     double angleRad = angleDegrees * M_PI / 180.0;
     double cosA = cos(angleRad), sinA = sin(angleRad);
     double hwSrc = srcW / 2.0, hhSrc = srcH / 2.0;
-    BYTE bgB = GetBValue(bgColor), bgG = GetGValue(bgColor), bgR = GetRValue(bgColor);
-    (void)bgR;
-    (void)bgG;
-    (void)bgB;
     
     if (dstStartX < 0) dstStartX = 0; if (dstStartY < 0) dstStartY = 0;
     if (dstEndX > canvasWidth) dstEndX = canvasWidth; if (dstEndY > canvasHeight) dstEndY = canvasHeight;
@@ -446,12 +443,14 @@ void SelectionRotate(int degrees) {
     if (s_sel.mode != SEL_FLOATING) return;
     s_sel.rot.fAngle += degrees;
     UpdateSelectionDraftLayer();
+    HistoryPushToolSessionById(TOOL_SELECT, "Adjust Selection");
 }
 
 void SelectionFlip(BOOL bHorz) {
     if (s_sel.mode != SEL_FLOATING) LiftSelectionPixels();
     if (s_sel.mode != SEL_FLOATING) return;
     SelectionFlipInternal(bHorz);
+    HistoryPushToolSessionById(TOOL_SELECT, "Adjust Selection");
 }
 
 static void UpdateSelectionDraftLayer(void) {
@@ -466,8 +465,7 @@ static void UpdateSelectionDraftLayer(void) {
     if (dstW > 0 && dstH > 0) {
         SelectionHelpers_SampleRotated(s_sel.pixels.pFloatBits, s_sel.pixels.nWidth, s_sel.pixels.nHeight,
                                       draftBits, dstW, dstH, s_sel.rot.fAngle, cx, cy,
-                                      sx, sy, ex, ey, Canvas_GetWidth(), Canvas_GetHeight(),
-                                      (nSelectionMode == SELECTION_TRANSPARENT), Palette_GetSecondaryColor());
+                                      sx, sy, ex, ey, Canvas_GetWidth(), Canvas_GetHeight());
     }
     LayersMarkDirty();
 }
@@ -592,6 +590,7 @@ void SelectionPaste(HWND hWnd) {
 void SelectionDelete(void) {
     if (s_sel.mode == SEL_FLOATING) { SelectionClearState(); InvalidateCanvas(); }
     else if (s_sel.mode == SEL_REGION_ONLY) {
+        Layers_BeginWrite();
         BYTE* p = LayersGetActiveColorBits(); int cw = Canvas_GetWidth(), ch = Canvas_GetHeight();
         for (int y = s_sel.rcBounds.top; y < s_sel.rcBounds.bottom; y++) {
             if (y < 0 || y >= ch) continue;
@@ -643,6 +642,10 @@ void SelectionToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
     s_modeAtDragStart = s_sel.mode;
     s_dragMoved = FALSE;
     if (s_sel.mode != SEL_NONE) {
+        RECT rcCommitBar;
+        Selection_GetOverlayFrameRect(&rcCommitBar);
+        COMMIT_BAR_HANDLE_CLICK(&rcCommitBar, x, y, CommitSelection(), CancelSelection());
+
         RECT rcFrame;
         Selection_GetOverlayFrameRect(&rcFrame);
         int rotH = HitTestRotationHandles(&rcFrame, x, y);
@@ -719,6 +722,10 @@ void SelectionToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
         s_sel.hRegion = Poly_CreateRegion(&s_sel.freeformPts);
     }
 
+    if (s_dragMoved && s_sel.mode != SEL_NONE) {
+        HistoryPushToolSessionById(TOOL_SELECT, "Adjust Selection");
+    }
+
     s_sel.nDragMode = HT_NONE;
     s_dragMoved = FALSE;
 }
@@ -771,6 +778,7 @@ void SelectionToolDrawOverlay(HDC hdc, double scale, int dx, int dy) {
             Overlay_DrawPolyline(&ctx, s_sel.freeformPts.points, s_sel.freeformPts.count, RGB(0, 0, 0), PS_DOT);
         }
     }
+    CommitBar_Draw(&ctx, &rcFrame);
 }
 
 void SelectionTool_Deactivate(void) { if (s_sel.mode != SEL_NONE) CommitSelection(); }
@@ -803,5 +811,6 @@ void SelectionMove(int dx, int dy) {
          OffsetRect(&s_sel.rcBounds, dx, dy);
          UpdateSelectionDraftLayer();
          InvalidateCanvas();
+         HistoryPushToolSessionById(TOOL_SELECT, "Adjust Selection");
      }
 }

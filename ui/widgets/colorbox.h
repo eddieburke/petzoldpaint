@@ -2,7 +2,7 @@
 #define COLORBOX_H
 #include <windows.h>
 
-#define COLORBOX_HEIGHT 48
+#define COLORBOX_HEIGHT 72
 void CreateColorbox(HWND hParent);
 void ColorboxOnPaint(HWND hWnd);
 void ColorboxOnLButtonDown(HWND hWnd, int x, int y);

@@ -45,13 +45,13 @@ int DrawPrim_GetSprayRadius(int sprayRadiusIndex) {
  *----------------------------------------------------------------------------*/
 
 void DrawPrim_DrawPencilPoint(BYTE *bits, int width, int height, int x, int y,
-                              COLORREF color) {
-  DrawPixelAlpha(bits, width, height, x, y, color, 255, LAYER_BLEND_NORMAL);
+                              COLORREF color, BYTE alpha) {
+  DrawPixelAlpha(bits, width, height, x, y, color, alpha, LAYER_BLEND_NORMAL);
 }
 
 void DrawPrim_DrawPencilLine(BYTE *bits, int width, int height, int x1, int y1,
-                             int x2, int y2, COLORREF color) {
-  DrawLineAlpha(bits, width, height, x1, y1, x2, y2, 1, color, 255, LAYER_BLEND_NORMAL);
+                             int x2, int y2, COLORREF color, BYTE alpha) {
+  DrawLineAlpha(bits, width, height, x1, y1, x2, y2, 1, color, alpha, LAYER_BLEND_NORMAL);
 }
 
 /*------------------------------------------------------------------------------
@@ -76,36 +76,36 @@ void DrawPrim_DrawEraserPoint(BYTE *bits, int width, int height, int x, int y,
  *----------------------------------------------------------------------------*/
 
 void DrawPrim_DrawBrushPoint(BYTE *bits, int width, int height, int x, int y,
-                             COLORREF color, int brushWidthIndex) {
+                             COLORREF color, BYTE alpha, int brushWidthIndex) {
   int size = DrawPrim_GetBrushSize(brushWidthIndex);
   int row = DrawPrim_GetBrushRow(brushWidthIndex);
 
   switch (row) {
   case 0: // Circle/Dot
     if (size == 1) {
-      DrawPixelAlpha(bits, width, height, x, y, color, 255, LAYER_BLEND_NORMAL);
+      DrawPixelAlpha(bits, width, height, x, y, color, alpha, LAYER_BLEND_NORMAL);
     } else {
-      DrawCircleAlpha(bits, width, height, x, y, (size - 1) / 2, color, 255, LAYER_BLEND_NORMAL);
+      DrawCircleAlpha(bits, width, height, x, y, (size - 1) / 2, color, alpha, LAYER_BLEND_NORMAL);
     }
     break;
 
   case 1: // Square
     if (size == 1) {
-      DrawPixelAlpha(bits, width, height, x, y, color, 255, LAYER_BLEND_NORMAL);
+      DrawPixelAlpha(bits, width, height, x, y, color, alpha, LAYER_BLEND_NORMAL);
     } else {
       DrawRectAlpha(bits, width, height, x - size / 2, y - size / 2, size, size,
-                    color, 255, LAYER_BLEND_NORMAL);
+                    color, alpha, LAYER_BLEND_NORMAL);
     }
     break;
 
   case 2: // Backward Diagonal Line (/)
   {
     if (size == 1) {
-      DrawPixelAlpha(bits, width, height, x, y, color, 255, LAYER_BLEND_NORMAL);
+      DrawPixelAlpha(bits, width, height, x, y, color, alpha, LAYER_BLEND_NORMAL);
     } else {
       int w = size / 2;
       DrawLineAlpha(bits, width, height, x + w, y - w, x - w, y + w, 1, color,
-                    255, LAYER_BLEND_NORMAL);
+                    alpha, LAYER_BLEND_NORMAL);
     }
     break;
   }
@@ -113,11 +113,11 @@ void DrawPrim_DrawBrushPoint(BYTE *bits, int width, int height, int x, int y,
   case 3: // Forward Diagonal Line (\)
   {
     if (size == 1) {
-      DrawPixelAlpha(bits, width, height, x, y, color, 255, LAYER_BLEND_NORMAL);
+      DrawPixelAlpha(bits, width, height, x, y, color, alpha, LAYER_BLEND_NORMAL);
     } else {
       int w = size / 2;
       DrawLineAlpha(bits, width, height, x - w, y - w, x + w, y + w, 1, color,
-                    255, LAYER_BLEND_NORMAL);
+                    alpha, LAYER_BLEND_NORMAL);
     }
     break;
   }
@@ -125,7 +125,7 @@ void DrawPrim_DrawBrushPoint(BYTE *bits, int width, int height, int x, int y,
 }
 
 void DrawPrim_DrawBrushLine(BYTE *bits, int width, int height, int x1, int y1,
-                            int x2, int y2, COLORREF color,
+                            int x2, int y2, COLORREF color, BYTE alpha,
                             int brushWidthIndex) {
   int dx = x2 - x1;
   int dy = y2 - y1;
@@ -134,7 +134,7 @@ void DrawPrim_DrawBrushLine(BYTE *bits, int width, int height, int x1, int y1,
   int steps = adx + ady; // Manhattan distance for 4-connectivity (no gaps)
 
   if (steps == 0) {
-    DrawPrim_DrawBrushPoint(bits, width, height, x1, y1, color,
+    DrawPrim_DrawBrushPoint(bits, width, height, x1, y1, color, alpha,
                             brushWidthIndex);
     return;
   }
@@ -142,7 +142,7 @@ void DrawPrim_DrawBrushLine(BYTE *bits, int width, int height, int x1, int y1,
   for (int i = 1; i <= steps; i++) {
     int ix = x1 + (dx * i + (steps / 2 * (dx < 0 ? -1 : 1))) / steps;
     int iy = y1 + (dy * i + (steps / 2 * (dy < 0 ? -1 : 1))) / steps;
-    DrawPrim_DrawBrushPoint(bits, width, height, ix, iy, color,
+    DrawPrim_DrawBrushPoint(bits, width, height, ix, iy, color, alpha,
                             brushWidthIndex);
   }
 }
@@ -152,7 +152,7 @@ void DrawPrim_DrawBrushLine(BYTE *bits, int width, int height, int x1, int y1,
  *----------------------------------------------------------------------------*/
 
 void DrawPrim_DrawSprayPoint(BYTE *bits, int width, int height, int x, int y,
-                              COLORREF color, int sprayRadiusIndex) {
+                              COLORREF color, BYTE alpha, int sprayRadiusIndex) {
    int densities[] = {10, 20, 30};
    int idx = sprayRadiusIndex - 1;
    if (idx < 0) idx = 0;
@@ -166,7 +166,7 @@ void DrawPrim_DrawSprayPoint(BYTE *bits, int width, int height, int x, int y,
     int dy = (rand() % (radius * 2)) - radius;
 
     if (dx * dx + dy * dy <= radius * radius) {
-      DrawPixelAlpha(bits, width, height, x + dx, y + dy, color, 255, LAYER_BLEND_NORMAL);
+      DrawPixelAlpha(bits, width, height, x + dx, y + dy, color, alpha, LAYER_BLEND_NORMAL);
     }
   }
 }
