@@ -1,6 +1,11 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+typedef enum ToolCancelReason {
+  TOOL_CANCEL_ABORT,
+  TOOL_CANCEL_INTERRUPT
+} ToolCancelReason;
+
 #define MIN_ZOOM_PERCENT   12.5
 #define MAX_ZOOM_PERCENT   3200.0
 #define SNAP_ANGLE_DEG     45

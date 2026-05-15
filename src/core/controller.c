@@ -286,7 +286,8 @@ void Controller_HandleMouseMove(HWND hwnd, int screenX, int screenY, int wParam)
     int steps = max(abs(dx), abs(dy));
 
     // If mouse didn't move to a new screen pixel, still process the current point once
-    if (steps == 0) steps = 1;
+    if (steps == 0)
+        steps = 1;
 
     for (int i = 1; i <= steps; i++) {
         int xCur = s_lastToolX + (dx * i) / steps;
@@ -301,9 +302,11 @@ void Controller_HandleMouseMove(HWND hwnd, int screenX, int screenY, int wParam)
             int yClamp = max(-1000, min(yBitmap, 10000));
             StatusBarSetCoordinates(xClamp, yClamp);
 
-            if (xBitmap >= 0 && xBitmap < Canvas_GetWidth() &&
-                yBitmap >= 0 && yBitmap < Canvas_GetHeight()) {
-                COLORREF c = LayersSampleCompositeColor(xBitmap, yBitmap, Palette_GetSecondaryColor());
+            if (!(wParam & (MK_LBUTTON | MK_RBUTTON)) && xBitmap >= 0 &&
+                xBitmap < Canvas_GetWidth() && yBitmap >= 0 &&
+                yBitmap < Canvas_GetHeight()) {
+                COLORREF c = LayersSampleCompositeColor(
+                    xBitmap, yBitmap, Palette_GetSecondaryColor());
                 StatusBarSetColor(c);
             }
         }
@@ -402,7 +405,7 @@ void Controller_HandleKey(HWND hwnd, WPARAM wParam, BOOL down) {
             InvalidateRect(hwnd, NULL, FALSE);
             return;
         }
-        ToolCancel(TOOL_CANCEL_ABORT);
+        ToolCancel(TOOL_CANCEL_ABORT, FALSE);
         return;
     }
 

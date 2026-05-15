@@ -3,6 +3,8 @@
 #include <windows.h>
 #include "palette.h"
 
+#define MAX_LAYERS 32 /* matches LayerSnapshot.layers[] */
+
 typedef enum { LAYER_BLEND_NORMAL=0, LAYER_BLEND_MULTIPLY, LAYER_BLEND_SCREEN, LAYER_BLEND_OVERLAY, LAYER_BLEND_COUNT } LayerBlendMode;
 
 BOOL LayersInit(int w, int h);
@@ -27,10 +29,6 @@ void LayersSetBlendMode(int i, int b);
 void LayersGetName(int i, char *out, int sz);
 
 void GetLayerDisplayName(int i, char *out, int sz);
-void HistoryPushLayerOpacity(int i, int o, int n);
-void HistoryPushLayerVisibility(int i, BOOL o, BOOL n);
-void HistoryPushLayerBlendMode(int i, int o, int n);
-void HistoryPushLayerMove(int f, int t);
 
 HBITMAP LayersGetActiveColorBitmap(void);
 BYTE *LayersGetActiveColorBits(void);

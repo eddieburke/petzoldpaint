@@ -18,7 +18,7 @@ void SelectionTool_OnCaptureLost(void);
 
 void SelectionToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY); // Draw handles/frame
 void SelectionTool_Deactivate(void);
-BOOL SelectionTool_Cancel(void);
+BOOL SelectionTool_Cancel(ToolCancelReason reason);
 
 /*------------------------------------------------------------------------------
  * State Management

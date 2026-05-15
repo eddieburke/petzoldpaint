@@ -210,7 +210,7 @@ static void HandleMoveLayer(int delta) {
   int to = ListIndexToLayerIndex(toList);
 
   if (LayersMoveLayer(idx, to)) {
-    HistoryPushLayerMove(idx, to);
+    HistoryPush("Move Layer");
     RefreshLayerList();
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
     SetDocumentDirty();
@@ -239,7 +239,7 @@ static void HandleOpacityChange(BOOL bPushHistory) {
  
   // Only push history when drag ends and value changed
   if (bPushHistory && s_startPercent != newPercent) {
-    HistoryPushLayerOpacity(idx, s_startPercent, newPercent);
+    HistoryPush("Layer Opacity");
     s_startPercent = newPercent;
   }
 }
@@ -258,7 +258,7 @@ static void HandleBlendChange(void) {
   // Only push history if actually changed
   if (oldMode != newMode) {
     LayersSetBlendMode(idx, newMode);
-    HistoryPushLayerBlendMode(idx, oldMode, newMode);
+    HistoryPush("Layer Blend Mode");
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
     SetDocumentDirty();
   }
@@ -277,7 +277,7 @@ static void HandleVisibleToggle(void) {
   // Only push history if actually changed
   if (oldVisible != newVisible) {
     LayersSetVisible(idx, newVisible);
-    HistoryPushLayerVisibility(idx, oldVisible, newVisible);
+    HistoryPush("Layer Visibility");
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
     SetDocumentDirty();
   }

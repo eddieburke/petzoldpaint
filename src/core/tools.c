@@ -93,6 +93,22 @@ static void ToolOnDoubleClick(HWND hWnd, int x, int y, int nButton);
 static void ToolOnCaptureLost(void);
 static void ToolOnViewportChanged(HWND hWnd);
 
+static const char *ToolCaptureLostHistoryLabel(int toolId) {
+  switch (toolId) {
+    case TOOL_LINE:
+    case TOOL_RECT:
+    case TOOL_ELLIPSE:
+    case TOOL_ROUNDRECT:
+      return "Draw Shape";
+    case TOOL_CURVE:
+      return "Draw Curve";
+    case TOOL_POLYGON:
+      return "Draw Polygon";
+    default:
+      return "Draw";
+  }
+}
+
 /*------------------------------------------------------------
    Modal Tool Commit/Cancel System
   ------------------------------------------------------------*/
@@ -118,19 +134,23 @@ static void ToolCancelInternal(int toolId, ToolCancelReason reason) {
   }
 }
 
-void ToolCancel(ToolCancelReason reason) {
+void ToolCancel(ToolCancelReason reason, BOOL skipSelectionTools) {
   int t = Tool_GetCurrent();
   HWND hc = GetCanvasWindow();
   HWND hCap = s_runtime.capturedWindow;
-  s_runtime.activeToolAtMouseDown = -1; s_runtime.capturedWindow = NULL;
+  s_runtime.activeToolAtMouseDown = -1;
+  s_runtime.capturedWindow = NULL;
 
-  ToolCancelInternal(t, reason);
+  if (skipSelectionTools && SelectionIsDragging())
+    SelectionToolOnMouseUp(hc, 0, 0, 0);
 
-  if (hCap || (hc && GetCapture() == hc)) {
+  if (!skipSelectionTools || (t != TOOL_FREEFORM && t != TOOL_SELECT))
+    ToolCancelInternal(t, reason);
+
+  if (hCap || (hc && GetCapture() == hc))
     ReleaseCapture();
-  }
 
-  InvalidateRect(GetCanvasWindow(), NULL, FALSE);
+  InvalidateRect(hc, NULL, FALSE);
 }
 
 static void ToolOnCaptureLost(void) {
@@ -141,19 +161,16 @@ static void ToolOnCaptureLost(void) {
   }
 
   if (Interaction_IsActive()) {
-    int activeStrokeTool = Tool_GetCurrent();
-    const char *action = (activeStrokeTool == TOOL_LINE || activeStrokeTool == TOOL_RECT ||
-                          activeStrokeTool == TOOL_ELLIPSE || activeStrokeTool == TOOL_ROUNDRECT)
-                             ? "Draw Shape" : "Draw";
-    Interaction_OnCaptureLost(action);
+    Interaction_OnCaptureLost(
+        ToolCaptureLostHistoryLabel(Interaction_GetActiveToolId()));
   }
 
-  ToolCancel(TOOL_CANCEL_INTERRUPT); /* abort any in-progress tool that never got MouseUp */
+  ToolCancel(TOOL_CANCEL_INTERRUPT, FALSE);
 }
 
 void ResetToolStateForNewDocument(void) {
   // Cancel any modal tool state and clear transient interactions
-  ToolCancel(TOOL_CANCEL_ABORT);
+  ToolCancel(TOOL_CANCEL_ABORT, FALSE);
 }
 
 void ToolHandlePointerEvent(ToolPointerEventType type, HWND hWnd, int x, int y,
@@ -179,10 +196,10 @@ void ToolHandlePointerEvent(ToolPointerEventType type, HWND hWnd, int x, int y,
 void ToolHandleLifecycleEvent(ToolLifecycleEventType type, HWND hWnd) {
   switch (type) {
   case TOOL_LIFECYCLE_CANCEL:
-    ToolCancel(TOOL_CANCEL_ABORT);
+    ToolCancel(TOOL_CANCEL_ABORT, FALSE);
     break;
   case TOOL_LIFECYCLE_CANCEL_INTERRUPT:
-    ToolCancel(TOOL_CANCEL_INTERRUPT);
+    ToolCancel(TOOL_CANCEL_INTERRUPT, FALSE);
     break;
   case TOOL_LIFECYCLE_CAPTURE_LOST:
     ToolOnCaptureLost();
@@ -360,7 +377,7 @@ void SetCurrentTool(int nTool) {
     return;
 
   if (s_runtime.capturedWindow != NULL) {
-    ToolCancel(TOOL_CANCEL_ABORT);
+    ToolCancel(TOOL_CANCEL_ABORT, FALSE);
   }
 
   /* Finalize the outgoing tool */

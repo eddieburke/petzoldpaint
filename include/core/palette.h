@@ -5,6 +5,9 @@
 
 BOOL ChooseColorDialog(HWND hWnd, COLORREF* color);
 
+/* Copies the first 16 colors into ChooseColorDialog's custom palette slots. */
+void SetCustomColors(const COLORREF *colors);
+
 COLORREF Palette_GetPrimaryColor(void);
 void Palette_SetPrimaryColor(COLORREF c);
 COLORREF* Palette_GetPrimaryColorPtr(void);

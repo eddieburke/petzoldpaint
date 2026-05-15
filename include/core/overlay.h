@@ -51,6 +51,6 @@ void Overlay_DrawPolyline(const OverlayContext* ctx, const POINT* ptsBitmap, int
                           COLORREF color, int penStyle);
 
 /* Hit test box handles with zoom-adjusted tolerance (shared helper) */
-int Overlay_HitTestBoxHandles(RECT* rcBmp, int xBmp, int yBmp);
+int Overlay_HitTestBoxHandles(const RECT* rcBmp, int xBmp, int yBmp);
 
 #endif /* OVERLAY_H */

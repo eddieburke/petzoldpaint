@@ -19,12 +19,7 @@ typedef enum ToolLifecycleEventType {
   TOOL_LIFECYCLE_TIMER_TICK
 } ToolLifecycleEventType;
 
-typedef enum ToolCancelReason {
-    TOOL_CANCEL_ABORT,      // Hard cancel (Escape key, right click)
-    TOOL_CANCEL_INTERRUPT   // Soft cancel (Focus lost, viewport scroll)
-} ToolCancelReason;
-
-void ToolCancel(ToolCancelReason reason);
+void ToolCancel(ToolCancelReason reason, BOOL skipSelectionTools);
 void ToolHandlePointerEvent(ToolPointerEventType type, HWND hWnd, int x, int y,
                             int nButton);
 void ToolHandleLifecycleEvent(ToolLifecycleEventType type, HWND hWnd);

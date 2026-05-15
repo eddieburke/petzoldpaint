@@ -6,32 +6,13 @@
 #define DRAW_H
 
 #include <windows.h>
+#include "geom.h"
 
 /*------------------------------------------------------------
-    Handle Drawing Constants
+    Handle identifiers: use geom.h (HT_* / HANDLE_SIZE).
 ------------------------------------------------------------*/
 
-#define H_SIZE 5
-#define H_GRAB 5
-
-#define HT_NONE -1
-#define HT_TL 0
-#define HT_T 1
-#define HT_TR 2
-#define HT_R 3
-#define HT_BR 4
-#define HT_B 5
-#define HT_BL 6
-#define HT_L 7
-#define HT_BODY 100
-#define HT_ROTATE_TL 10
-#define HT_ROTATE_TR 11
-#define HT_ROTATE_BR 12
-#define HT_ROTATE_BL 13
-
 void DrawSelectionFrame(HDC hdc, RECT *rc, BOOL bDotted);
-int HitTestBoxHandles(RECT *rc, int x, int y);
-int HitTestBoxHandlesEx(RECT *rc, int x, int y, int tolerance);
 void ResizeRect(RECT *rc, int handle, int dx, int dy, int minSize,
                 BOOL bKeepAspect);
 LPCTSTR GetHandleCursor(int handleId);

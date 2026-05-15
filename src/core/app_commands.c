@@ -144,45 +144,45 @@ BOOL AppCommands_OnCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     return TRUE;
 
   case IDM_UNDO:
-    ToolCancelSkipSelection();
+    ToolCancel(TOOL_CANCEL_INTERRUPT, TRUE);
     if (Undo()) {
         SendMessage(hwnd, WM_SIZE, 0, 0);
     }
     return TRUE;
 
   case IDM_REDO:
-    ToolCancelSkipSelection();
+    ToolCancel(TOOL_CANCEL_INTERRUPT, TRUE);
     if (Redo()) {
         SendMessage(hwnd, WM_SIZE, 0, 0);
     }
     return TRUE;
 
   case IDM_COPY:
-    ToolCancelSkipSelection();
+    ToolCancel(TOOL_CANCEL_INTERRUPT, TRUE);
     SelectionCopy();
     return TRUE;
 
   case IDM_CUT:
-    ToolCancelSkipSelection();
+    ToolCancel(TOOL_CANCEL_INTERRUPT, TRUE);
     SelectionCut();
     SetDocumentDirty();
     return TRUE;
 
   case IDM_PASTE:
-    ToolCancelSkipSelection();
+    ToolCancel(TOOL_CANCEL_INTERRUPT, TRUE);
     SetCurrentTool(TOOL_SELECT);
     SelectionPaste(hwnd);
     SetDocumentDirty();
     return TRUE;
 
   case IDM_CLEAR:
-    ToolCancelSkipSelection();
+    ToolCancel(TOOL_CANCEL_INTERRUPT, TRUE);
     ClearSelection();
     SetDocumentDirty();
     return TRUE;
 
   case IDM_SELECTALL:
-    ToolCancelSkipSelection();
+    ToolCancel(TOOL_CANCEL_INTERRUPT, TRUE);
     SetCurrentTool(TOOL_SELECT);
     SelectionSelectAll();
     return TRUE;

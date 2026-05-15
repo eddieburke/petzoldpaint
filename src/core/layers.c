@@ -7,10 +7,10 @@
 #include "layers.h"
 #include "canvas.h"
 #include "history.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-/* MAX_LAYERS removed - using dynamic reallocation */
 #define DEF_NAME "Layer"
 
 typedef struct {
@@ -92,6 +92,8 @@ int LayersGetActiveIndex(void) { return act; }
 BOOL LayersSetActiveIndex(int i) { if(i<0||i>=lc) return FALSE; act=i; return TRUE; }
 
 BOOL LayersAddLayer(const char *name) {
+    if (lc >= MAX_LAYERS)
+        return FALSE;
     if(cap<=lc){cap=cap?cap*2:4; Layer* nl=calloc(cap,sizeof(Layer)); memcpy(nl,lyr,lc*sizeof(Layer)); free(lyr);lyr=nl;}
     int ww=Canvas_GetWidth(), hh=Canvas_GetHeight();
     lyr[lc].bmp=CreateLayerBmp(ww,hh,&lyr[lc].bits);
@@ -153,7 +155,6 @@ static void LogLastError(const char* msg) {
     snprintf(buf, sizeof(buf), "PetzoldPaint Error: %s (Error %lu)\n", msg, GetLastError());
     OutputDebugStringA(buf);
 }
-/* HistoryPushLayer stubs removed (unused) */
 
 HBITMAP LayersGetActiveColorBitmap(void){return lc>0&&act>=0&&act<lc?lyr[act].bmp:NULL;}
 BYTE *LayersGetActiveColorBits(void){return lc>0&&act>=0&&act<lc?lyr[act].bits:NULL;}
@@ -212,16 +213,24 @@ HBITMAP LayersFlattenToBitmapWithAlpha(BYTE **out){
 COLORREF LayersSampleCompositeColor(int x,int y,COLORREF bg){
     int ww=Canvas_GetWidth(), hh=Canvas_GetHeight();
     if(x<0||y<0||x>=ww||y>=hh) return CLR_INVALID;
-    BYTE *tmp; HBITMAP bm=CreateLayerBmp(ww,hh,&tmp);
-    Composite(tmp,ww,hh,FALSE,bg);
-    BYTE *p=tmp+(y*ww+x)*4;
-    COLORREF result=RGB(p[2],p[1],p[0]);
-    DeleteObject(bm);
-    return result;
+    if(!dirty && compBits && compW==ww && compH==hh){
+        BYTE *p=compBits+(y*ww+x)*4;
+        return RGB(p[2],p[1],p[0]);
+    }
+    BYTE px[4]={GetBValue(bg),GetGValue(bg),GetRValue(bg),255};
+    for(int i=0;i<lc;i++){
+        if(!lyr[i].visible||!lyr[i].opacity||!lyr[i].bits) continue;
+        BYTE *sp=lyr[i].bits+(y*ww+x)*4;
+        if(!sp[3]) continue;
+        int a=sp[3]*lyr[i].opacity/255;
+        if(a<=0) continue;
+        PixelOps_BlendPixel(sp[2],sp[1],sp[0],a,px,lyr[i].blend);
+    }
+    return RGB(px[2],px[1],px[0]);
 }
 
 LayerSnapshot *LayersCreateSnapshot(void){
-    if(lc<=0) return NULL;
+    if(lc<=0 || lc > MAX_LAYERS) return NULL;
     LayerSnapshot *s=calloc(1,sizeof(LayerSnapshot));
     if(!s) return NULL;
     s->width=Canvas_GetWidth(); s->height=Canvas_GetHeight();
@@ -236,7 +245,7 @@ LayerSnapshot *LayersCreateSnapshot(void){
 }
 
 BOOL LayersApplySnapshot(LayerSnapshot *s){
-    if(!s||s->layerCount<0||s->layerCount>MAX_LAYERS) return FALSE;
+    if(!s||s->layerCount<=0||s->layerCount>MAX_LAYERS) return FALSE;
     for(int i=0;i<lc;i++)ClearLayer(&lyr[i]);
     if(cap<s->layerCount){cap=s->layerCount; free(lyr);lyr=calloc(cap,sizeof(Layer));}
     lc=s->layerCount; act=s->activeIndex; if(act>=lc) act=lc-1; if(act<0) act=0;
