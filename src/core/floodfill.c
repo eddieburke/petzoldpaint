@@ -22,8 +22,31 @@ static Span *s_stack = NULL;
 static size_t s_stackCount = 0;
 static size_t s_stackCap = 0;
 
+static BOOL StackEnsureCapacity(size_t minCap) {
+  if (s_stackCap >= minCap)
+    return TRUE;
+
+  size_t newCap = s_stackCap ? s_stackCap : 1024;
+  while (newCap < minCap) {
+    if (newCap > SIZE_MAX / 2)
+      return FALSE;
+    newCap *= 2;
+  }
+
+  if (newCap > SIZE_MAX / sizeof(Span))
+    return FALSE;
+
+  Span *newStack = (Span *)realloc(s_stack, newCap * sizeof(Span));
+  if (!newStack)
+    return FALSE;
+
+  s_stack = newStack;
+  s_stackCap = newCap;
+  return TRUE;
+}
+
 static BOOL StackPush(int x1, int x2, int y, int dy) {
-  if (s_stackCount >= s_stackCap)
+  if (!StackEnsureCapacity(s_stackCount + 1))
     return FALSE;
   s_stack[s_stackCount++] = (Span){x1, x2, y, dy};
   return TRUE;
@@ -56,17 +79,10 @@ BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor,
   if (hasSelection && !IsPointInSelection(startX, startY))
     return FALSE;
 
-  size_t needed = (size_t)w * (size_t)h + 2;
-  if (needed > SIZE_MAX / sizeof(Span))
-    return FALSE;
   free(s_stack);
-  s_stack = (Span *)malloc(needed * sizeof(Span));
-  if (!s_stack) {
-    s_stackCap = 0;
-    return FALSE;
-  }
+  s_stack = NULL;
   s_stackCount = 0;
-  s_stackCap = needed;
+  s_stackCap = 0;
 
   if (!StackPush(startX, startX, startY, 1))
     goto cleanup_fail;
