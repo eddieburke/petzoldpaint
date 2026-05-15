@@ -60,6 +60,8 @@ static BOOL EnsureViewBuffer(HDC hdc, int w, int h) {
 
   if (!s_hViewDC) {
     s_hViewDC = CreateCompatibleDC(hdc);
+    if (!s_hViewDC)
+      return FALSE;
   }
 
   if (s_viewW != w || s_viewH != h) {

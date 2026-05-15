@@ -22,14 +22,38 @@ static Span *s_stack = NULL;
 static size_t s_stackCount = 0;
 static size_t s_stackCap = 0;
 
-static inline void StackPush(int x1, int x2, int y, int dy) {
-  if (s_stackCount >= s_stackCap)
-    return;
+static BOOL StackEnsureCapacity(size_t minCap) {
+  if (s_stackCap >= minCap)
+    return TRUE;
+
+  size_t newCap = s_stackCap ? s_stackCap : 1024;
+  while (newCap < minCap) {
+    if (newCap > SIZE_MAX / 2)
+      return FALSE;
+    newCap *= 2;
+  }
+
+  if (newCap > SIZE_MAX / sizeof(Span))
+    return FALSE;
+
+  Span *newStack = (Span *)realloc(s_stack, newCap * sizeof(Span));
+  if (!newStack)
+    return FALSE;
+
+  s_stack = newStack;
+  s_stackCap = newCap;
+  return TRUE;
+}
+
+static BOOL StackPush(int x1, int x2, int y, int dy) {
+  if (!StackEnsureCapacity(s_stackCount + 1))
+    return FALSE;
   s_stack[s_stackCount++] = (Span){x1, x2, y, dy};
+  return TRUE;
 }
 
 BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor,
-                      BYTE fillAlpha) {
+                       BYTE fillAlpha) {
   BYTE *bits = LayersGetActiveColorBits();
   if (!bits)
     return FALSE;
@@ -55,20 +79,15 @@ BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor,
   if (hasSelection && !IsPointInSelection(startX, startY))
     return FALSE;
 
-  // Safe allocation
-  if (w <= 0 || h <= 0) return FALSE;
-  size_t pixelCount = (size_t)w * (size_t)h;
-  if (pixelCount > (SIZE_MAX / sizeof(Span)) / 4) // Heuristic cap
-      pixelCount = (SIZE_MAX / sizeof(Span)) / 4;
-  
-  s_stackCap = h * 2 + 100; // Scanline stack usually much smaller than total pixels
-  s_stack = (Span *)malloc(s_stackCap * sizeof(Span));
-  if (!s_stack)
-    return FALSE;
+  free(s_stack);
+  s_stack = NULL;
   s_stackCount = 0;
+  s_stackCap = 0;
 
-  StackPush(startX, startX, startY, 1);
-  StackPush(startX, startX, startY - 1, -1);
+  if (!StackPush(startX, startX, startY, 1))
+    goto cleanup_fail;
+  if (!StackPush(startX, startX, startY - 1, -1))
+    goto cleanup_fail;
 
   while (s_stackCount > 0) {
     Span s = s_stack[--s_stackCount];
@@ -85,7 +104,8 @@ BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor,
     l++;
 
     if (l < x) {
-        StackPush(l, x - 1, y - s.dy, -s.dy);
+        if (!StackPush(l, x - 1, y - s.dy, -s.dy))
+          goto cleanup_fail;
     }
 
     while (x < w) {
@@ -94,9 +114,11 @@ BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor,
             *(DWORD*)(bits + (y * w + x) * 4) = fillPixel;
             x++;
         }
-        StackPush(l, x - 1, y + s.dy, s.dy);
+        if (!StackPush(l, x - 1, y + s.dy, s.dy))
+          goto cleanup_fail;
         if (x - 1 > s.x2) {
-            StackPush(s.x2 + 1, x - 1, y - s.dy, -s.dy);
+            if (!StackPush(s.x2 + 1, x - 1, y - s.dy, -s.dy))
+              goto cleanup_fail;
         }
         x++;
         while (x <= s.x2 && (*(DWORD*)(bits + (y * w + x) * 4) != startPixel || 
@@ -114,8 +136,18 @@ BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor,
 
   LayersMarkDirty();
   return TRUE;
+
+cleanup_fail:
+  free(s_stack);
+  s_stack = NULL;
+  s_stackCount = 0;
+  s_stackCap = 0;
+  return FALSE;
 }
 
 void FloodFillCleanup(void) {
-  // Now a no-op as memory is managed per-call
+  free(s_stack);
+  s_stack = NULL;
+  s_stackCount = 0;
+  s_stackCap = 0;
 }

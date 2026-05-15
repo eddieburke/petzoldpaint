@@ -27,10 +27,8 @@ typedef struct {
     int size;
 } BrushPresetData;
 
-typedef void (*BrushApplyFn)(const BrushPresetData* data);
 typedef void (*BrushGetFn)(BrushPresetData* out);
 
-void BrushPreset_Register(int slot, BrushApplyFn applyFn, BrushGetFn getFn);
 void BrushPreset_Add(int slot, const char* name, const BrushPresetData* data, BOOL isDefault);
 BOOL BrushPreset_SaveCurrent(int slot, BrushGetFn getFn);
 

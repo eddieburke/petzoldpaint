@@ -22,22 +22,9 @@ BYTE ComposeOpacity(BYTE baseAlpha, BYTE colorOpacity);
 /*------------------------------------------------------------
     Invalidation
 ------------------------------------------------------------*/
-
-void InvalidateWindow(HWND hwnd);
-void InvalidateCanvas(void);
-void InvalidateCanvasRect(RECT *pRect);
-
 /* Ensure canvas updates properly after pixel modifications */
 void UpdateCanvasAfterModification(void);
 
 
-
-/*------------------------------------------------------------
-    History Helper Functions
-------------------------------------------------------------*/
-
-void HistoryPushFormatted(const char *format, ...);
-void HistoryPushToolActionById(int toolId, const char *action);
-const char *GetToolName(int toolId);
 
 #endif /* HELPERS_H */

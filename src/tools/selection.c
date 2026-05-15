@@ -233,7 +233,7 @@ static void SampleRotated(const BYTE *src, int sw, int sh, BYTE *dst, double ang
         int si = (int)floor(srcX), sj = (int)floor(srcY);
         if (si >= 0 && si < sw && sj >= 0 && sj < sh) {
             int si2 = (sj * sw + si) * 4, ci = (y * cw + x) * 4;
-            BYTE *sp = src + si2;
+            const BYTE *sp = src + si2;
             if (sp[3] == 0) continue;
             PixelOps_BlendPixel(sp[2], sp[1], sp[0], sp[3], dst + ci, 0);
         }

@@ -43,7 +43,11 @@ void Interaction_Abort(void) {
 
 void Interaction_EndQuiet(void) {
     if (!ix.active) return;
-    EndState(); SetDocumentDirty(); InvalidateRect(GetCanvasWindow(), NULL, FALSE);
+    BOOL modified = ix.modified;
+    EndState();
+    if (modified)
+        SetDocumentDirty();
+    InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
 BOOL Interaction_IsActiveButton(int btn) { return ix.active && (btn & ix.btn) != 0; }

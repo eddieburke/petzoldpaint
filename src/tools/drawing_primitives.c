@@ -59,7 +59,7 @@ void DrawPrim_DrawPencilLine(BYTE *bits, int width, int height, int x1, int y1,
  *----------------------------------------------------------------------------*/
 
 void DrawPrim_DrawEraserPoint(BYTE *bits, int width, int height, int x, int y,
-                              COLORREF color, int brushWidthIndex) {
+                               COLORREF color, int brushWidthIndex) {
   int sizes[] = {4, 6, 8, 10};
   int size;
    if (brushWidthIndex < 1)
@@ -68,7 +68,8 @@ void DrawPrim_DrawEraserPoint(BYTE *bits, int width, int height, int x, int y,
      size = sizes[(brushWidthIndex - 1) % 4];
   (void)color; // Eraser uses background color or clears alpha, handled by
                // EraseRectAlpha
-  EraseRectAlpha(bits, width, height, x, y - size, size, size);
+  int half = size / 2;
+  EraseRectAlpha(bits, width, height, x - half, y - half, size, size);
 }
 
 /*------------------------------------------------------------------------------

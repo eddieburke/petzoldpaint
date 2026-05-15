@@ -43,6 +43,9 @@ static void EvictHeadIfOverLimit(void) {
         head->prev = NULL;
     FreeNode(old);
     count--;
+    /* Logical indices shift left by one when the oldest entry is removed. */
+    if (pos > 0)
+        pos--;
     if (pos >= count)
         pos = count - 1;
 }
@@ -50,8 +53,14 @@ static void EvictHeadIfOverLimit(void) {
 void HistoryInit(void) {
     HistoryDestroy();
     HistNode *n = calloc(1, sizeof(HistNode));
+    if (!n)
+        return;
     n->layers = LayersCreateSnapshot();
     n->desc = _strdup("Initial");
+    if (!n->layers || !n->desc) {
+        FreeNode(n);
+        return;
+    }
     head = tail = curr = n;
     count = 1; pos = 0;
 }
@@ -84,6 +93,10 @@ static BOOL PushInternal(const char *desc, BOOL captureTool) {
     n->layers = LayersCreateSnapshot();
     if (captureTool) n->tool = ToolSession_CaptureCurrent();
     n->desc = _strdup(desc ? desc : "Action");
+    if (!n->layers || !n->desc) {
+        FreeNode(n);
+        return FALSE;
+    }
     if (curr) { curr->next = n; n->prev = curr; curr = n; tail = n; count++; pos++; }
     else { head = tail = curr = n; count = 1; pos = 0; }
     EvictHeadIfOverLimit();
