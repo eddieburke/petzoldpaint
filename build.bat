@@ -29,7 +29,7 @@ if errorlevel 1 (
 set CORE_FILES=src/main.c src/core/canvas.c src/core/tools.c src/core/draw.c src/core/layers.c src/core/helpers.c src/core/gdi_utils.c src/core/geom.c src/core/file_io.c src/core/history.c src/core/floodfill.c src/core/palette.c src/core/app_commands.c src/core/cursors.c src/core/overlay.c src/core/image_transforms.c src/core/poly_store.c src/core/pixel_ops.c src/core/document.c src/core/controller.c src/core/peztold_core.c src/core/interaction.c src/core/commit_bar.c src/core/tool_session.c
 
 :: Tool files
-set TOOL_FILES=src/tools/bezier_tool.c src/tools/brush_presets.c src/tools/crayon_tool.c src/tools/drawing_primitives.c src/tools/fill_tool.c src/tools/freehand_tools.c src/tools/highlighter_tool.c src/tools/magnifier_tool.c src/tools/pen_tool.c src/tools/pick_tool.c src/tools/polygon_tool.c src/tools/selection.c src/tools/shape_tools.c src/tools/text.c
+set TOOL_FILES=src/tools/bezier_tool.c src/tools/crayon_tool.c src/tools/drawing_primitives.c src/tools/fill_tool.c src/tools/freehand_tools.c src/tools/highlighter_tool.c src/tools/magnifier_tool.c src/tools/pen_tool.c src/tools/pick_tool.c src/tools/polygon_tool.c src/tools/selection.c src/tools/shape_tools.c src/tools/text.c
 
 :: UI and Panel files
 set UI_FILES=src/ui/widgets/colorbox.c src/ui/widgets/statusbar.c src/ui/widgets/toolbar.c src/ui/panels/history_panel.c src/ui/panels/layers_panel.c

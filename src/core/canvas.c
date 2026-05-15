@@ -119,7 +119,6 @@ BOOL ResizeCanvas(int nNewWidth, int nNewHeight) {
 }
 
 void DestroyCanvas(void) {
-  /* View buffer is released in the canvas window WM_DESTROY (CleanupViewBuffer). */
   LayersDestroy();
   HistoryDestroy();
   FileIO_ShutdownCom();
@@ -140,19 +139,56 @@ void ClearCanvas(COLORREF color) {
 }
 
 
-BOOL Undo(void) {
-  return HistoryUndo();
-}
-
-BOOL Redo(void) {
-  return HistoryRedo();
-}
-
 void GetCanvasViewportOrigin(int *pX, int *pY) {
   if (pX)
     *pX = 2 - Canvas_GetScrollX();
   if (pY)
     *pY = 2 - Canvas_GetScrollY();
+}
+
+void Canvas_InvalidateBitmapRect(const RECT *rcBmp) {
+  HWND hwnd = GetCanvasWindow();
+  if (!hwnd)
+    return;
+  if (!rcBmp) {
+    InvalidateRect(hwnd, NULL, FALSE);
+    return;
+  }
+
+  RECT rc = *rcBmp;
+  int ww = Canvas_GetWidth(), hh = Canvas_GetHeight();
+  if (ww <= 0 || hh <= 0)
+    return;
+  if (rc.left < 0)
+    rc.left = 0;
+  if (rc.top < 0)
+    rc.top = 0;
+  if (rc.right > ww)
+    rc.right = ww;
+  if (rc.bottom > hh)
+    rc.bottom = hh;
+  if (rc.left >= rc.right || rc.top >= rc.bottom)
+    return;
+
+  Viewport vp = GetCurrentViewport();
+  RECT rcScr;
+  Viewport_RectBmpToScr(&vp, &rc, &rcScr);
+  InflateRect(&rcScr, 2, 2);
+
+  RECT client;
+  GetClientRect(hwnd, &client);
+  if (rcScr.left < client.left)
+    rcScr.left = client.left;
+  if (rcScr.top < client.top)
+    rcScr.top = client.top;
+  if (rcScr.right > client.right)
+    rcScr.right = client.right;
+  if (rcScr.bottom > client.bottom)
+    rcScr.bottom = client.bottom;
+  if (rcScr.left >= rcScr.right || rcScr.top >= rcScr.bottom)
+    return;
+
+  InvalidateRect(hwnd, &rcScr, FALSE);
 }
 
 static void DrawResizeHandles(HDC hdc, int nDestX, int nDestY, int nScaledW,
@@ -192,13 +228,10 @@ LRESULT CALLBACK CanvasWndProc(HWND hwnd, UINT message, WPARAM wParam,
 
   case WM_PAINT: {
     PAINTSTRUCT ps;
-    HDC hdc;
-    HDC hBmpDC = NULL;
-    HBITMAP hOldBmp = NULL;
     RECT rcClient;
     int nScaledW, nScaledH;
 
-    hdc = BeginPaint(hwnd, &ps);
+    HDC hdc = BeginPaint(hwnd, &ps);
     GetClientRect(hwnd, &rcClient);
 
     if (!EnsureViewBuffer(hdc, rcClient.right, rcClient.bottom)) {
@@ -220,24 +253,21 @@ LRESULT CALLBACK CanvasWndProc(HWND hwnd, UINT message, WPARAM wParam,
 
     SetStretchBltMode(s_hViewDC, COLORONCOLOR);
 
-    HBITMAP hComposite = LayersGetCompositeBitmap(TRUE);
+    HBITMAP hComposite = LayersGetCompositeBitmap();
     if (hComposite) {
-      hBmpDC = CreateCompatibleDC(hdc);
+      HDC hBmpDC = CreateCompatibleDC(hdc);
       if (hBmpDC) {
-        hOldBmp = (HBITMAP)SelectObject(hBmpDC, hComposite);
+        HBITMAP hOldBmp = (HBITMAP)SelectObject(hBmpDC, hComposite);
         StretchBlt(s_hViewDC, nDestX, nDestY, nScaledW, nScaledH, hBmpDC, 0, 0,
                    Canvas_GetWidth(), Canvas_GetHeight(), SRCCOPY);
         SelectObject(hBmpDC, hOldBmp);
         DeleteDC(hBmpDC);
-        hBmpDC = NULL;
-        hOldBmp = NULL;
       }
     }
 
     ToolDrawOverlay(s_hViewDC, dScale, nDestX, nDestY);
     DrawResizeHandles(s_hViewDC, nDestX, nDestY, nScaledW, nScaledH);
 
-    /* Resize preview from controller */
     if (Controller_IsResizing()) {
       int prevW, prevH;
       Controller_GetResizePreview(&prevW, &prevH);
@@ -345,7 +375,7 @@ LRESULT CALLBACK CanvasWndProc(HWND hwnd, UINT message, WPARAM wParam,
 
 
 void CreateCanvasWindow(HWND hParent) {
-  hCanvasWnd = NULL; // Initialize window handle
+  hCanvasWnd = NULL;
   WNDCLASS wc;
   static char szClassName[] = "PeztoldCanvas";
 
@@ -427,7 +457,6 @@ void Canvas_ZoomAroundPoint(double newZoom, int ptMouseX, int ptMouseY) {
     si.nPos = Canvas_GetScrollY();
     SetScrollInfo(hCanvasWnd, SB_VERT, &si, TRUE);
 
-    SendMessage(GetParent(hCanvasWnd), WM_SIZE, 0, 0);
     ToolHandleLifecycleEvent(TOOL_LIFECYCLE_VIEWPORT_CHANGED, hCanvasWnd);
     InvalidateRect(hCanvasWnd, NULL, FALSE);
   }

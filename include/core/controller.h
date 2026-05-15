@@ -6,6 +6,9 @@
 
 #define TIMER_AIRBRUSH 101
 
+/* Cap interpolated move events per WM_MOUSEMOVE (fast drags still reach endpoints). */
+#define CONTROLLER_MAX_POINTER_SUBSTEPS 32
+
 typedef enum {
     RESIZE_HANDLE_NONE = 0,
     RESIZE_HANDLE_RIGHT,

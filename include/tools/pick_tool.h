@@ -4,7 +4,7 @@
 #include "peztold_core.h"
 
 
-void PickToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void PickToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
+void PickTool_OnMouseDown(HWND hWnd, int x, int y, int nButton);
+void PickTool_OnMouseMove(HWND hWnd, int x, int y, int nButton);
 
 #endif

@@ -9,10 +9,12 @@
 #include "palette.h"
 
 #include "tools/selection_tool.h"
+#include "tools/text_tool.h"
 #include "tools/tool_options/tool_options.h"
 #include "ui/widgets/colorbox.h"
 #include "ui/widgets/statusbar.h"
 #include "tools.h"
+#include "tool_session.h"
 
 extern void ResizeLayout(HWND hwnd);
 
@@ -29,7 +31,7 @@ static BOOL HandleZoomMenu(HWND hwnd, WORD id) {
 
   for (int i = 0; i < (int)(sizeof(kZoomItems) / sizeof(kZoomItems[0])); i++) {
     if (kZoomItems[i].id == id) {
-      Canvas_SetZoom(kZoomItems[i].zoom);
+      Canvas_ApplyZoomCentered(kZoomItems[i].zoom);
       ResizeLayout(hwnd);
       InvalidateRect(GetCanvasWindow(), NULL, FALSE);
       return TRUE;
@@ -43,6 +45,7 @@ static BOOL CanPasteFromClipboard(void) {
   if (uPng && IsClipboardFormatAvailable(uPng))
     return TRUE;
   return IsClipboardFormatAvailable(CF_DIBV5) ||
+         IsClipboardFormatAvailable(CF_DIB) ||
          IsClipboardFormatAvailable(CF_BITMAP);
 }
 
@@ -59,8 +62,11 @@ static void SyncAfterDocumentLoadOrReset(HWND hwnd) {
 
 void DocumentNew(HWND hwnd) {
   ResetToolStateForNewDocument();
-  /* Layers first: HistoryInit snapshots current layers; must match new document. */
-  if (!LayersInit(Canvas_GetWidth(), Canvas_GetHeight()))
+  SelectionClearState();
+  Canvas_SetWidth(800);
+  Canvas_SetHeight(600);
+  Canvas_ApplyZoomCentered(100.0);
+  if (!LayersInit(800, 600))
     return;
   HistoryClear();
   Doc_ClearDirty();
@@ -72,7 +78,12 @@ void DocumentOpen(HWND hwnd, const wchar_t *path) {
   BOOL loaded = FALSE;
   if (path) {
     loaded = LoadBitmapFromFile(path);
-    if (loaded) Doc_SetFile(path);
+    if (loaded) {
+      Doc_SetFile(path);
+    } else {
+      MessageBoxW(hwnd, L"Could not open the file.", L"Open",
+                  MB_OK | MB_ICONERROR);
+    }
   } else {
     loaded = FileLoad(hwnd);
   }
@@ -131,15 +142,15 @@ BOOL AppCommands_OnCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     return TRUE;
 
   case IDM_UNDO:
-    ToolCancel(TOOL_CANCEL_INTERRUPT, TRUE);
-    if (Undo()) {
+    if (TextTool_TryEditUndo())
+      return TRUE;
+    if (HistoryUndo()) {
         SendMessage(hwnd, WM_SIZE, 0, 0);
     }
     return TRUE;
 
   case IDM_REDO:
-    ToolCancel(TOOL_CANCEL_INTERRUPT, TRUE);
-    if (Redo()) {
+    if (HistoryRedo()) {
         SendMessage(hwnd, WM_SIZE, 0, 0);
     }
     return TRUE;
@@ -159,7 +170,10 @@ BOOL AppCommands_OnCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     ToolCancel(TOOL_CANCEL_INTERRUPT, TRUE);
     SetCurrentTool(TOOL_SELECT);
     SelectionPaste(hwnd);
-    SetDocumentDirty();
+    if (IsSelectionActive()) {
+      HistoryPushSession("Paste");
+      SetDocumentDirty();
+    }
     return TRUE;
 
   case IDM_CLEAR:

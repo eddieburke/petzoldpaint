@@ -9,10 +9,10 @@
 #include "ui/widgets/toolbar.h"
 #include "tool_options/presets.h"
 #include "tool_options/tool_options.h"
-#include "brush_presets.h"
 
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "interaction.h"
 
 #define LCG_A 1103515245
@@ -20,102 +20,59 @@
 #define LCG_M 0x7fffffff
 #define TWO_PI_10K 62832.0f
 
-
-static void CrayonPreset_GetCurrent(BrushPresetData *out) {
-  if (!out)
-    return;
-  out->crayon.density = nCrayonDensity;
-  out->crayon.textureIntensity = nCrayonTextureIntensity;
-  out->crayon.sprayAmount = nCrayonSprayAmount;
-  out->crayon.colorVariation = nCrayonColorVariation;
-  out->crayon.brightnessRange = nCrayonBrightnessRange;
-  out->crayon.saturationRange = nCrayonSaturationRange;
-  out->crayon.hueShiftRange = nCrayonHueShiftRange;
-  out->size = nBrushWidth;
-}
+typedef struct {
+  int density, textureIntensity, sprayAmount;
+  int colorVariation, brightnessRange, saturationRange, hueShiftRange;
+  int size;
+} CrayonPresetData;
 
 static void CrayonPreset_Apply(const void *data, size_t size) {
-  if (!data || size != sizeof(BrushPresetData))
-    return;
-
-  const BrushPresetData *d = (const BrushPresetData *)data;
-  nCrayonDensity = d->crayon.density;
-  nCrayonTextureIntensity = d->crayon.textureIntensity;
-  nCrayonSprayAmount = d->crayon.sprayAmount;
-  nCrayonColorVariation = d->crayon.colorVariation;
-  nCrayonBrightnessRange = d->crayon.brightnessRange;
-  nCrayonSaturationRange = d->crayon.saturationRange;
-  nCrayonHueShiftRange = d->crayon.hueShiftRange;
-  nBrushWidth = d->size;
-
+  if (!data || size != sizeof(CrayonPresetData)) return;
+  const CrayonPresetData *d = (const CrayonPresetData *)data;
+  nCrayonDensity          = d->density;
+  nCrayonTextureIntensity = d->textureIntensity;
+  nCrayonSprayAmount      = d->sprayAmount;
+  nCrayonColorVariation   = d->colorVariation;
+  nCrayonBrightnessRange  = d->brightnessRange;
+  nCrayonSaturationRange  = d->saturationRange;
+  nCrayonHueShiftRange    = d->hueShiftRange;
+  nBrushWidth             = d->size;
   SetStoredLineWidth(d->size);
-  {
-    HWND h = GetToolOptionsWindow();
-    if (h)
-      InvalidateRect(h, NULL, FALSE);
-  }
+  HWND h = GetToolOptionsWindow();
+  if (h) InvalidateRect(h, NULL, FALSE);
   InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
 static BOOL CrayonPreset_SaveCurrent(void) {
-  return BrushPreset_SaveCurrent(PRESET_SLOT_CRAYON, (BrushGetFn)CrayonPreset_GetCurrent);
+  static int s_customCount = 1;
+  CrayonPresetData d = {
+    nCrayonDensity, nCrayonTextureIntensity, nCrayonSprayAmount,
+    nCrayonColorVariation, nCrayonBrightnessRange, nCrayonSaturationRange,
+    nCrayonHueShiftRange, nBrushWidth
+  };
+  char name[MAX_PRESET_NAME];
+  snprintf(name, sizeof(name), "Custom %d", s_customCount);
+  if (!Preset_Add(PRESET_CAT_BRUSH, PRESET_SLOT_CRAYON, name, &d, sizeof(d), FALSE))
+    return FALSE;
+  s_customCount++;
+  return TRUE;
+}
+
+static void CrayonPreset_AddNamed(const char *name, int density, int texture,
+                                  int spray, int variation, int bright, int sat,
+                                  int hue, int size, BOOL isDefault) {
+  CrayonPresetData c = { density, texture, spray, variation, bright, sat, hue, size };
+  Preset_Add(PRESET_CAT_BRUSH, PRESET_SLOT_CRAYON, name, &c, sizeof(c), isDefault);
 }
 
 void CrayonTool_RegisterPresets(void) {
   Preset_RegisterSlot(PRESET_CAT_BRUSH, PRESET_SLOT_CRAYON, CrayonPreset_Apply,
                       CrayonPreset_SaveCurrent);
-
-  BrushPresetData c;
-
-  c.crayon.density = 30;
-  c.crayon.textureIntensity = 40;
-  c.crayon.sprayAmount = 20;
-  c.crayon.colorVariation = 30;
-  c.crayon.brightnessRange = 20;
-  c.crayon.saturationRange = 20;
-  c.crayon.hueShiftRange = 5;
-  c.size = 2;
-  BrushPreset_Add(PRESET_SLOT_CRAYON, "Soft", &c, TRUE);
-
-  c.crayon.density = 50;
-  c.crayon.textureIntensity = 60;
-  c.crayon.sprayAmount = 40;
-  c.crayon.colorVariation = 50;
-  c.crayon.brightnessRange = 35;
-  c.crayon.saturationRange = 30;
-  c.crayon.hueShiftRange = 10;
-  c.size = 3;
-  BrushPreset_Add(PRESET_SLOT_CRAYON, "Medium", &c, TRUE);
-
-  c.crayon.density = 80;
-  c.crayon.textureIntensity = 85;
-  c.crayon.sprayAmount = 60;
-  c.crayon.colorVariation = 70;
-  c.crayon.brightnessRange = 50;
-  c.crayon.saturationRange = 45;
-  c.crayon.hueShiftRange = 15;
-  c.size = 4;
-  BrushPreset_Add(PRESET_SLOT_CRAYON, "Bold", &c, TRUE);
-
-  c.crayon.density = 70;
-  c.crayon.textureIntensity = 95;
-  c.crayon.sprayAmount = 80;
-  c.crayon.colorVariation = 60;
-  c.crayon.brightnessRange = 60;
-  c.crayon.saturationRange = 50;
-  c.crayon.hueShiftRange = 20;
-  c.size = 3;
-  BrushPreset_Add(PRESET_SLOT_CRAYON, "Rough", &c, TRUE);
-
-  c.crayon.density = 40;
-  c.crayon.textureIntensity = 25;
-  c.crayon.sprayAmount = 15;
-  c.crayon.colorVariation = 35;
-  c.crayon.brightnessRange = 25;
-  c.crayon.saturationRange = 25;
-  c.crayon.hueShiftRange = 8;
-  c.size = 2;
-  BrushPreset_Add(PRESET_SLOT_CRAYON, "Smooth", &c, TRUE);
+  CrayonPreset_AddNamed("Soft",   30, 40, 20, 30, 20, 20,  5, 2, TRUE);
+  CrayonPreset_AddNamed("Medium", 50, 60, 40, 50, 35, 30, 10, 3, FALSE);
+  CrayonPreset_AddNamed("Bold",   80, 85, 60, 70, 50, 45, 15, 4, FALSE);
+  CrayonPreset_AddNamed("Rough",  70, 95, 80, 60, 60, 50, 20, 3, FALSE);
+  CrayonPreset_AddNamed("Smooth", 40, 25, 15, 35, 25, 25,  8, 2, FALSE);
 }
 
 
@@ -613,11 +570,11 @@ static void DrawCrayonStroke(BYTE *bits, int width, int height,
 }
 
 
-void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+void CrayonTool_OnMouseDown(HWND hWnd, int x, int y, int nButton) {
    InitNoiseTextures();
    Interaction_Begin(hWnd, x, y, nButton, TOOL_CRAYON);
 
-  BYTE *bits = LayersGetActiveColorBits();
+  BYTE *bits = LayersGetStrokeBits();
   if (!bits) {
     Interaction_Abort();
     return;
@@ -634,19 +591,22 @@ void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   BYTE colorAlpha = GetOpacityForButton(Interaction_GetDrawButton());
   DrawCrayonSpot(bits, Canvas_GetWidth(), Canvas_GetHeight(), (float)x, (float)y, radius,
                  GetColorForButton(Interaction_GetDrawButton()), colorAlpha, 1.0f, 1.0f, 0.0f);
-  LayersMarkDirty();
   Interaction_MarkModified();
-  InvalidateRect(GetCanvasWindow(), NULL, FALSE);
+  Interaction_NoteStrokeSegment(x, y, x, y, GetCrayonSize() + 4);
+  Interaction_FlushStrokeRedraw();
 }
 
-void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+void CrayonTool_OnMouseMove(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   if (!Interaction_IsActive() || !Interaction_IsActiveButton(nButton))
     return;
 
+  POINT lp;
+  Interaction_GetLastPoint(&lp);
+
   AddStrokePoint(x, y);
 
-  BYTE *bits = LayersGetActiveColorBits();
+  BYTE *bits = LayersGetStrokeBits();
   if (bits) {
     int startIdx = (s_strokePointCount >= 3) ? s_strokePointCount - 3 : 0;
     int endIdx = s_strokePointCount - 1;
@@ -668,22 +628,21 @@ void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
         DrawCrayonStrokeSmooth(bits, Canvas_GetWidth(), Canvas_GetHeight(), p0, p1, p2, p3,
                                color, colorAlpha, size, pressure);
       }
-      LayersMarkDirty();
       Interaction_MarkModified();
+      Interaction_NoteStrokeSegment(lp.x, lp.y, x, y, GetCrayonSize() + 4);
     }
   }
 
   Interaction_UpdateLastPoint(x, y);
-  InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-void CrayonToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+void CrayonTool_OnMouseUp(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   (void)nButton;
   if (Interaction_IsActive()) {
     AddStrokePoint(x, y);
 
-    BYTE *bits = LayersGetActiveColorBits();
+    BYTE *bits = LayersGetStrokeBits();
     if (bits && s_strokePointCount >= 2) {
       int size = GetCrayonSize();
       COLORREF color = GetColorForButton(Interaction_GetDrawButton());
@@ -704,7 +663,6 @@ void CrayonToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
         DrawCrayonStrokeSmooth(bits, Canvas_GetWidth(), Canvas_GetHeight(), p0, p1, p2, p3,
                                color, colorAlpha, size, pressure);
       }
-      LayersMarkDirty();
       Interaction_MarkModified();
     }
   }
@@ -714,17 +672,19 @@ void CrayonToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   s_strokePointCount = 0;
 }
 
-BOOL IsCrayonDrawing(void) { return Interaction_IsActive(); }
+BOOL IsCrayonDrawing(void) {
+  return Interaction_IsActive() && Interaction_GetActiveToolId() == TOOL_CRAYON;
+}
 
 void CrayonTool_Deactivate(void) {
-  if (Interaction_IsActive()) {
+  if (Interaction_IsActive() && Interaction_GetActiveToolId() == TOOL_CRAYON) {
     Interaction_EndQuiet();
     s_strokePointCount = 0;
   }
 }
 
-BOOL CancelCrayonDrawing(void) {
-  if (!Interaction_IsActive()) {
+BOOL CrayonTool_Cancel(void) {
+  if (!Interaction_IsActive() || Interaction_GetActiveToolId() != TOOL_CRAYON) {
     s_strokePointCount = 0;
     return FALSE;
   }

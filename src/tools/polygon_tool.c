@@ -265,8 +265,12 @@ static void AddPoint(HWND hWnd, int x, int y) {
 
 void PolygonTool_OnMouseDown(HWND hWnd, int x, int y, int nButton) {
     if (nButton == MK_RBUTTON) {
-        if (bPolygonPending && polygon.count >= 3)
-            CommitPolygonInternal();
+        if (bPolygonPending) {
+            if (polygon.count >= 3)
+                CommitPolygonInternal();
+            else
+                PolygonTool_Cancel();
+        }
         return;
     }
 

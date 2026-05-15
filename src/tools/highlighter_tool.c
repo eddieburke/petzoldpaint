@@ -9,67 +9,63 @@
 #include "ui/widgets/toolbar.h"
 #include "tool_options/presets.h"
 #include "tool_options/tool_options.h"
-#include "brush_presets.h"
 #include <math.h>
-#include "interaction.h"
 #include <stdio.h>
+#include "interaction.h"
 
-/* LCG Random Constants */
 #define LCG_A 1103515245
 #define LCG_C 12345
 #define LCG_M 0x7fffffff
 
+typedef struct {
+  int transparency, blendMode, edgeSoftness;
+  int opacity, sizeVariation, texture;
+  int size;
+} HighlighterPresetData;
 
-static void HighlighterPreset_GetCurrent(BrushPresetData *out) {
-  if (!out) return;
-  out->highlighter.transparency = nHighlighterTransparency;
-  out->highlighter.blendMode = nHighlighterBlendMode;
-  out->highlighter.edgeSoftness = nHighlighterEdgeSoftness;
-  out->highlighter.opacity = nHighlighterOpacity;
-  out->highlighter.sizeVariation = nHighlighterSizeVariation;
-  out->highlighter.texture = nHighlighterTexture;
-  out->size = nBrushWidth;
-}
-
-static void HighlighterPreset_Apply(const void *data, size_t size) {
-  if (!data || size != sizeof(BrushPresetData)) return;
-  const BrushPresetData *d = (const BrushPresetData *)data;
-  nHighlighterTransparency = d->highlighter.transparency;
-  nHighlighterBlendMode = d->highlighter.blendMode;
-  nHighlighterEdgeSoftness = d->highlighter.edgeSoftness;
-  nHighlighterOpacity = d->highlighter.opacity;
-  nHighlighterSizeVariation = d->highlighter.sizeVariation;
-  nHighlighterTexture = d->highlighter.texture;
-  nBrushWidth = d->size;
+static void HighlighterPreset_Apply(const void *data, size_t sz) {
+  if (!data || sz != sizeof(HighlighterPresetData)) return;
+  const HighlighterPresetData *d = (const HighlighterPresetData *)data;
+  nHighlighterTransparency = d->transparency;
+  nHighlighterBlendMode    = d->blendMode;
+  nHighlighterEdgeSoftness = d->edgeSoftness;
+  nHighlighterOpacity      = d->opacity;
+  nHighlighterSizeVariation= d->sizeVariation;
+  nHighlighterTexture      = d->texture;
+  nBrushWidth              = d->size;
   SetStoredLineWidth(d->size);
-  { HWND h = GetToolOptionsWindow(); if (h) InvalidateRect(h, NULL, FALSE); }
+  HWND h = GetToolOptionsWindow();
+  if (h) InvalidateRect(h, NULL, FALSE);
   InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
 static BOOL HighlighterPreset_SaveCurrent(void) {
-  return BrushPreset_SaveCurrent(PRESET_SLOT_HIGHLIGHTER, (BrushGetFn)HighlighterPreset_GetCurrent);
+  static int s_customCount = 1;
+  HighlighterPresetData d = {
+    nHighlighterTransparency, nHighlighterBlendMode, nHighlighterEdgeSoftness,
+    nHighlighterOpacity, nHighlighterSizeVariation, nHighlighterTexture, nBrushWidth
+  };
+  char name[MAX_PRESET_NAME];
+  snprintf(name, sizeof(name), "Custom %d", s_customCount);
+  if (!Preset_Add(PRESET_CAT_BRUSH, PRESET_SLOT_HIGHLIGHTER, name, &d, sizeof(d), FALSE))
+    return FALSE;
+  s_customCount++;
+  return TRUE;
 }
-
-#define REG_PRESET(name, tr, bm, es, op, sv, tx, sz) do { \
-    BrushPresetData p = {0}; \
-    p.highlighter.transparency = tr; \
-    p.highlighter.blendMode = bm; \
-    p.highlighter.edgeSoftness = es; \
-    p.highlighter.opacity = op; \
-    p.highlighter.sizeVariation = sv; \
-    p.highlighter.texture = tx; \
-    p.size = sz; \
-    BrushPreset_Add(PRESET_SLOT_HIGHLIGHTER, (name), &p, TRUE); \
-} while(0)
 
 void HighlighterTool_RegisterPresets(void) {
   Preset_RegisterSlot(PRESET_CAT_BRUSH, PRESET_SLOT_HIGHLIGHTER,
                       HighlighterPreset_Apply, HighlighterPreset_SaveCurrent);
-  REG_PRESET("Standard", 40,0,50,85,20,30,3);
-  REG_PRESET("Soft",     60,0,80,70,15,20,2);
-  REG_PRESET("Bold",     20,0,30,95,30,50,4);
-  REG_PRESET("Neon",     30,1,40,90,25,40,3);
-  REG_PRESET("Overlay",  50,2,60,75,20,35,3);
+#define REG(name, tr, bm, es, op, sv, tx, sz) do { \
+    HighlighterPresetData p = {tr,bm,es,op,sv,tx,sz}; \
+    Preset_Add(PRESET_CAT_BRUSH, PRESET_SLOT_HIGHLIGHTER, name, &p, sizeof(p), TRUE); \
+} while(0)
+  REG("Standard", 40,0,50,85,20,30,3);
+  REG("Soft",     60,0,80,70,15,20,2);
+  REG("Bold",     20,0,30,95,30,50,4);
+  REG("Neon",     30,1,40,90,25,40,3);
+  REG("Overlay",  50,2,60,75,20,35,3);
+#undef REG
 }
 
 
@@ -102,10 +98,10 @@ static BYTE CalcHighlighterAlpha(void) {
 }
 
 
-void HighlighterToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+void HighlighterTool_OnMouseDown(HWND hWnd, int x, int y, int nButton) {
   Interaction_Begin(hWnd, x, y, nButton, TOOL_HIGHLIGHTER);
 
-  BYTE *bits = LayersGetActiveColorBits();
+  BYTE *bits = LayersGetStrokeBits();
   if (!bits) {
     Interaction_Abort();
     return;
@@ -119,18 +115,21 @@ void HighlighterToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
     DrawCircleAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), x, y, r,
                       GetColorForButton(nButton), alpha, GetHighlighterBlendMode());
   }
-  LayersMarkDirty();
   Interaction_MarkModified();
-  InvalidateRect(GetCanvasWindow(), NULL, FALSE);
+  {
+    int pad = GetHighlighterSize() + 2;
+    Interaction_NoteStrokeSegment(x, y, x, y, pad);
+    Interaction_FlushStrokeRedraw();
+  }
 }
 
-void HighlighterToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+void HighlighterTool_OnMouseMove(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   if (!Interaction_IsActive() || !Interaction_IsActiveButton(nButton))
     return;
 
   BYTE alpha = ComposeOpacity(CalcHighlighterAlpha(), GetOpacityForButton(Interaction_GetDrawButton()));
-  BYTE *bits = LayersGetActiveColorBits();
+  BYTE *bits = LayersGetStrokeBits();
   if (bits) {
     POINT lp;
     Interaction_GetLastPoint(&lp);
@@ -144,14 +143,13 @@ void HighlighterToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
                     GetColorForButton(Interaction_GetDrawButton()), alpha,
                     GetHighlighterBlendMode());
     }
-    LayersMarkDirty();
     Interaction_MarkModified();
+    Interaction_NoteStrokeSegment(lp.x, lp.y, x, y, GetHighlighterSize() + 2);
   }
   Interaction_UpdateLastPoint(x, y);
-  InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-void HighlighterToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+void HighlighterTool_OnMouseUp(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   (void)x;
   (void)y;
@@ -159,12 +157,20 @@ void HighlighterToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   Interaction_Commit("Draw");
 }
 
-BOOL IsHighlighterDrawing(void) { return Interaction_IsActive(); }
+BOOL IsHighlighterDrawing(void) {
+  return Interaction_IsActive() &&
+         Interaction_GetActiveToolId() == TOOL_HIGHLIGHTER;
+}
 
-void HighlighterTool_Deactivate(void) { Interaction_EndQuiet(); }
+void HighlighterTool_Deactivate(void) {
+  if (Interaction_IsActive() &&
+      Interaction_GetActiveToolId() == TOOL_HIGHLIGHTER)
+    Interaction_EndQuiet();
+}
 
-BOOL CancelHighlighterDrawing(void) {
-  if (!Interaction_IsActive())
+BOOL HighlighterTool_Cancel(void) {
+  if (!Interaction_IsActive() ||
+      Interaction_GetActiveToolId() != TOOL_HIGHLIGHTER)
     return FALSE;
   Interaction_Abort();
   return TRUE;

@@ -6,7 +6,7 @@
 #include "history.h"
 #include "canvas.h"
 
-void FillToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+void FillTool_OnMouseDown(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   if (nButton != MK_LBUTTON && nButton != MK_RBUTTON)
     return;

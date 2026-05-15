@@ -5,7 +5,6 @@
 
 #include "helpers.h"
 #include "history.h"
-#include "tools.h"
 #include <commctrl.h>
 #include <stdio.h>
 #include <uxtheme.h>
@@ -13,7 +12,6 @@
 #define HISTORY_PANEL_MIN_W 250
 #define HISTORY_PANEL_MIN_H 300
 
-// Control IDs
 #define IDC_HISTORY_LIST 2001
 #define IDC_GROUP_HISTORY 2010
 
@@ -42,7 +40,6 @@ static void RefreshHistoryList(void) {
       StringCchPrintf(desc, sizeof(desc), "Action %d", i + 1);
     }
 
-    // Add indicator for current position
     char display[140];
     if (i == currentPos) {
       StringCchPrintf(display, sizeof(display), "> %s", desc);
@@ -67,7 +64,6 @@ static void RefreshHistoryList(void) {
   SendMessage(hHistoryList, WM_SETREDRAW, TRUE, 0);
   InvalidateRect(hHistoryList, NULL, TRUE);
 
-  // Select current position
   if (currentPos >= 0 && currentPos < count) {
     SendMessage(hHistoryList, LB_SETCURSEL, currentPos, 0);
   }
@@ -104,7 +100,6 @@ static void HandleHistorySelection(void) {
   if (sel == LB_ERR)
     return;
 
-  /* Jump applies state; ApplyNode notifies observers so list stays in sync. */
   HistoryJumpTo(sel);
 }
 
@@ -117,6 +112,7 @@ static LRESULT CALLBACK HistoryPanelWndProc(HWND hwnd, UINT message,
                                             WPARAM wParam, LPARAM lParam) {
   switch (message) {
   case WM_CREATE: {
+    char historyGroupTitle[48];
     struct {
       HWND *hwnd;
       DWORD exStyle;
@@ -124,13 +120,15 @@ static LRESULT CALLBACK HistoryPanelWndProc(HWND hwnd, UINT message,
       const char *text;
       DWORD style;
       int id;
-    } controls[] = {{&hGroupHistory, 0, "BUTTON", "History (Last 100)",
+    } controls[] = {{&hGroupHistory, 0, "BUTTON", historyGroupTitle,
                      WS_CHILD | WS_VISIBLE | BS_GROUPBOX, IDC_GROUP_HISTORY},
                     {&hHistoryList, WS_EX_CLIENTEDGE, "LISTBOX", "",
                      WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_VSCROLL |
                          WS_HSCROLL | LBS_NOINTEGRALHEIGHT,
                      IDC_HISTORY_LIST}};
 
+    StringCchPrintf(historyGroupTitle, sizeof(historyGroupTitle),
+                    "History (Last %d)", HISTORY_MAX_ENTRIES);
     hUiFont = CreateSegoiUIFont(-11, FW_NORMAL);
 
     for (int i = 0; i < (int)(sizeof(controls) / sizeof(controls[0])); i++) {

@@ -6,12 +6,11 @@ BOOL CreateCanvas(int width, int height);
 BOOL ResizeCanvas(int newWidth, int newHeight);
 void DestroyCanvas(void);
 void ClearCanvas(COLORREF color);
-BOOL Undo(void);
-BOOL Redo(void);
 
 void CreateCanvasWindow(HWND hParent);
 HWND GetCanvasWindow(void);
-void RefreshCanvasRect(RECT* pRect);
+/* Invalidate client area covering rcBmp (bitmap coords); NULL = full canvas. */
+void Canvas_InvalidateBitmapRect(const RECT *rcBmp);
 void ResetCanvasScroll(void);
 void GetCanvasViewportOrigin(int* pX, int* pY);
 int Canvas_GetWidth(void);

@@ -8,12 +8,12 @@
 #include <windows.h>
 
 
-void SelectionToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void SelectionToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void SelectionToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
+void SelectionTool_OnMouseDown(HWND hWnd, int x, int y, int nButton);
+void SelectionTool_OnMouseMove(HWND hWnd, int x, int y, int nButton);
+void SelectionTool_OnMouseUp(HWND hWnd, int x, int y, int nButton);
 void SelectionTool_OnCaptureLost(void);
 
-void SelectionToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
+void SelectionTool_DrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
 void SelectionTool_Deactivate(void);
 BOOL SelectionTool_Cancel(ToolCancelReason reason);
 
@@ -61,6 +61,6 @@ typedef struct SelectionSnapshot {
 
 SelectionSnapshot *Selection_CreateSnapshot(void);
 void Selection_DestroySnapshot(SelectionSnapshot *snapshot);
-void Selection_ApplySnapshot(SelectionSnapshot *snapshot);
+void Selection_ApplySnapshot(const SelectionSnapshot *snapshot);
 
 #endif

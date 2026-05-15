@@ -25,18 +25,19 @@ typedef struct TextToolSnapshot {
 } TextToolSnapshot;
 
 
-void TextToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void TextToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void TextToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
-void TextToolOnViewportChanged(HWND hWnd);
+void TextTool_OnMouseDown(HWND hWnd, int x, int y, int nButton);
+void TextTool_OnMouseMove(HWND hWnd, int x, int y, int nButton);
+void TextTool_OnMouseUp(HWND hWnd, int x, int y, int nButton);
+void TextTool_OnViewportChanged(HWND hWnd);
 
 
-void TextToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
+void TextTool_DrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
 
 
 void CommitText(HWND hWndParent);
-BOOL CancelText(void);
+BOOL TextTool_Cancel(void);
 BOOL IsTextEditing(void);
+BOOL TextTool_TryEditUndo(void);
 void ApplyTextFont(void);
 void TextTool_Deactivate(void);
 TextToolSnapshot *TextTool_CreateSnapshot(void);

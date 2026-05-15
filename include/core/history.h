@@ -5,10 +5,11 @@
 
 typedef struct ToolSessionSnapshot ToolSessionSnapshot;
 
+#define HISTORY_MAX_ENTRIES 50
+
 void HistoryInit(void);
 void HistoryDestroy(void);
 BOOL HistoryPush(const char* description);
-void HistoryReportPushFailure(const char* context);
 BOOL HistoryUndo(void);
 BOOL HistoryRedo(void);
 void HistoryClear(void);

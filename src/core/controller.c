@@ -7,14 +7,7 @@
 #include "history.h"
 #include "layers.h"
 #include "tools.h"
-#include "tools/bezier_tool.h"
-#include "tools/crayon_tool.h"
-#include "tools/freehand_tools.h"
-#include "tools/highlighter_tool.h"
-#include "tools/pen_tool.h"
-#include "tools/polygon_tool.h"
-#include "tools/shape_tools.h"
-#include "tools/text_tool.h"
+#include "interaction.h"
 #include "ui/widgets/statusbar.h"
 
 #include <math.h>
@@ -32,11 +25,18 @@ typedef struct {
 
 static ResizeState s_resize = {0};
 
-static ResizeHandleType HitTestResizeHandle(HWND hwnd, int x, int y);
-static void HandleScroll(HWND hwnd, int nBar, int nScrollCode);
+static ResizeHandleType HitTestResizeHandle(int x, int y);
 
 static int s_lastToolX = -1;
 static int s_lastToolY = -1;
+
+static void ClampBitmapCoord(int *x, int *y) {
+  int w = Canvas_GetWidth(), h = Canvas_GetHeight();
+  if (*x < 0) *x = 0;
+  else if (*x >= w) *x = w - 1;
+  if (*y < 0) *y = 0;
+  else if (*y >= h) *y = h - 1;
+}
 
 void Controller_HandleSize(HWND hwnd) {
   Controller_UpdateScrollbars(hwnd);
@@ -76,7 +76,7 @@ void Controller_UpdateScrollbars(HWND hwnd) {
   Canvas_SetScrollY(si.nPos);
 }
 
-static void HandleScroll(HWND hwnd, int nBar, int nScrollCode) {
+static void HandleScrollEx(HWND hwnd, int nBar, int nScrollCode, int lineDelta) {
   SCROLLINFO si;
   int nPos;
   int *pScrollPos =
@@ -90,10 +90,10 @@ static void HandleScroll(HWND hwnd, int nBar, int nScrollCode) {
 
   switch (nScrollCode) {
   case SB_LINEUP:
-    nPos -= 10;
+    nPos -= lineDelta;
     break;
   case SB_LINEDOWN:
-    nPos += 10;
+    nPos += lineDelta;
     break;
   case SB_PAGEUP:
     nPos -= si.nPage;
@@ -125,8 +125,10 @@ static void HandleScroll(HWND hwnd, int nBar, int nScrollCode) {
   }
 }
 
-static ResizeHandleType HitTestResizeHandle(HWND hwnd, int xScreen,
-                                             int yScreen) {
+static ResizeHandleType HitTestResizeHandle(int xScreen, int yScreen) {
+    if (IsSelectionActive())
+        return RESIZE_HANDLE_NONE;
+
     int nScaledW, nScaledH;
     GetScaledDimensions(Canvas_GetWidth(), Canvas_GetHeight(), &nScaledW, &nScaledH);
     int nDestX, nDestY;
@@ -179,7 +181,7 @@ void Controller_GetResizePreview(int *outW, int *outH) {
 }
 
 void Controller_HandleMouseDown(HWND hwnd, int screenX, int screenY, int btn) {
-  ResizeHandleType handle = HitTestResizeHandle(hwnd, screenX, screenY);
+  ResizeHandleType handle = HitTestResizeHandle(screenX, screenY);
 
   if (handle != RESIZE_HANDLE_NONE) {
     if (IsSelectionActive()) {
@@ -250,6 +252,8 @@ void Controller_HandleMouseMove(HWND hwnd, int screenX, int screenY, int wParam)
   int steps = max(abs(dx), abs(dy));
   if (steps == 0) {
     steps = 1;
+  } else if (steps > CONTROLLER_MAX_POINTER_SUBSTEPS) {
+    steps = CONTROLLER_MAX_POINTER_SUBSTEPS;
   }
 
   for (int i = 1; i <= steps; i++) {
@@ -267,19 +271,17 @@ void Controller_HandleMouseMove(HWND hwnd, int screenX, int screenY, int wParam)
       if (!(wParam & (MK_LBUTTON | MK_RBUTTON)) && xBitmap >= 0 &&
           xBitmap < Canvas_GetWidth() && yBitmap >= 0 &&
           yBitmap < Canvas_GetHeight()) {
-        COLORREF c =
-            LayersSampleCompositeColor(xBitmap, yBitmap, Palette_GetSecondaryColor());
+        COLORREF c = LayersSampleCompositeColor(xBitmap, yBitmap);
         StatusBarSetColor(c);
       }
     }
 
-    if (xBitmap < 0) xBitmap = 0;
-    if (xBitmap >= Canvas_GetWidth()) xBitmap = Canvas_GetWidth() - 1;
-    if (yBitmap < 0) yBitmap = 0;
-    if (yBitmap >= Canvas_GetHeight()) yBitmap = Canvas_GetHeight() - 1;
-
+    ClampBitmapCoord(&xBitmap, &yBitmap);
     ToolHandlePointerEvent(TOOL_POINTER_MOVE, hwnd, xBitmap, yBitmap, wParam);
   }
+
+  if ((wParam & (MK_LBUTTON | MK_RBUTTON)) && Interaction_IsActive())
+    Interaction_FlushStrokeRedraw();
 
   s_lastToolX = screenX;
   s_lastToolY = screenY;
@@ -307,11 +309,7 @@ void Controller_HandleMouseUp(HWND hwnd, int screenX, int screenY, int btn) {
 
   int xBitmap, yBitmap;
   CoordScrToBmp(screenX, screenY, &xBitmap, &yBitmap);
-
-  if (xBitmap < 0) xBitmap = 0;
-  if (xBitmap >= Canvas_GetWidth()) xBitmap = Canvas_GetWidth() - 1;
-  if (yBitmap < 0) yBitmap = 0;
-  if (yBitmap >= Canvas_GetHeight()) yBitmap = Canvas_GetHeight() - 1;
+  ClampBitmapCoord(&xBitmap, &yBitmap);
 
   s_lastToolX = -1;
   s_lastToolY = -1;
@@ -352,10 +350,7 @@ void Controller_HandleKey(HWND hwnd, WPARAM wParam, BOOL down) {
 
   if (Controller_IsResizing()) return;
 
-  if (IsSelectionActive() && !SelectionIsDragging() && !IsFreehandDrawing() &&
-      !IsPolygonPending() && !IsShapePending() && !IsTextEditing() &&
-      !IsPenDrawing() && !IsCurvePending() && !IsHighlighterDrawing() &&
-      !IsCrayonDrawing()) {
+  if (IsSelectionActive() && !SelectionIsDragging() && !Tool_IsCurrentBusy()) {
     int dx = 0, dy = 0;
     if (wParam == VK_LEFT)
       dx = -1;
@@ -406,14 +401,11 @@ void Controller_HandleMouseWheel(HWND hwnd, WPARAM wParam, LPARAM lParam) {
   int delta = GET_WHEEL_DELTA_WPARAM(wParam);
   int nScrollCode = (delta > 0) ? SB_LINEUP : SB_LINEDOWN;
   int nBar = (GetKeyState(VK_SHIFT) & 0x8000) ? SB_HORZ : SB_VERT;
-
-  for (int i = 0; i < 3; i++) {
-    HandleScroll(hwnd, nBar, nScrollCode);
-  }
+  HandleScrollEx(hwnd, nBar, nScrollCode, 30);
 }
 
 void Controller_HandleSetCursor(HWND hwnd, int screenX, int screenY) {
-  ResizeHandleType handle = HitTestResizeHandle(hwnd, screenX, screenY);
+  ResizeHandleType handle = HitTestResizeHandle(screenX, screenY);
   if (handle != RESIZE_HANDLE_NONE) {
     switch (handle) {
     case RESIZE_HANDLE_RIGHT:
@@ -448,5 +440,5 @@ void Controller_HandleSetCursor(HWND hwnd, int screenX, int screenY) {
 }
 
 void Controller_HandleScroll(HWND hwnd, int nBar, int nScrollCode) {
-  HandleScroll(hwnd, nBar, nScrollCode);
+  HandleScrollEx(hwnd, nBar, nScrollCode, 10);
 }

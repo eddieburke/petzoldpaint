@@ -254,12 +254,10 @@ void ColorboxOnPaint(HWND hWnd) {
 
   hdc = BeginPaint(hWnd, &ps);
 
-  // Fill background to prevent flicker (since we handle WM_ERASEBKGND)
   ClearClientRect(hdc, hWnd, GetSysColorBrush(COLOR_BTNFACE));
 
   nVertCenter = (COLORBOX_HEIGHT - (CELL_SIZE * 2 + CELL_GAP)) / 2;
 
-  // Draw BG color box
   rc.left = FGBG_OFFSET + 7;
   rc.top = nVertCenter + 7;
   rc.right = rc.left + FGBG_BOX_SIZE;
@@ -269,7 +267,6 @@ void ColorboxOnPaint(HWND hWnd) {
   if (s_activeTarget == COLOR_TARGET_SECONDARY)
     DrawFocusRect(hdc, &rc);
 
-  // Draw FG color box
   rc.left = FGBG_OFFSET;
   rc.top = nVertCenter;
   rc.right = rc.left + FGBG_BOX_SIZE;
@@ -279,7 +276,6 @@ void ColorboxOnPaint(HWND hWnd) {
   if (s_activeTarget == COLOR_TARGET_PRIMARY)
     DrawFocusRect(hdc, &rc);
 
-  // Draw Palette
   for (i = 0; i < 28; i++) {
     row = i / COLORS_PER_ROW;
     col = i % COLORS_PER_ROW;
@@ -297,7 +293,6 @@ void ColorboxOnPaint(HWND hWnd) {
     DrawEdge(hdc, &rc, BDR_SUNKENOUTER, BF_RECT);
   }
 
-  // Draw Buttons
   if (!hColorboxFont) {
     hColorboxFont =
         CreateFont(12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
@@ -449,7 +444,7 @@ LRESULT CALLBACK ColorboxWndProc(HWND hwnd, UINT message, WPARAM wParam,
                                  LPARAM lParam) {
   switch (message) {
   case WM_ERASEBKGND:
-    return 1; // Prevent flicker - we paint the entire background in WM_PAINT
+    return 1;
   case WM_PAINT:
     ColorboxOnPaint(hwnd);
     return 0;
@@ -486,7 +481,7 @@ void CreateColorbox(HWND hParent) {
   WNDCLASS wc;
   static char szClassName[] = "PeztoldColorbox";
   ZeroMemory(&wc, sizeof(wc));
-  wc.style = CS_DBLCLKS; // Removed CS_HREDRAW | CS_VREDRAW to reduce flicker
+  wc.style = CS_DBLCLKS;
   wc.lpfnWndProc = ColorboxWndProc;
   wc.hInstance = hInst;
   wc.hCursor = LoadCursor(NULL, IDC_ARROW);

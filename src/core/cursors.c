@@ -20,21 +20,15 @@ static void SetPlatformCursor(LPCTSTR lpCursorName)
 
 BOOL SetToolCursor(int nToolId, int x, int y)
 {
-    // Use IsAltDown() directly here - cursor changes are visual only and don't affect state
-    // However, the actual tool switching in tools.c is protected by capture checks
     if (IsAltDown())
         nToolId = TOOL_PICK;
 
     if (nToolId == TOOL_SELECT || nToolId == TOOL_FREEFORM) {
         int nHandle = SelectionGetCursorId(x, y);
-        
-        // Check for rotation handles (all use same cursor)
         if (nHandle >= HT_ROTATE_TL && nHandle <= HT_ROTATE_BL) {
             SetAppCursor(IDC_CURSOR_ROTATE);
             return TRUE;
         }
-        
-        // Check for resize/move handles
         if (nHandle != HT_NONE) {
             SetPlatformCursor(GetHandleCursor(nHandle));
             return TRUE;
