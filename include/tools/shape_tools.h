@@ -11,17 +11,11 @@ typedef struct ShapeToolSnapshot {
   int drawButton;
 } ShapeToolSnapshot;
 
-/*------------------------------------------------------------------------------
- * Line Tool
- *----------------------------------------------------------------------------*/
 
 void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId);
 void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId);
 void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId);
 
-/*------------------------------------------------------------------------------
- * Shared State / Lifecycle
- *----------------------------------------------------------------------------*/
 
 BOOL IsShapeDrawing(void);
 BOOL IsShapePending(void);
@@ -35,9 +29,6 @@ void ShapeTool_ApplySnapshot(const ShapeToolSnapshot *snapshot);
 void ShapeTool_Deactivate(void);
 BOOL ShapeTool_Cancel(void);
 
-/*------------------------------------------------------------------------------
- * Overlay Drawing (screen-space handles)
- *----------------------------------------------------------------------------*/
 
 void ShapeToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
 

@@ -1,7 +1,3 @@
-/*------------------------------------------------------------
-   HISTORY.C - Simplified Undo History (full snapshots only)
-------------------------------------------------------------*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

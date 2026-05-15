@@ -1,10 +1,3 @@
-/*------------------------------------------------------------
-    poly_store.h - Dynamic POINT array for polygon/freeform tools
-
-    Consolidated storage for polygon points.
-    Used by selection_tool, polygon_tool, and selection_region.
-------------------------------------------------------------*/
-
 #ifndef POLY_STORE_H
 #define POLY_STORE_H
 

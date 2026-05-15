@@ -1,13 +1,6 @@
-/*------------------------------------------------------------
-    gdi_utils.c - GDI, bitmap, font, and preview buffer utilities
-------------------------------------------------------------*/
-
 #include "gdi_utils.h"
 #include "layers.h"
 
-/*------------------------------------------------------------
-    GDI Resource Management
-------------------------------------------------------------*/
 
 HDC GetScreenDC(void) { return GetDC(NULL); }
 
@@ -132,9 +125,6 @@ HDC GetBitmapDC(HBITMAP hBmp, HBITMAP *phOld) {
   return hMemDC;
 }
 
-/*------------------------------------------------------------
-    Bitmap Utilities
-------------------------------------------------------------*/
 
 HBITMAP CreateDibSection32(int width, int height, BYTE **outBits) {
   BITMAPINFO bmi;
@@ -183,11 +173,7 @@ HBITMAP CopyBitmapToDib32(HBITMAP hSrc, int w, int h, BYTE **outBits) {
   return hDib;
 }
 
-/* Bitmap Transformation code removed (dead code) */
 
-/*------------------------------------------------------------
-    Font and Text
-------------------------------------------------------------*/
 
 HFONT CreateClearTypeFont(int size, int weight, BOOL bItalic,
                           const char *faceName) {

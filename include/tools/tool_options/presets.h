@@ -4,9 +4,6 @@
 #include <windows.h>
 #include <stddef.h>
 
-/*------------------------------------------------------------
-   Generic Preset API (tool-agnostic)
-  ------------------------------------------------------------*/
 
 #define MAX_PRESET_NAME 64
 #define MAX_PRESETS 32

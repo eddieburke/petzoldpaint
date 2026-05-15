@@ -1,7 +1,3 @@
-/*------------------------------------------------------------------------------
- * FREEHAND_TOOLS.C - Simplified Freehand Drawing
- *----------------------------------------------------------------------------*/
-
 #include "freehand_tools.h"
 #include "canvas.h"
 #include "geom.h"

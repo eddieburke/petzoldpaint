@@ -3,28 +3,15 @@
 
 #include <windows.h>
 
-/*------------------------------------------------------------
-   Pixel Operations
-
-   Centralized pixel manipulation functions to ensure consistent
-   handling of alpha channel (transparency mask) and color data.
-------------------------------------------------------------*/
 
 /* Invert RGB colors, preserving Alpha (Transparency Mask) */
 void PixelOps_InvertColors(BYTE *bits, int width, int height);
 
-/* PixelOps_InvertAlpha and PixelOps_Premultiply removed (unused) */
 
 /* Set all pixels to specific color (filling RGB, setting Alpha) */
 void PixelOps_Fill(BYTE *bits, int width, int height, COLORREF color,
                    BYTE alpha);
 
-/*------------------------------------------------------------
-   Per-pixel inline blending helpers
-
-   These are static inline to eliminate call overhead inside
-   tight loops (e.g., 800x600 compositing = 480k iterations).
-------------------------------------------------------------*/
 
 static inline BYTE PixelOps_ApplyBlendMultiply(BYTE s, BYTE d) {
   return (BYTE)((s * d + 127) / 255);
@@ -109,9 +96,6 @@ static inline void PixelOps_BlendPixel(int sr, int sg, int sb, int sa,
   px[3] = (BYTE)outA;
 }
 
-/*------------------------------------------------------------
-   Buffer-wide operations (not inlined — called once per op)
-------------------------------------------------------------*/
 
 /* Fill with checkerboard pattern (UI/Preview helper) */
 void PixelOps_FillCheckerboard(BYTE *bits, int width, int height);

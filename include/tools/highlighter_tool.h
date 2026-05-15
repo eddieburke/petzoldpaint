@@ -3,9 +3,6 @@
 
 #include "peztold_core.h"
 
-/*------------------------------------------------------------------------------
- * Highlighter Tool API
- *----------------------------------------------------------------------------*/
 
 void HighlighterToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
 void HighlighterToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
@@ -17,9 +14,6 @@ BOOL CancelHighlighterDrawing(void);
 
 void HighlighterTool_RegisterPresets(void);
 
-/*------------------------------------------------------------------------------
- * Highlighter Options API
- *----------------------------------------------------------------------------*/
 
 void HighlighterOptions_Draw(HDC hdc, RECT *prc);
 BOOL HighlighterOptions_LButtonDown(HWND hwnd, int x, int y);

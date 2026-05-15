@@ -1,7 +1,3 @@
-/*------------------------------------------------------------
-   app_commands.c - Menu command and init-menu-popup handlers
-------------------------------------------------------------*/
-
 #include "peztold_core.h"
 #include "canvas.h"
 #include "controller.h"
@@ -20,9 +16,6 @@
 
 extern void ResizeLayout(HWND hwnd);
 
-/*------------------------------------------------------------
-   Zoom Menu Helper
-------------------------------------------------------------*/
 
 typedef struct {
   WORD id;
@@ -63,9 +56,6 @@ static void SyncAfterDocumentLoadOrReset(HWND hwnd) {
   ResizeLayout(hwnd);
 }
 
-/*------------------------------------------------------------
-   Document Lifecycle Helpers
-------------------------------------------------------------*/
 
 void DocumentNew(HWND hwnd) {
   ResetToolStateForNewDocument();
@@ -106,9 +96,6 @@ BOOL DocumentConfirmDiscardOrSave(HWND hwnd) {
   return TRUE;
 }
 
-/*------------------------------------------------------------
-   WM_COMMAND Handler
-------------------------------------------------------------*/
 
 BOOL AppCommands_OnCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
   (void)lParam;
@@ -262,9 +249,6 @@ BOOL AppCommands_OnCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
   return FALSE;
 }
 
-/*------------------------------------------------------------
-   WM_INITMENUPOPUP Handler
-------------------------------------------------------------*/
 
 void AppCommands_OnInitMenuPopup(HWND hwnd, WPARAM wParam, LPARAM lParam) {
   (void)lParam;

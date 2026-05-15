@@ -1,12 +1,3 @@
-/*------------------------------------------------------------------------------
- * HIGHLIGHTER_TOOL.C
- *
- * Highlighter Tool Implementation
- *
- * Implements a highlighter tool using multiply blend mode and alpha blending
- * to simulate a transparent ink effect.
- *----------------------------------------------------------------------------*/
-
 #include "highlighter_tool.h"
 #include "canvas.h"
 #include "draw.h"
@@ -28,9 +19,6 @@
 #define LCG_C 12345
 #define LCG_M 0x7fffffff
 
-/*------------------------------------------------------------------------------
- * Highlighter Presets
- *----------------------------------------------------------------------------*/
 
 static void HighlighterPreset_GetCurrent(BrushPresetData *out) {
   if (!out) return;
@@ -84,9 +72,6 @@ void HighlighterTool_RegisterPresets(void) {
   REG_PRESET("Overlay",  50,2,60,75,20,35,3);
 }
 
-/*------------------------------------------------------------
-   Highlighter Rendering Helpers
-  ------------------------------------------------------------*/
 
 static int GetHighlighterSize(void) {
    int sizes[] = {6, 10, 14, 18, 22};
@@ -116,9 +101,6 @@ static BYTE CalcHighlighterAlpha(void) {
   return (BYTE)(baseAlpha * ((float)nHighlighterOpacity / 100.0f));
 }
 
-/*------------------------------------------------------------
-   Highlighter Tool Public API
-  ------------------------------------------------------------*/
 
 void HighlighterToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   Interaction_Begin(hWnd, x, y, nButton, TOOL_HIGHLIGHTER);

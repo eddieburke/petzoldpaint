@@ -1,15 +1,3 @@
-/*------------------------------------------------------------------------------
- * CRAYON_TOOL.C
- *
- * Crayon Tool Implementation
- *
- * Features a novel stroke system with:
- * - Spline-based smooth curve interpolation
- * - Speed-based pressure simulation
- * - Directional noise texture
- * - Natural texture buildup
- *----------------------------------------------------------------------------*/
-
 #include "crayon_tool.h"
 #include "canvas.h"
 #include "draw.h"
@@ -33,9 +21,6 @@
 #define LCG_M 0x7fffffff
 #define TWO_PI_10K 62832.0f
 
-/*------------------------------------------------------------------------------
- * Crayon Presets
- *----------------------------------------------------------------------------*/
 
 static void CrayonPreset_GetCurrent(BrushPresetData *out) {
   if (!out)
@@ -139,9 +124,6 @@ void CrayonTool_RegisterPresets(void) {
   BrushPreset_Add(PRESET_SLOT_CRAYON, "Smooth", &c, TRUE);
 }
 
-/*------------------------------------------------------------
-   Drawing State with Stroke History
-  ------------------------------------------------------------*/
 
 #define MAX_STROKE_POINTS 64
 
@@ -155,9 +137,6 @@ static int s_currentNoiseSeed = 0;
 static StrokePoint s_strokePoints[MAX_STROKE_POINTS];
 static int s_strokePointCount = 0;
 
-/*------------------------------------------------------------
-    Improved Noise Implementation
-   ------------------------------------------------------------*/
 
 #define NOISE_TEX_SIZE 64
 static float s_noiseTex[NOISE_TEX_SIZE * NOISE_TEX_SIZE];
@@ -381,9 +360,6 @@ static COLORREF ApplyCrayonColorVariation(COLORREF baseColor,
   return RGB(r, g, b);
 }
 
-/*------------------------------------------------------------
-   Spline Interpolation
-  ------------------------------------------------------------*/
 
 // Catmull-Rom spline interpolation for smooth curves
 static void CatmullRomSpline(float t, float p0x, float p0y, float p1x,
@@ -401,9 +377,6 @@ static void CatmullRomSpline(float t, float p0x, float p0y, float p1x,
                   (-p0y + 3.0f * p1y - 3.0f * p2y + p3y) * t3);
 }
 
-/*------------------------------------------------------------
-   Pressure Calculation
-  ------------------------------------------------------------*/
 
 // Calculate pressure based on stroke speed
 static float CalculatePressure(StrokePoint *p1, StrokePoint *p2) {
@@ -438,9 +411,6 @@ static float CalculatePressure(StrokePoint *p1, StrokePoint *p2) {
   return pressure;
 }
 
-/*------------------------------------------------------------
-   Crayon Size
-  ------------------------------------------------------------*/
 
 static int GetCrayonSize(void) {
   int sizes[] = {6, 10, 14, 18, 22};
@@ -452,9 +422,6 @@ static int GetCrayonSize(void) {
   return sizes[idx];
 }
 
-/*------------------------------------------------------------
-   Low-level Rendering Helpers
-  ------------------------------------------------------------*/
 
 // Forward declaration for renderer
 static void ApplySprayEffect(BYTE *bits, int width, int height, float centerX,
@@ -544,9 +511,6 @@ static void DrawCrayonSpot(BYTE *bits, int width, int height, float sx,
                    s_currentNoiseSeed);
 }
 
-/*------------------------------------------------------------
-   Novel Stroke Rendering
-  ------------------------------------------------------------*/
 
 // Draw a smooth stroke segment using spline interpolation
 static void DrawCrayonStrokeSmooth(BYTE *bits, int width, int height,
@@ -652,9 +616,6 @@ static void ApplySprayEffect(BYTE *bits, int width, int height, float centerX,
   }
 }
 
-/*------------------------------------------------------------
-   Stroke Point Management
-  ------------------------------------------------------------*/
 
 static void AddStrokePoint(int x, int y) {
   DWORD currentTime = GetTickCount();
@@ -684,9 +645,6 @@ static void AddStrokePoint(int x, int y) {
   s_strokePointCount++;
 }
 
-/*------------------------------------------------------------
-   Main Stroke Drawing
-  ------------------------------------------------------------*/
 
 static void DrawCrayonStroke(BYTE *bits, int width, int height,
                              COLORREF color, BYTE colorAlpha) {
@@ -713,9 +671,6 @@ static void DrawCrayonStroke(BYTE *bits, int width, int height,
   }
 }
 
-/*------------------------------------------------------------
-   Crayon Tool Public API
-  ------------------------------------------------------------*/
 
 void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
    InitNoiseTextures();

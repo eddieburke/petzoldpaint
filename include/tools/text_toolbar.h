@@ -3,12 +3,6 @@
 
 #include <windows.h>
 
-/*------------------------------------------------------------
-   Text Toolbar Management
-   
-   Handles the floating toolbar window for text tool formatting
-   options (font, size, bold, italic, underline, strikeout, opaque/transparent).
-------------------------------------------------------------*/
 
 /* Toolbar control IDs */
 #define IDC_TEXT_FONT 1001

@@ -86,9 +86,6 @@ static void SelectionCommitBarGetRects(int clientW, int *pBarY, RECT *rcCommit,
     *pBarY = barY;
 }
 
-/*------------------------------------------------------------
-    Slider & UI Helpers (Consolidated)
-------------------------------------------------------------*/
 
 static int SliderValueFromY(int y, const RECT *prcSlider, int minValue,
                             int maxValue, BOOL invert) {
@@ -161,9 +158,6 @@ static void DrawCenteredText(HDC hdc, int x, int y, int width, const char *text)
 
 static void DrawGlossySelection(HDC hdc, RECT *prc);
 
-/*------------------------------------------------------------
-     Slider & Text Helpers (formerly tool_options_panels.c)
- ------------------------------------------------------------*/
 
 
 void DrawOptionButtonFrame(HDC hdc, RECT *prc, BOOL bSelected) {
@@ -815,9 +809,6 @@ static BOOL ShapeWithLineOptionsLButtonDown(HWND hwnd, int x, int y) {
   return FALSE;
 }
 
-/*------------------------------------------------------------
-    Highlighter Options Panel (Consolidated)
-------------------------------------------------------------*/
 
 static void HighlighterOptions_Draw(HDC hdc, RECT *prcClient) {
   int clientW = prcClient->right - prcClient->left;
@@ -968,9 +959,6 @@ static BOOL HighlighterOptions_MouseMove(HWND hwnd, int y) {
   return TRUE;
 }
 
-/*------------------------------------------------------------
-    Crayon Options Panel (Consolidated)
-------------------------------------------------------------*/
 
 static void CrayonOptions_Draw(HDC hdc, RECT *prcClient) {
   int clientW = prcClient->right - prcClient->left;

@@ -3,14 +3,6 @@
 
 #include <windows.h>
 
-/*------------------------------------------------------------
-   Document — central application state container
-
-   Consolidates canvas dimensions, dirty flag, current file,
-   scroll position, and zoom into a single struct.
-   Replaces the formerly scattered globals (bDocumentDirty,
-   szCurrentFile, canvas static vars).
-------------------------------------------------------------*/
 
 typedef struct {
     int width;              /* Canvas width  (pixels)        */

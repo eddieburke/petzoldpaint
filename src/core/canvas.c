@@ -1,10 +1,3 @@
-/*------------------------------------------------------------
-   CANVAS.C -- Canvas Window and Rendering Implementation
-
-   This module implements the main canvas window, which displays
-   the composite of all layers and handles user interaction.
-  ------------------------------------------------------------*/
-
 #include "peztold_core.h"
 #include "controller.h"
 #include "cursors.h"
@@ -23,9 +16,6 @@
 #include <math.h>
 #include <stdio.h>
 
-/*------------------------------------------------------------
-   Global Variables
-  ------------------------------------------------------------*/
 
 static HWND hCanvasWnd = NULL;
 
@@ -100,18 +90,12 @@ void Canvas_SetZoom(double z) {
 
 
 
-/*------------------------------------------------------------
-   Forward Declarations
-  ------------------------------------------------------------*/
 
 static void DrawResizeHandles(HDC hdc, int nDestX, int nDestY, int nScaledW,
                               int nScaledH);
 LRESULT CALLBACK CanvasWndProc(HWND hwnd, UINT message, WPARAM wParam,
                                LPARAM lParam);
 
-/*------------------------------------------------------------
-   Canvas Management Functions
-  ------------------------------------------------------------*/
 
 BOOL CreateCanvas(int width, int height) {
   if (!LayersInit(width, height))
@@ -155,9 +139,6 @@ void ClearCanvas(COLORREF color) {
   InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-/*------------------------------------------------------------
-   Undo/Redo Functions
-  ------------------------------------------------------------*/
 
 BOOL Undo(void) {
   return HistoryUndo();
@@ -197,9 +178,6 @@ static void DrawResizeHandles(HDC hdc, int nDestX, int nDestY, int nScaledW,
   Gdi_DeleteBrush(hBrush);
 }
 
-/*------------------------------------------------------------
-   Canvas Window Procedure
-  ------------------------------------------------------------*/
 
 LRESULT CALLBACK CanvasWndProc(HWND hwnd, UINT message, WPARAM wParam,
                                 LPARAM lParam) {
@@ -365,9 +343,6 @@ LRESULT CALLBACK CanvasWndProc(HWND hwnd, UINT message, WPARAM wParam,
   return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
-/*------------------------------------------------------------
-   Canvas Window Management Functions
-  ------------------------------------------------------------*/
 
 void CreateCanvasWindow(HWND hParent) {
   hCanvasWnd = NULL; // Initialize window handle

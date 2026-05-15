@@ -1,13 +1,3 @@
-/*------------------------------------------------------------------------------
- * POLYGON_TOOL.C
- *
- * Polygon Drawing Tool Implementation (Draft Layer model)
- *
- * MouseDown/Move: Draws open polygon + rubber band to the draft layer.
- * DoubleClick / close-to-start: Merges draft to active layer, pushes history.
- * onDeactivate / onCancel:      Clears draft, resets state.
- *----------------------------------------------------------------------------*/
-
 #include "polygon_tool.h"
 #include "canvas.h"
 #include "peztold_core.h"
@@ -26,10 +16,6 @@
 #include <stdlib.h>
 #include "palette.h"
 
-/*------------------------------------------------------------------------------
- * Internal State
- *----------------------------------------------------------------------------*/
-
 static PolyStore polygon;
 static BOOL bPolygonPending = FALSE;
 static BOOL bDragging = FALSE;
@@ -38,10 +24,6 @@ static int nDrawButton = 0;
 static BOOL bSuspendingCapture = FALSE;
 static int nDragIndex = -1;
 static BOOL bVertexMoved = FALSE;
-
-/*------------------------------------------------------------------------------
- * FillPolygonAlpha
- *----------------------------------------------------------------------------*/
 
 static void FillPolygonAlpha(BYTE *bits, int width, int height,
                               COLORREF color, BYTE alpha) {
@@ -97,10 +79,6 @@ static void FillPolygonAlpha(BYTE *bits, int width, int height,
   free(intersections);
 }
 
-/*------------------------------------------------------------------------------
- * DrawPolygonToDraft
- *----------------------------------------------------------------------------*/
-
 static void DrawPolygonToDraft(void) {
   if (!bPolygonPending || polygon.count == 0)
     return;
@@ -110,8 +88,10 @@ static void DrawPolygonToDraft(void) {
   if (!bits)
     return;
 
-  COLORREF fg = (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryColor() : Palette_GetPrimaryColor();
-  BYTE fgAlpha = (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryOpacity() : Palette_GetPrimaryOpacity();
+  COLORREF fg =
+      (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryColor() : Palette_GetPrimaryColor();
+  BYTE fgAlpha =
+      (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryOpacity() : Palette_GetPrimaryOpacity();
   int lineW = (nBrushWidth > 0 ? nBrushWidth : 1);
 
   for (int i = 0; i < polygon.count - 1; i++) {
@@ -131,10 +111,6 @@ static void DrawPolygonToDraft(void) {
   LayersMarkDirty();
 }
 
-/*------------------------------------------------------------------------------
- * CommitPolygon
- *----------------------------------------------------------------------------*/
-
 static void CommitPolygonInternal(void) {
   if (!bPolygonPending || polygon.count < 3) {
     if (Interaction_IsActive())
@@ -149,10 +125,14 @@ static void CommitPolygonInternal(void) {
   LayersClearDraft();
   BYTE *bits = LayersGetDraftBits();
   if (bits) {
-    COLORREF fg = (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryColor() : Palette_GetPrimaryColor();
-    COLORREF bg = (nDrawButton == MK_RBUTTON) ? Palette_GetPrimaryColor() : Palette_GetSecondaryColor();
-    BYTE fgAlpha = (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryOpacity() : Palette_GetPrimaryOpacity();
-    BYTE bgAlpha = (nDrawButton == MK_RBUTTON) ? Palette_GetPrimaryOpacity() : Palette_GetSecondaryOpacity();
+    COLORREF fg =
+        (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryColor() : Palette_GetPrimaryColor();
+    COLORREF bg =
+        (nDrawButton == MK_RBUTTON) ? Palette_GetPrimaryColor() : Palette_GetSecondaryColor();
+    BYTE fgAlpha =
+        (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryOpacity() : Palette_GetPrimaryOpacity();
+    BYTE bgAlpha =
+        (nDrawButton == MK_RBUTTON) ? Palette_GetPrimaryOpacity() : Palette_GetSecondaryOpacity();
     int lineW = (nBrushWidth > 0 ? nBrushWidth : 1);
 
     if ((nShapeDrawType == 1 || nShapeDrawType == 2) && polygon.count >= 3) {
@@ -179,10 +159,6 @@ static void CommitPolygonInternal(void) {
 }
 BOOL IsPolygonPending(void) { return bPolygonPending; }
 void PolygonTool_CommitPending(void) { CommitPolygonInternal(); }
-
-/*------------------------------------------------------------------------------
- * Lifecycle hooks
- *----------------------------------------------------------------------------*/
 
 BOOL PolygonTool_Cancel(void) {
   if (bSuspendingCapture)
@@ -236,10 +212,6 @@ static BOOL PolygonTryAddPoint(HWND hWnd, int x, int y) {
   }
   return TRUE;
 }
-
-/*------------------------------------------------------------------------------
- * Event Handlers
- *----------------------------------------------------------------------------*/
 
 static void StartNewPolygon(HWND hWnd, int x, int y, int nButton) {
     nDrawButton = nButton;
@@ -302,7 +274,8 @@ void PolygonTool_OnMouseDown(HWND hWnd, int x, int y, int nButton) {
         StartNewPolygon(hWnd, x, y, nButton);
     } else {
         RECT rcBounds = GetBoundingBox(polygon.points, polygon.count);
-        COMMIT_BAR_HANDLE_CLICK(&rcBounds, x, y, CommitPolygonInternal(), PolygonTool_Cancel());
+        COMMIT_BAR_HANDLE_CLICK(&rcBounds, x, y, CommitPolygonInternal(),
+                                PolygonTool_Cancel());
 
         int dragIdx = HitTestVertex(x, y);
         if (dragIdx >= 0) {
@@ -392,7 +365,8 @@ void PolygonTool_DrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
   OverlayContext ctx;
   Overlay_Init(&ctx, hdc, dScale, nDestX, nDestY);
 
-  COLORREF fg = (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryColor() : Palette_GetPrimaryColor();
+  COLORREF fg =
+      (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryColor() : Palette_GetPrimaryColor();
 
   if (nDragIndex < 0 && polygon.count > 0) {
     POINT last = Poly_GetLast(&polygon);

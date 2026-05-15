@@ -1,7 +1,3 @@
-/*------------------------------------------------------------
-   LAYERS.C - Simplified Layer System
-------------------------------------------------------------*/
-
 #include "peztold_core.h"
 #include "pixel_ops.h"
 #include "layers.h"

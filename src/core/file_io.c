@@ -1,10 +1,3 @@
-/*------------------------------------------------------------
-   FILE_IO.C -- File Input/Output Operations
-
-   This module handles loading and saving bitmap files in
-   both BMP and PNG formats using Windows Imaging Component.
-  ------------------------------------------------------------*/
-
 #include "peztold_core.h"
 #include "canvas.h"
 #include "file_io.h"
@@ -17,9 +10,6 @@
 #include <wincodec.h>
 
 
-/*------------------------------------------------------------
-   Static Variables
-  ------------------------------------------------------------*/
 
 static IWICImagingFactory* g_wicFactory = NULL;
 static BOOL g_comInitialized = FALSE;
@@ -31,9 +21,6 @@ static BOOL g_jpegFlattenBg = TRUE;
 
 #define MAX_CANVAS_DIM 16384U
 
-/*------------------------------------------------------------
-   WIC Factory Management
-  ------------------------------------------------------------*/
 
 static BOOL EnsureWicFactory(void)
 {
@@ -77,9 +64,6 @@ void FileIO_ShutdownCom(void)
     g_comInitializedByUs = FALSE;
 }
 
-/*------------------------------------------------------------
-   File Extension Helpers
-  ------------------------------------------------------------*/
 
 static BOOL HasExtension(const wchar_t* path, const wchar_t* ext)
 {
@@ -105,9 +89,6 @@ static void EnsureExtensionForSave(wchar_t* path, size_t maxLen, const wchar_t* 
     }
 }
 
-/*------------------------------------------------------------
-    WIC Error Reporting Helper
-------------------------------------------------------------*/
 
 static void ShowWicError(HRESULT hr, const char* operation)
 {
@@ -120,9 +101,6 @@ static void ShowWicError(HRESULT hr, const char* operation)
     MessageBoxA(hMainWnd, msg, "Image Error", MB_ICONERROR);
 }
 
-/*------------------------------------------------------------
-    PNG Loading Function
-------------------------------------------------------------*/
 
 static BOOL LoadWicPixels(IWICFormatConverter* converter, UINT width, UINT height) {
     if (width == 0 || height == 0 || width > MAX_CANVAS_DIM || height > MAX_CANVAS_DIM) return FALSE;
@@ -177,9 +155,6 @@ static BOOL LoadWicImage(const wchar_t* szPath)
     return ok;
 }
 
-/*------------------------------------------------------------
-    JPEG Options Dialog
-  ------------------------------------------------------------*/
 
 INT_PTR CALLBACK JpegOptionsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -224,9 +199,6 @@ INT_PTR CALLBACK JpegOptionsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
     return (INT_PTR)FALSE;
 }
 
-/*------------------------------------------------------------
-   WIC Saving Function
-  ------------------------------------------------------------*/
 
 static BOOL SaveWicImage(const wchar_t* lpszFileName, REFGUID containerFormat)
 {
@@ -356,11 +328,6 @@ cleanup:
     return ok;
 }
 
-/*------------------------------------------------------------
-   FileLoad
-
-   Displays the file open dialog and loads the selected file.
-  ------------------------------------------------------------*/
 
 BOOL FileLoad(HWND hWnd)
 {
@@ -403,11 +370,6 @@ BOOL FileLoad(HWND hWnd)
     return FALSE;
 }
 
-/*------------------------------------------------------------
-   LoadBitmapFromFile
-
-   Loads a bitmap file (BMP or PNG) into the layers system.
-  ------------------------------------------------------------*/
 
 BOOL LoadBitmapFromFile(const wchar_t* szPath)
 {
@@ -432,11 +394,6 @@ BOOL LoadBitmapFromFile(const wchar_t* szPath)
 
 
 
-/*------------------------------------------------------------
-   FileSave
-
-   Saves the current document to the previously opened file.
-  ------------------------------------------------------------*/
 
 BOOL FileSave(HWND hWnd)
 {
@@ -453,11 +410,6 @@ BOOL FileSave(HWND hWnd)
     return FileSaveAs(hWnd);
 }
 
-/*------------------------------------------------------------
-   FileSaveAs
-
-   Displays the file save dialog and saves the document.
-  ------------------------------------------------------------*/
 
 BOOL FileSaveAs(HWND hWnd)
 {

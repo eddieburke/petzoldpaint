@@ -2,12 +2,6 @@
 #include "pixel_ops.h"
 #include "layers.h"
 
-/*------------------------------------------------------------
-   PixelOps_InvertColors
-
-   Inverts RGB channels, preserves original Alpha (Mask).
-   Prevents mask corruption during color operations.
-------------------------------------------------------------*/
 void PixelOps_InvertColors(BYTE *bits, int width, int height) {
   if (!bits || width <= 0 || height <= 0)
     return;
@@ -20,13 +14,7 @@ void PixelOps_InvertColors(BYTE *bits, int width, int height) {
   }
 }
 
-/* PixelOps_InvertAlpha removed (unused) */
 
-/*------------------------------------------------------------
-   PixelOps_Fill
-
-   Fills the buffer with a solid color and alpha.
-------------------------------------------------------------*/
 void PixelOps_Fill(BYTE *bits, int width, int height, COLORREF color,
                    BYTE alpha) {
   if (!bits || width <= 0 || height <= 0)
@@ -47,11 +35,7 @@ void PixelOps_Fill(BYTE *bits, int width, int height, COLORREF color,
   }
 }
 
-/* PixelOps_Premultiply removed (unused) */
 
-/*------------------------------------------------------------
-   PixelOps_FillCheckerboard
-------------------------------------------------------------*/
 void PixelOps_FillCheckerboard(BYTE *bits, int width, int height) {
   PixelOps_FillCheckerboardRect(bits, width, height, 0, 0, width, height);
 }
@@ -92,17 +76,9 @@ void PixelOps_FillCheckerboardRect(BYTE *bits, int width, int height,
   }
 }
 
-/*------------------------------------------------------------
-   Channel Blending Helpers
-
-   Moved to pixel_ops.h as static inline for performance.
-------------------------------------------------------------*/
 
 /* (empty — implementations now in pixel_ops.h) */
 
-/*------------------------------------------------------------
-   PixelOps_Flip
-------------------------------------------------------------*/
 void PixelOps_Flip(BYTE *bits, int width, int height, BOOL bHorz) {
   DWORD *px = (DWORD *)bits;
   if (!px || width <= 0 || height <= 0)

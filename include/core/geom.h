@@ -1,15 +1,8 @@
-/*------------------------------------------------------------
-    geom.h - Math, geometry, polygon, and coordinate conversion
-------------------------------------------------------------*/
-
 #ifndef GEOM_H
 #define GEOM_H
 
 #include <windows.h>
 
-/*------------------------------------------------------------
-    Math and Geometry
-------------------------------------------------------------*/
 
 int DistSq(int x1, int y1, int x2, int y2);
 double Dist(int x1, int y1, int x2, int y2);
@@ -44,9 +37,6 @@ BOOL IsShiftDown(void);
 BOOL IsCtrlDown(void);
 BOOL IsAltDown(void);
 
-/*------------------------------------------------------------
-    Coordinate Conversion
-------------------------------------------------------------*/
 
 typedef struct {
     double scale;

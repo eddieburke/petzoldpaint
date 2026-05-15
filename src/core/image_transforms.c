@@ -1,10 +1,3 @@
-/*------------------------------------------------------------
-   IMAGE_TRANSFORMS.C -- Image Transformation Operations
-
-   This module provides image transformation functions including
-   flip, rotate, resize, skew, invert colors, and attributes.
-  ------------------------------------------------------------*/
-
 #include "peztold_core.h"
 #include "canvas.h"
 #include "history.h"
@@ -16,9 +9,6 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-/*------------------------------------------------------------
-   Flip/Rotate Dialog Procedure
-  ------------------------------------------------------------*/
 
 static BOOL CALLBACK FlipRotateDlgProc(HWND hDlg, UINT message, WPARAM wParam,
                                        LPARAM lParam) {
@@ -60,9 +50,6 @@ static BOOL CALLBACK FlipRotateDlgProc(HWND hDlg, UINT message, WPARAM wParam,
   return FALSE;
 }
 
-/*------------------------------------------------------------
-   Flip Transform Function
-  ------------------------------------------------------------*/
 
 static void FlipRawTransform(BYTE *pSrc, int srcW, int srcH, BYTE *pDst,
                              int dstW, int dstH, void *pUserData) {
@@ -81,18 +68,13 @@ static void DoFlip(BOOL bHorz) {
   StringCchPrintf(desc, sizeof(desc), "Flip %s", bHorz ? "Horizontal" : "Vertical");
   if (LayersApplyRawTransformToAll(Canvas_GetWidth(), Canvas_GetHeight(), FlipRawTransform,
                                    (void *)(INT_PTR)bHorz)) {
-    if (!HistoryPush(desc)) {
-      /* Change applied, but undo entry could not be recorded. */
-    }
+    (void)HistoryPush(desc);
     SetDocumentDirty();
     Core_Notify(EV_PIXELS_CHANGED);
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
   }
 }
 
-/*------------------------------------------------------------
-   Rotate Transform Function
-  ------------------------------------------------------------*/
 
 static void RotateRawTransform(BYTE *pSrc, int srcW, int srcH, BYTE *pDst,
                                int dstW, int dstH, void *pUserData) {
@@ -134,9 +116,7 @@ static void DoRotate(int degrees) {
   StringCchPrintf(desc, sizeof(desc), "Rotate %d Degrees", degrees);
   if (LayersApplyRawTransformToAll(nNewW, nNewH, RotateRawTransform,
                                    (void *)(INT_PTR)degrees)) {
-    if (!HistoryPush(desc)) {
-      /* Change applied, but undo entry could not be recorded. */
-    }
+    (void)HistoryPush(desc);
     SetDocumentDirty();
     Core_Notify(EV_PIXELS_CHANGED);
     SendMessage(hMainWnd, WM_SIZE, 0, 0);
@@ -144,11 +124,6 @@ static void DoRotate(int degrees) {
   }
 }
 
-/*------------------------------------------------------------
-   ImageFlipRotate
-
-   Displays the flip/rotate dialog and applies the transformation.
-  ------------------------------------------------------------*/
 
 void ImageFlipRotate(HWND hWnd) {
   INT_PTR result = DialogBox(hInst, MAKEINTRESOURCE(IDD_FLIPROTATE), hWnd,
@@ -181,9 +156,6 @@ void ImageFlipRotate(HWND hWnd) {
   }
 }
 
-/*------------------------------------------------------------
-   Resize/Skew Transform Structures
-  ------------------------------------------------------------*/
 
 typedef struct {
   int resH, resV;
@@ -195,9 +167,6 @@ typedef struct {
   int offX, offY;
 } SkewParams;
 
-/*------------------------------------------------------------
-   Skew Transform Function
-  ------------------------------------------------------------*/
 
 static void SkewRawTransform(BYTE *pSrc, int srcW, int srcH, BYTE *pDst,
                              int dstW, int dstH, void *pUserData) {
@@ -242,9 +211,6 @@ static void SkewRawTransform(BYTE *pSrc, int srcW, int srcH, BYTE *pDst,
   }
 }
 
-/*------------------------------------------------------------
-   Resize/Skew Dialog Procedure
-  ------------------------------------------------------------*/
 
 static BOOL CALLBACK ResizeSkewDlgProc(HWND hDlg, UINT message, WPARAM wParam,
                                        LPARAM lParam) {
@@ -276,11 +242,6 @@ static BOOL CALLBACK ResizeSkewDlgProc(HWND hDlg, UINT message, WPARAM wParam,
   return FALSE;
 }
 
-/*------------------------------------------------------------
-   ImageResizeSkew
-
-   Displays the resize/skew dialog and applies the transformation.
-  ------------------------------------------------------------*/
 
 void ImageResizeSkew(HWND hWnd) {
   TRANSFORM_PARAMS params;
@@ -307,9 +268,7 @@ void ImageResizeSkew(HWND hWnd) {
             finalW, finalH);
     if (LayersApplyRawTransformToAll(finalW, finalH, SkewRawTransform,
                                      &skewParams)) {
-      if (!HistoryPush(desc)) {
-      /* Change applied, but undo entry could not be recorded. */
-    }
+      (void)HistoryPush(desc);
       SetDocumentDirty();
       Core_Notify(EV_PIXELS_CHANGED);
       SendMessage(hMainWnd, WM_SIZE, 0, 0);
@@ -318,9 +277,6 @@ void ImageResizeSkew(HWND hWnd) {
   }
 }
 
-/*------------------------------------------------------------
-   Attributes Dialog Procedure
-  ------------------------------------------------------------*/
 
 static BOOL CALLBACK AttributesDlgProc(HWND hDlg, UINT message, WPARAM wParam,
                                        LPARAM lParam) {
@@ -356,11 +312,6 @@ static BOOL CALLBACK AttributesDlgProc(HWND hDlg, UINT message, WPARAM wParam,
   return FALSE;
 }
 
-/*------------------------------------------------------------
-   ImageAttributes
-
-   Displays the image attributes dialog and resizes the canvas.
-  ------------------------------------------------------------*/
 
 void ImageAttributes(HWND hWnd) {
   int oldW = Canvas_GetWidth();
@@ -375,21 +326,13 @@ void ImageAttributes(HWND hWnd) {
       SetDocumentDirty();
       Core_Notify(EV_LAYER_CONFIG);
 
-      // Push undo state AFTER resize is complete
-      if (!HistoryPush(desc)) {
-      /* Change applied, but undo entry could not be recorded. */
-    }
+      (void)HistoryPush(desc);
     }
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
     SendMessage(hMainWnd, WM_SIZE, 0, 0);
   }
 }
 
-/*------------------------------------------------------------
-   ImageInvertColors
-
-   Inverts the colors of the image or selection.
-  ------------------------------------------------------------*/
 
 void ImageInvertColors(HWND hWnd) {
   if (IsSelectionActive()) {
@@ -409,24 +352,15 @@ void ImageInvertColors(HWND hWnd) {
 
   LayersMarkDirty();
 
-  if (!HistoryPush("Invert Colors")) {
-    /* Change applied, but undo entry could not be recorded. */
-  }
+  (void)HistoryPush("Invert Colors");
   SetDocumentDirty();
   InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-/*------------------------------------------------------------
-   ImageClear
-
-   Clears the entire canvas to the background color.
-  ------------------------------------------------------------*/
 
 void ImageClear(HWND hWnd) {
   ClearCanvas(Palette_GetSecondaryColor());
-  if (!HistoryPush("Clear Image")) {
-    /* Change applied, but undo entry could not be recorded. */
-  }
+  (void)HistoryPush("Clear Image");
   SetDocumentDirty();
   InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
