@@ -278,18 +278,20 @@ static BOOL HistoryRebuildToCurrent(void) {
   if (!ApplyFullEntry(e0))
     return FALSE;
 
-  for (HistoryEntry *e = e0->next; e; e = e->next) {
-    if (e->kind == HIST_ENTRY_FULL) {
-      if (!ApplyFullEntry(e))
-        return FALSE;
-    } else if (e->kind == HIST_ENTRY_LAYER_PIXELS) {
-      BYTE *bits = LayersGetLayerColorBits(e->deltaLayerIndex);
-      if (!bits || e->deltaByteCount == 0)
-        return FALSE;
-      memcpy(bits, e->deltaAfter, e->deltaByteCount);
+  if (s_currentEntry != e0) {
+    for (HistoryEntry *e = e0->next; e; e = e->next) {
+      if (e->kind == HIST_ENTRY_FULL) {
+        if (!ApplyFullEntry(e))
+          return FALSE;
+      } else if (e->kind == HIST_ENTRY_LAYER_PIXELS) {
+        BYTE *bits = LayersGetLayerColorBits(e->deltaLayerIndex);
+        if (!bits || e->deltaByteCount == 0)
+          return FALSE;
+        memcpy(bits, e->deltaAfter, e->deltaByteCount);
+      }
+      if (e == s_currentEntry)
+        break;
     }
-    if (e == s_currentEntry)
-      break;
   }
 
   LayersMarkDirty();
