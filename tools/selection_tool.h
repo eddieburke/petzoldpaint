@@ -65,6 +65,10 @@ typedef struct SelectionSnapshot {
     HBITMAP hFloatBmp;       // Copy of floating bitmap
     BYTE *pFloatBits;        // Pixel data
     int nFloatW, nFloatH;     // Dimensions
+    HBITMAP hBackupBmp;       // Backup bitmap used for cancel
+    BYTE *pBackupBits;        // Backup pixel data
+    HRGN hBackupRegion;       // Backup selection region
+    RECT rcLiftOrigin;        // Bounds where lift happened
     double fRotationAngle;       // Rotation angle
     POINT ptRotateCenter;      // Rotation center
     PolyStore freeformPts;      // Polygon points (for reconstructing region/editing)

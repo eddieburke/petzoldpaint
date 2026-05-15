@@ -399,6 +399,9 @@ void HistoryPushToolSessionById(int toolId, const char *action) {
   char description[256];
   StringCchPrintf(description, sizeof(description), "%s: %s", toolName, action);
 
+  /* Tool-session snapshots do not encode pixel writes; avoid stale deltas. */
+  History_ClearPendingLayerSnapshot();
+
   TrimRedoBranch();
   HistoryEntry *entry = CreateToolSessionEntry(description);
   if (!entry) {
