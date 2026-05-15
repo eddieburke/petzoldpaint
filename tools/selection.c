@@ -84,11 +84,13 @@ static BOOL s_dragMoved = FALSE;
 // Forward declarations
 static void UpdateSelectionDraftLayer(void);
 static void SelectionHelpers_RestoreCanvas(void);
+static void SelectionHelpers_BlitFloatingToCanvas(void);
 static void SelectionHelpers_SampleRotated(BYTE* pSrcBits, int srcW, int srcH,
                                           BYTE* pDstBits, int dstW, int dstH,
                                           double angleDegrees, double centerX, double centerY,
                                           int dstStartX, int dstStartY, int dstEndX, int dstEndY,
                                           int canvasWidth, int canvasHeight);
+static void SelectionDeleteInternal(BOOL pushHistory, const char* historyLabel);
 static void Selection_ComputeRotatedSampleExtents(const RECT *rcBounds,
                                                   double angleDeg, int *pDstW,
                                                   int *pDstH, double *pCx,
@@ -337,6 +339,14 @@ void CancelSelection(void) {
         UpdateCanvasAfterModification();
         return;
     }
+    if (s_sel.mode == SEL_FLOATING && s_sel.pixels.pFloatBits) {
+        /* Fallback for rebuilt/partial snapshots: keep pixels instead of dropping data. */
+        SelectionHelpers_BlitFloatingToCanvas();
+        LayersClearDraft();
+        UpdateCanvasAfterModification();
+        SelectionClearState();
+        return;
+    }
     SelectionClearState();
     LayersClearDraft();
     InvalidateCanvas();
@@ -360,6 +370,14 @@ SelectionSnapshot* Selection_CreateSnapshot(void) {
         s->nFloatW = s_sel.pixels.nWidth;
         s->nFloatH = s_sel.pixels.nHeight;
     }
+    if (s_sel.pixels.hBackupBmp) {
+        s->hBackupBmp = CopyBitmapToDib32(s_sel.pixels.hBackupBmp, Canvas_GetWidth(), Canvas_GetHeight(), &s->pBackupBits);
+    }
+    if (s_sel.pixels.hBackupRegion) {
+        s->hBackupRegion = CreateRectRgn(0, 0, 0, 0);
+        CombineRgn(s->hBackupRegion, s_sel.pixels.hBackupRegion, NULL, RGN_COPY);
+    }
+    s->rcLiftOrigin = s_sel.pixels.rcLiftOrigin;
     s->fRotationAngle = s_sel.rot.fAngle;
     s->ptRotateCenter = s_sel.rot.ptCenter;
     Poly_Copy(&s->freeformPts, &s_sel.freeformPts);
@@ -370,6 +388,8 @@ void Selection_DestroySnapshot(SelectionSnapshot* s) {
     if (!s) return;
     if (s->hRegion) DeleteObject(s->hRegion);
     if (s->hFloatBmp) DeleteObject(s->hFloatBmp);
+    if (s->hBackupBmp) DeleteObject(s->hBackupBmp);
+    if (s->hBackupRegion) DeleteObject(s->hBackupRegion);
     Poly_Free(&s->freeformPts);
     free(s);
 }
@@ -388,9 +408,21 @@ void Selection_ApplySnapshot(SelectionSnapshot* s) {
         s_sel.pixels.nWidth = s->nFloatW;
         s_sel.pixels.nHeight = s->nFloatH;
     }
+    if (s->hBackupBmp) {
+        s_sel.pixels.hBackupBmp = CopyBitmapToDib32(s->hBackupBmp, Canvas_GetWidth(), Canvas_GetHeight(), &s_sel.pixels.pBackupBits);
+    }
+    if (s->hBackupRegion) {
+        s_sel.pixels.hBackupRegion = CreateRectRgn(0, 0, 0, 0);
+        CombineRgn(s_sel.pixels.hBackupRegion, s->hBackupRegion, NULL, RGN_COPY);
+    }
+    s_sel.pixels.rcLiftOrigin = s->rcLiftOrigin;
     s_sel.rot.fAngle = s->fRotationAngle;
     s_sel.rot.ptCenter = s->ptRotateCenter;
     Poly_Copy(&s_sel.freeformPts, &s->freeformPts);
+    s_sel.nDragMode = HT_NONE;
+    if (s_sel.mode == SEL_FLOATING && !s_sel.pixels.pFloatBits) {
+        s_sel.mode = SEL_REGION_ONLY;
+    }
     UpdateSelectionDraftLayer();
     InvalidateCanvas();
 }
@@ -436,6 +468,24 @@ static void SelectionFlipInternal(BOOL bHorz) {
     if (s_sel.mode != SEL_FLOATING || !s_sel.pixels.pFloatBits) return;
     Transform_Flip(s_sel.pixels.pFloatBits, s_sel.pixels.nWidth, s_sel.pixels.nHeight, bHorz);
     UpdateSelectionDraftLayer();
+}
+
+static void SelectionHelpers_BlitFloatingToCanvas(void) {
+    if (s_sel.mode != SEL_FLOATING || !s_sel.pixels.pFloatBits) return;
+    Layers_BeginWrite();
+    BYTE* pBits = LayersGetActiveColorBits();
+    if (!pBits) return;
+    int dstW, dstH, sx, sy, ex, ey;
+    double cx, cy;
+    Selection_ComputeRotatedSampleExtents(&s_sel.rcBounds, s_sel.rot.fAngle,
+                                          &dstW, &dstH, &cx, &cy, &sx, &sy,
+                                          &ex, &ey);
+    if (dstW > 0 && dstH > 0) {
+        SelectionHelpers_SampleRotated(s_sel.pixels.pFloatBits, s_sel.pixels.nWidth,
+                                       s_sel.pixels.nHeight, pBits, dstW, dstH,
+                                       s_sel.rot.fAngle, cx, cy, sx, sy, ex, ey,
+                                       Canvas_GetWidth(), Canvas_GetHeight());
+    }
 }
 
 void SelectionRotate(int degrees) {
@@ -535,7 +585,7 @@ void SelectionCopy(void) {
 
 void SelectionCut(void) { 
     SelectionCopy(); 
-    SelectionDelete(); 
+    SelectionDeleteInternal(FALSE, "Cut");
     if (!HistoryPush("Cut")) {
         /* Change applied, but undo entry could not be recorded. */
     }
@@ -587,8 +637,19 @@ void SelectionPaste(HWND hWnd) {
     }
 }
 
-void SelectionDelete(void) {
-    if (s_sel.mode == SEL_FLOATING) { SelectionClearState(); InvalidateCanvas(); }
+static void SelectionDeleteInternal(BOOL pushHistory, const char* historyLabel) {
+    const char *label = historyLabel ? historyLabel : "Delete Selection";
+    if (s_sel.mode == SEL_FLOATING) {
+        BOOL hadLiftBackup = (s_sel.pixels.hBackupBmp != NULL);
+        SelectionClearState();
+        LayersClearDraft();
+        UpdateCanvasAfterModification();
+        if (pushHistory && hadLiftBackup) {
+            if (!HistoryPush(label)) {
+                /* Change applied, but undo entry could not be recorded. */
+            }
+        }
+    }
     else if (s_sel.mode == SEL_REGION_ONLY) {
         Layers_BeginWrite();
         BYTE* p = LayersGetActiveColorBits(); int cw = Canvas_GetWidth(), ch = Canvas_GetHeight();
@@ -600,11 +661,13 @@ void SelectionDelete(void) {
             }
         }
         UpdateCanvasAfterModification(); SelectionClearState();
-        if (!HistoryPush("Delete Selection")) {
+        if (pushHistory && !HistoryPush(label)) {
             /* Change applied, but undo entry could not be recorded. */
         }
     }
 }
+
+void SelectionDelete(void) { SelectionDeleteInternal(TRUE, "Delete Selection"); }
 
 // ============================================================================
 // Event Handlers & Hit Testing

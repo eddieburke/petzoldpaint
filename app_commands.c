@@ -145,14 +145,14 @@ BOOL AppCommands_OnCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     return TRUE;
 
   case IDM_UNDO:
-    ToolCancel();
+    ToolCancelSkipSelection();
     if (Undo()) {
         SendMessage(hwnd, WM_SIZE, 0, 0);
     }
     return TRUE;
 
   case IDM_REDO:
-    ToolCancel();
+    ToolCancelSkipSelection();
     if (Redo()) {
         SendMessage(hwnd, WM_SIZE, 0, 0);
     }
