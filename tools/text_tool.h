@@ -3,6 +3,7 @@
 
 #include "../peztold_core.h"
 
+#include "text_font.h"
 #include "text_toolbar.h"
 #include <windows.h>
 
@@ -17,6 +18,14 @@ extern BOOL bTextItalic;
 extern BOOL bTextUnderline;
 extern BOOL bTextStrikeout;
 extern int nTextFontSize;
+
+typedef struct TextToolSnapshot {
+  int mode;
+  RECT rcBox;
+  BOOL bOpaque;
+  TextFontState font;
+  char *text;
+} TextToolSnapshot;
 
 /*------------------------------------------------------------------------------
  * Event Handlers
@@ -49,5 +58,8 @@ void TextToolSetOpaque(BOOL bOpaque);
 HWND TextToolGetEditHwnd(void);
 void TextToolCleanup(void);
 void TextTool_Deactivate(void);
+TextToolSnapshot *TextTool_CreateSnapshot(void);
+void TextTool_DestroySnapshot(TextToolSnapshot *snapshot);
+void TextTool_ApplySnapshot(const TextToolSnapshot *snapshot);
 
 #endif

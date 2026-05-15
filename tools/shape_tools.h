@@ -3,6 +3,14 @@
 
 #include "../peztold_core.h"
 
+typedef struct ShapeToolSnapshot {
+  int state;
+  int activeToolId;
+  POINT ptStart;
+  POINT ptEnd;
+  int drawButton;
+} ShapeToolSnapshot;
+
 /*------------------------------------------------------------------------------
  * Line Tool
  *----------------------------------------------------------------------------*/
@@ -19,8 +27,10 @@ BOOL IsShapeDrawing(void);
 BOOL IsShapePending(void);
 BOOL ShapeTool_IsBusy(void);
 void CancelShapeDrawing(void);
-void CommitPendingShape(void);
-
+void ShapeTool_CommitPending(void);
+ShapeToolSnapshot *ShapeTool_CreateSnapshot(void);
+void ShapeTool_DestroySnapshot(ShapeToolSnapshot *snapshot);
+void ShapeTool_ApplySnapshot(const ShapeToolSnapshot *snapshot);
 /* Tool VTable lifecycle hooks */
 void ShapeTool_Deactivate(void);
 BOOL ShapeTool_Cancel(void);

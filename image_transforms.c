@@ -6,14 +6,11 @@
   ------------------------------------------------------------*/
 
 #include "peztold_core.h"
-#include "image_transforms.h"
 #include "canvas.h"
 #include "history.h"
 #include "layers.h"
 #include "pixel_ops.h"
 #include "tools/selection_tool.h"
-#include "ui/panels/layers_panel.h"
-
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -88,7 +85,7 @@ static void DoFlip(BOOL bHorz) {
       /* Change applied, but undo entry could not be recorded. */
     }
     SetDocumentDirty();
-    LayersPanelSync();
+    Core_Notify(EV_PIXELS_CHANGED);
     InvalidateCanvas();
   }
 }
@@ -141,7 +138,7 @@ static void DoRotate(int degrees) {
       /* Change applied, but undo entry could not be recorded. */
     }
     SetDocumentDirty();
-    LayersPanelSync();
+    Core_Notify(EV_PIXELS_CHANGED);
     SendMessage(hMainWnd, WM_SIZE, 0, 0);
     InvalidateCanvas();
   }
@@ -314,7 +311,7 @@ void ImageResizeSkew(HWND hWnd) {
       /* Change applied, but undo entry could not be recorded. */
     }
       SetDocumentDirty();
-      LayersPanelSync();
+      Core_Notify(EV_PIXELS_CHANGED);
       SendMessage(hMainWnd, WM_SIZE, 0, 0);
       InvalidateCanvas();
     }
@@ -376,8 +373,7 @@ void ImageAttributes(HWND hWnd) {
               Canvas_GetHeight());
 
       SetDocumentDirty();
-      extern void LayersPanelSync(void);
-      LayersPanelSync();
+      Core_Notify(EV_LAYER_CONFIG);
 
       // Push undo state AFTER resize is complete
       if (!HistoryPush(desc)) {
@@ -404,6 +400,7 @@ void ImageInvertColors(HWND hWnd) {
   if (!LayersGetActiveColorBitmap())
     return;
 
+  Layers_BeginWrite();
   BYTE *pBits = LayersGetActiveColorBits();
   if (!pBits)
     return;

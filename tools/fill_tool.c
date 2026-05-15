@@ -19,10 +19,14 @@ static BOOL FillRequest_IsSupportedButton(const FillRequest *request) {
 static BOOL FillTool_Execute(const FillRequest *request) {
   HBITMAP hOldColor = NULL;
   HDC hColor = LayersGetActiveColorDC(&hOldColor);
-  if (!hColor) return FALSE;
+  if (!hColor)
+    return FALSE;
+
+  Layers_BeginWrite();
 
   BOOL changed = FloodFillCanvas(request->x, request->y,
-                                 GetColorForButton(request->button), 255);
+                                 GetColorForButton(request->button),
+                                 GetOpacityForButton(request->button));
   ReleaseBitmapDC(hColor, hOldColor);
   return changed;
 }

@@ -19,7 +19,7 @@
 #include "tool_options/presets.h"
 #include "tool_options/tool_options.h"
 #include <math.h>
-#include "stroke_session.h"
+#include "../interaction.h"
 #include <stdio.h>
 
 /*------------------------------------------------------------------------------
@@ -81,12 +81,6 @@ void HighlighterTool_RegisterPresets(void) {
 }
 
 /*------------------------------------------------------------
-   Localized Drawing State
-  ------------------------------------------------------------*/
-
-static StrokeSession s_session = {0};
-
-/*------------------------------------------------------------
    Highlighter Rendering Helpers
   ------------------------------------------------------------*/
 
@@ -123,9 +117,9 @@ static BYTE CalcHighlighterAlpha(void) {
   ------------------------------------------------------------*/
 
 void HighlighterToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
-  StrokeSession_Begin(&s_session, hWnd, x, y, nButton, TOOL_HIGHLIGHTER);
+  Interaction_Begin(hWnd, x, y, nButton, TOOL_HIGHLIGHTER);
 
-  BYTE alpha = CalcHighlighterAlpha();
+  BYTE alpha = ComposeOpacity(CalcHighlighterAlpha(), GetOpacityForButton(nButton));
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
     DrawCircleAAAlphaSoft(bits, Canvas_GetWidth(), Canvas_GetHeight(), x, y,
@@ -133,29 +127,31 @@ void HighlighterToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
                           alpha, GetHighlighterBlendMode(),
                           (float)nHighlighterEdgeSoftness / 100.0f);
     LayersMarkDirty();
-    StrokeSession_MarkPixelsModified(&s_session);
+    Interaction_MarkModified();
   }
   InvalidateCanvas();
 }
 
 void HighlighterToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
-  if (!s_session.isDrawing || !StrokeSession_IsActiveButton(nButton))
+  if (!Interaction_IsActive() || !Interaction_IsActiveButton(nButton))
     return;
 
-  BYTE alpha = CalcHighlighterAlpha();
+  BYTE alpha = ComposeOpacity(CalcHighlighterAlpha(), GetOpacityForButton(Interaction_GetDrawButton()));
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
+    POINT lp;
+    Interaction_GetLastPoint(&lp);
     DrawLineAAAlphaSoft(bits, Canvas_GetWidth(), Canvas_GetHeight(),
-                        (float)s_session.lastPoint.x, (float)s_session.lastPoint.y,
+                        (float)lp.x, (float)lp.y,
                         (float)x, (float)y, GetHighlighterSize() / 2.0f,
-                        GetColorForButton(s_session.drawButton), alpha,
+                        GetColorForButton(Interaction_GetDrawButton()), alpha,
                         GetHighlighterBlendMode(),
                         (float)nHighlighterEdgeSoftness / 100.0f);
     LayersMarkDirty();
-    StrokeSession_MarkPixelsModified(&s_session);
+    Interaction_MarkModified();
   }
-  StrokeSession_UpdateLastPoint(&s_session, x, y);
+  Interaction_UpdateLastPoint(x, y);
   InvalidateCanvas();
 }
 
@@ -164,19 +160,17 @@ void HighlighterToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   (void)x;
   (void)y;
   (void)nButton;
-  StrokeSession_CommitIfNeeded(&s_session, "Draw");
-  StrokeSession_End(&s_session);
+  Interaction_Commit("Draw");
 }
 
-BOOL IsHighlighterDrawing(void) { return s_session.isDrawing; }
+BOOL IsHighlighterDrawing(void) { return Interaction_IsActive(); }
 
-void HighlighterTool_Deactivate(void) {
-  StrokeSession_End(&s_session);
-}
+void HighlighterTool_Deactivate(void) { Interaction_EndQuiet(); }
 
 BOOL CancelHighlighterDrawing(void) {
-  if (!s_session.isDrawing) return FALSE;
-  StrokeSession_Cancel(&s_session);
+  if (!Interaction_IsActive())
+    return FALSE;
+  Interaction_Abort();
   return TRUE;
 }
 

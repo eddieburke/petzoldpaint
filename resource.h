@@ -100,6 +100,7 @@
 #define IDM_ZOOM_400  59512
 #define IDM_ZOOM_800  59513
 #define IDM_PRESETS   59520
+#define IDM_SHOW_COMMIT_BAR 59521
 
 #define TOOL_FREEFORM    0
 #define TOOL_SELECT      1

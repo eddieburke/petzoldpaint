@@ -4,9 +4,7 @@
 
 #include "../../helpers.h"
 #include "../../history.h"
-#include "../../resource.h"
 #include "../../tools.h"
-#include "layers_panel.h"
 #include <commctrl.h>
 #include <stdio.h>
 #include <uxtheme.h>
@@ -105,19 +103,14 @@ static void HandleHistorySelection(void) {
   if (sel == LB_ERR)
     return;
 
-  // Commit any pending tool work before jumping
-  Tool_FinalizeCurrentState();
-  SelectionClearState();
-
   // Jump to selected history state
   HistoryJumpTo(sel);
-  InvalidateCanvas();
-
-  // Sync layers panel since layer state may have changed
-  LayersPanelSync();
-
-  // Refresh to update the display
   RefreshHistoryList();
+}
+
+static void HistoryPanel_OnCoreEvent(CoreEvent ev) {
+  (void)ev;
+  HistoryPanelSync();
 }
 
 static LRESULT CALLBACK HistoryPanelWndProc(HWND hwnd, UINT message,
@@ -154,6 +147,7 @@ static LRESULT CALLBACK HistoryPanelWndProc(HWND hwnd, UINT message,
 
     RefreshHistoryList();
     LayoutControls(hwnd);
+    Core_RegisterObserver(HistoryPanel_OnCoreEvent);
     return 0;
   }
 

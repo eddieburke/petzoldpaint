@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "stroke_session.h"
+#include "../interaction.h"
 
 /*------------------------------------------------------------------------------
  * Crayon Presets
@@ -168,7 +168,6 @@ typedef struct {
   float pressure;
 } StrokePoint;
 
-static StrokeSession s_session = {0};
 static int s_currentNoiseSeed = 0;
 static StrokePoint s_strokePoints[MAX_STROKE_POINTS];
 static int s_strokePointCount = 0;
@@ -477,7 +476,7 @@ static int GetCrayonSize(void) {
 // Forward declaration for renderer
 static void ApplySprayEffect(BYTE *bits, int width, int height, float centerX,
                              float centerY, float radius, COLORREF color,
-                             float pressure, int seed);
+                             BYTE colorAlpha, float pressure, int seed);
 
 static BYTE CalcCrayonBaseAlpha(void) {
   float densityFactor = (float)nCrayonDensity / 100.0f;
@@ -489,7 +488,7 @@ static BYTE CalcCrayonBaseAlpha(void) {
 
 static void DrawCrayonSpot(BYTE *bits, int width, int height, float sx,
                            float sy, float radius, COLORREF color,
-                           float pressure, float dirX, float dirY) {
+                           BYTE colorAlpha, float pressure, float dirX, float dirY) {
   int centerX = (int)(sx + 0.5f);
   int centerY = (int)(sy + 0.5f);
   int r = (int)(radius + 1.5f);
@@ -548,7 +547,8 @@ static void DrawCrayonSpot(BYTE *bits, int width, int height, float sx,
       }
 
       // Calculate final alpha with pressure, noise, and edge
-      BYTE alpha = (BYTE)(baseAlpha * pressure * textureMod * edgeFactor);
+      BYTE alpha = ComposeOpacity((BYTE)(baseAlpha * pressure * textureMod * edgeFactor),
+                                  colorAlpha);
 
       if (alpha > 0) {
         DrawPixelAlpha(bits, width, height, px, py, variedColor, alpha, LAYER_BLEND_NORMAL);
@@ -557,7 +557,7 @@ static void DrawCrayonSpot(BYTE *bits, int width, int height, float sx,
   }
 
   // Apply aliased spraybrush effect at the end for extra texture
-  ApplySprayEffect(bits, width, height, sx, sy, radius, color, pressure,
+  ApplySprayEffect(bits, width, height, sx, sy, radius, color, colorAlpha, pressure,
                    s_currentNoiseSeed);
 }
 
@@ -569,7 +569,7 @@ static void DrawCrayonSpot(BYTE *bits, int width, int height, float sx,
 static void DrawCrayonStrokeSmooth(BYTE *bits, int width, int height,
                                    StrokePoint *p0, StrokePoint *p1,
                                    StrokePoint *p2, StrokePoint *p3,
-                                   COLORREF color, int size, float pressure) {
+                                   COLORREF color, BYTE colorAlpha, int size, float pressure) {
   if (!p1 || !p2)
     return;
 
@@ -615,7 +615,7 @@ static void DrawCrayonStrokeSmooth(BYTE *bits, int width, int height,
       sy = p1->y + (p2->y - p1->y) * t;
     }
 
-    DrawCrayonSpot(bits, width, height, sx, sy, radius, color, pressure, dirX,
+    DrawCrayonSpot(bits, width, height, sx, sy, radius, color, colorAlpha, pressure, dirX,
                    dirY);
   }
 }
@@ -623,7 +623,7 @@ static void DrawCrayonStrokeSmooth(BYTE *bits, int width, int height,
 // Aliased spraybrush effect - adds scattered pixels at the end for texture
 static void ApplySprayEffect(BYTE *bits, int width, int height, float centerX,
                              float centerY, float radius, COLORREF color,
-                             float pressure, int seed) {
+                             BYTE colorAlpha, float pressure, int seed) {
   // Number of spray particles based on area, pressure, and spray amount setting
   float sprayFactor = (float)nCrayonSprayAmount / 100.0f;
   int sprayCount = (int)(radius * radius * 0.15f * pressure * sprayFactor);
@@ -661,7 +661,7 @@ static void ApplySprayEffect(BYTE *bits, int width, int height, float centerX,
 
     // Random alpha for spray particles (aliased - full opacity or low)
     localSeed = (localSeed * 1103515245 + 12345) & 0x7fffffff;
-    BYTE sprayAlpha = (BYTE)(80 + (localSeed % 100)); // 80-180 alpha range
+    BYTE sprayAlpha = ComposeOpacity((BYTE)(80 + (localSeed % 100)), colorAlpha); // 80-180 alpha range
 
     // Draw aliased pixel (no anti-aliasing, hard edge)
     DrawPixelAlpha(bits, width, height, px, py, variedColor, sprayAlpha,
@@ -706,7 +706,7 @@ static void AddStrokePoint(int x, int y) {
   ------------------------------------------------------------*/
 
 static void DrawCrayonStroke(BYTE *bits, int width, int height,
-                             COLORREF color) {
+                             COLORREF color, BYTE colorAlpha) {
   if (s_strokePointCount < 2)
     return;
 
@@ -725,7 +725,7 @@ static void DrawCrayonStroke(BYTE *bits, int width, int height,
     // Use average pressure
     float pressure = (p1->pressure + p2->pressure) * 0.5f;
 
-    DrawCrayonStrokeSmooth(bits, width, height, p0, p1, p2, p3, color, size,
+    DrawCrayonStrokeSmooth(bits, width, height, p0, p1, p2, p3, color, colorAlpha, size,
                            pressure);
   }
 }
@@ -736,7 +736,7 @@ static void DrawCrayonStroke(BYTE *bits, int width, int height,
 
 void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
    InitNoiseTextures();
-   StrokeSession_Begin(&s_session, hWnd, x, y, nButton, TOOL_CRAYON);
+   Interaction_Begin(hWnd, x, y, nButton, TOOL_CRAYON);
 
   // Generate new random seed for this stroke
   s_currentNoiseSeed = (int)GetTickCount() + (x * 1619) + (y * 31337);
@@ -744,24 +744,25 @@ void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   // Reset stroke points
   s_strokePointCount = 0;
   AddStrokePoint(x, y);
-  StrokeSession_UpdateLastPoint(&s_session, x, y);
+  Interaction_UpdateLastPoint(x, y);
 
   // Draw initial point
   BYTE *bits = LayersGetActiveColorBits();
   if (bits) {
     int size = GetCrayonSize();
     float radius = size / 2.0f;
+    BYTE colorAlpha = GetOpacityForButton(Interaction_GetDrawButton());
     DrawCrayonSpot(bits, Canvas_GetWidth(), Canvas_GetHeight(), (float)x, (float)y, radius,
-                   GetColorForButton(s_session.drawButton), 1.0f, 1.0f, 0.0f);
+                   GetColorForButton(Interaction_GetDrawButton()), colorAlpha, 1.0f, 1.0f, 0.0f);
     LayersMarkDirty();
-    StrokeSession_MarkPixelsModified(&s_session);
+    Interaction_MarkModified();
   }
   InvalidateCanvas();
 }
 
 void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
-  if (!s_session.isDrawing || !StrokeSession_IsActiveButton(nButton))
+  if (!Interaction_IsActive() || !Interaction_IsActiveButton(nButton))
     return;
 
   // Add new point to stroke
@@ -776,7 +777,8 @@ void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
 
     if (endIdx > startIdx) {
       int size = GetCrayonSize();
-      COLORREF color = GetColorForButton(s_session.drawButton);
+      COLORREF color = GetColorForButton(Interaction_GetDrawButton());
+      BYTE colorAlpha = GetOpacityForButton(Interaction_GetDrawButton());
 
       for (int i = startIdx; i < endIdx; i++) {
         StrokePoint *p1 = &s_strokePoints[i];
@@ -788,14 +790,14 @@ void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
         float pressure = (p1->pressure + p2->pressure) * 0.5f;
 
         DrawCrayonStrokeSmooth(bits, Canvas_GetWidth(), Canvas_GetHeight(), p0, p1, p2, p3,
-                               color, size, pressure);
+                               color, colorAlpha, size, pressure);
       }
       LayersMarkDirty();
-      StrokeSession_MarkPixelsModified(&s_session);
+      Interaction_MarkModified();
     }
   }
 
-  StrokeSession_UpdateLastPoint(&s_session, x, y);
+  Interaction_UpdateLastPoint(x, y);
   InvalidateCanvas();
 }
 
@@ -803,14 +805,15 @@ void CrayonToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   (void)nButton;
   // Add final point
-  if (s_session.isDrawing) {
+  if (Interaction_IsActive()) {
     AddStrokePoint(x, y);
 
     // Draw final stroke segment
     BYTE *bits = LayersGetActiveColorBits();
     if (bits && s_strokePointCount >= 2) {
       int size = GetCrayonSize();
-      COLORREF color = GetColorForButton(s_session.drawButton);
+      COLORREF color = GetColorForButton(Interaction_GetDrawButton());
+      BYTE colorAlpha = GetOpacityForButton(Interaction_GetDrawButton());
 
       int startIdx = (s_strokePointCount >= 3) ? s_strokePointCount - 3 : 0;
       int endIdx = s_strokePointCount - 1;
@@ -825,34 +828,33 @@ void CrayonToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
         float pressure = (p1->pressure + p2->pressure) * 0.5f;
 
         DrawCrayonStrokeSmooth(bits, Canvas_GetWidth(), Canvas_GetHeight(), p0, p1, p2, p3,
-                               color, size, pressure);
+                               color, colorAlpha, size, pressure);
       }
       LayersMarkDirty();
-      StrokeSession_MarkPixelsModified(&s_session);
+      Interaction_MarkModified();
     }
   }
 
-  StrokeSession_UpdateLastPoint(&s_session, x, y);
-  StrokeSession_CommitIfNeeded(&s_session, "Draw");
-  StrokeSession_End(&s_session);
+  Interaction_UpdateLastPoint(x, y);
+  Interaction_Commit("Draw");
   s_strokePointCount = 0;
 }
 
-BOOL IsCrayonDrawing(void) { return s_session.isDrawing; }
+BOOL IsCrayonDrawing(void) { return Interaction_IsActive(); }
 
 void CrayonTool_Deactivate(void) {
-  if (s_session.isDrawing) {
-    StrokeSession_End(&s_session);
+  if (Interaction_IsActive()) {
+    Interaction_EndQuiet();
     s_strokePointCount = 0;
   }
 }
 
 BOOL CancelCrayonDrawing(void) {
-  if (!s_session.isDrawing) {
+  if (!Interaction_IsActive()) {
     s_strokePointCount = 0;
     return FALSE;
   }
-  StrokeSession_Cancel(&s_session);
+  Interaction_Abort();
   s_strokePointCount = 0;
   return TRUE;
 }

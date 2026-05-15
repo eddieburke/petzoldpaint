@@ -19,9 +19,11 @@
 #include "../history.h"
 #include "../layers.h"
 #include "../overlay.h"
-#include "../resource.h"
+#include "../commit_bar.h"
 #include "../tools.h"
+#include "interaction.h"
 #include "tool_options/tool_options.h"
+#include <stdlib.h>
 
 typedef enum {
   STATE_IDLE = 0,
@@ -29,7 +31,9 @@ typedef enum {
   STATE_WAIT_CTRL1,
   STATE_DRAG_CTRL1,
   STATE_WAIT_CTRL2,
-  STATE_DRAG_CTRL2
+  STATE_DRAG_CTRL2,
+  STATE_EDITING,
+  STATE_DRAG_EDIT_HANDLE
 } BezierState;
 
 static BezierState state = STATE_IDLE;
@@ -39,9 +43,31 @@ static POINT ptCtrl1;
 static POINT ptCtrl2;
 static int nDrawButton = 0;
 static BOOL bSuspendingCapture = FALSE;
+static int nEditHandle = -1;
+
+static int BezierHitHandle(int x, int y) {
+  int tol = (int)(8.0 / GetZoomScale());
+  if (tol < 2)
+    tol = 2;
+  POINT pts[4] = {ptStart, ptEnd, ptCtrl1, ptCtrl2};
+  for (int i = 0; i < 4; i++) {
+    int dx = x - pts[i].x;
+    int dy = y - pts[i].y;
+    if (dx * dx + dy * dy <= tol * tol)
+      return i;
+  }
+  return -1;
+}
+
+static void BezierGetBounds(RECT *outRect) {
+  if (!outRect)
+    return;
+  POINT pts[4] = {ptStart, ptEnd, ptCtrl1, ptCtrl2};
+  *outRect = GetBoundingBox(pts, 4);
+}
 
 static void DrawBezierSegment(BYTE *bits, int width, int height, COLORREF color,
-                              int thickness) {
+                              BYTE alpha, int thickness) {
   POINT p0 = ptStart, p1 = ptCtrl1, p2 = ptCtrl2, p3 = ptEnd;
   int steps = 100;
   int dist = abs(p0.x - p3.x) + abs(p0.y - p3.y);
@@ -58,7 +84,7 @@ static void DrawBezierSegment(BYTE *bits, int width, int height, COLORREF color,
     float x = u3 * p0.x + 3 * u2 * t * p1.x + 3 * u * t2 * p2.x + t3 * p3.x;
     float y = u3 * p0.y + 3 * u2 * t * p1.y + 3 * u * t2 * p2.y + t3 * p3.y;
     DrawLineAAAlpha(bits, width, height, prevX, prevY, x, y, radius, color,
-                    255, LAYER_BLEND_NORMAL);
+                    alpha, LAYER_BLEND_NORMAL);
     prevX = x;
     prevY = y;
   }
@@ -70,30 +96,33 @@ static void UpdateDraftLayer(void) {
   BYTE *bits = LayersGetDraftBits();
   if (!bits) return;
   COLORREF color = GetColorForButton(nDrawButton);
+  BYTE alpha = GetOpacityForButton(nDrawButton);
   int thickness = (nBrushWidth > 0) ? nBrushWidth : 1;
-  DrawBezierSegment(bits, Canvas_GetWidth(), Canvas_GetHeight(), color, thickness);
+  DrawBezierSegment(bits, Canvas_GetWidth(), Canvas_GetHeight(), color, alpha, thickness);
   LayersMarkDirty();
 }
 
 static void BezierReset(void) {
   state = STATE_IDLE;
   bSuspendingCapture = FALSE;
+  nEditHandle = -1;
   LayersClearDraft();
 }
 
-void CommitPendingCurve(void) {
-  if (state == STATE_IDLE) return;
+static void BezierCommitCurve(void) {
+  if (state == STATE_IDLE)
+    return;
   UpdateDraftLayer();
-  LayersMergeDraftToActive();
-  LayersMarkDirty();
-  SetDocumentDirty();
-  HistoryPushToolActionById(TOOL_CURVE, "Draw Curve");
+  Interaction_Commit("Draw Curve");
   BezierReset();
   InvalidateCanvas();
 }
+void BezierTool_CommitPending(void) { BezierCommitCurve(); }
 
 BOOL BezierTool_Cancel(void) {
-  if (bSuspendingCapture) return FALSE;
+  if (bSuspendingCapture)
+    return FALSE;
+  Interaction_Abort();
   BezierReset();
   InvalidateCanvas();
   return TRUE;
@@ -101,6 +130,7 @@ BOOL BezierTool_Cancel(void) {
 
 void BezierTool_Deactivate(void) {
   if (state != STATE_IDLE) {
+    Interaction_Abort();
     BezierReset();
     InvalidateCanvas();
   }
@@ -118,9 +148,11 @@ void BezierToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   switch (state) {
   case STATE_IDLE:
     nDrawButton = nButton;
-    ptStart.x = x; ptStart.y = y;
+    ptStart.x = x;
+    ptStart.y = y;
     ptEnd = ptCtrl1 = ptCtrl2 = ptStart;
     state = STATE_DRAWING_LINE;
+    Interaction_BeginEx(hWnd, x, y, nButton, TOOL_CURVE, FALSE);
     SetCapture(hWnd);
     break;
   case STATE_WAIT_CTRL1:
@@ -133,6 +165,22 @@ void BezierToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
     state = STATE_DRAG_CTRL2;
     SetCapture(hWnd);
     break;
+  case STATE_EDITING: {
+    RECT rcBounds;
+    BezierGetBounds(&rcBounds);
+    COMMIT_BAR_HANDLE_CLICK(&rcBounds, x, y, BezierCommitCurve(),
+                            BezierTool_Cancel());
+
+    nEditHandle = BezierHitHandle(x, y);
+    if (nEditHandle >= 0) {
+      state = STATE_DRAG_EDIT_HANDLE;
+      SetCapture(hWnd);
+    } else {
+      BezierCommitCurve();
+      return;
+    }
+    break;
+  }
   default:
     break;
   }
@@ -156,6 +204,17 @@ void BezierToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
     break;
   case STATE_DRAG_CTRL2:
     ptCtrl2.x = x; ptCtrl2.y = y;
+    break;
+  case STATE_DRAG_EDIT_HANDLE:
+    if (nEditHandle == 0) {
+      ptStart.x = x; ptStart.y = y;
+    } else if (nEditHandle == 1) {
+      ptEnd.x = x; ptEnd.y = y;
+    } else if (nEditHandle == 2) {
+      ptCtrl1.x = x; ptCtrl1.y = y;
+    } else if (nEditHandle == 3) {
+      ptCtrl2.x = x; ptCtrl2.y = y;
+    }
     break;
   default: break;
   }
@@ -182,9 +241,25 @@ void BezierToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
     state = STATE_WAIT_CTRL2;
     break;
   case STATE_DRAG_CTRL2:
-    ptCtrl2.x = x; ptCtrl2.y = y;
-    CommitPendingCurve();
-    return;
+    ptCtrl2.x = x;
+    ptCtrl2.y = y;
+    state = STATE_EDITING;
+    HistoryPushToolSessionById(TOOL_CURVE, "Create Curve");
+    break;
+  case STATE_DRAG_EDIT_HANDLE:
+    if (nEditHandle == 0) {
+      ptStart.x = x; ptStart.y = y;
+    } else if (nEditHandle == 1) {
+      ptEnd.x = x; ptEnd.y = y;
+    } else if (nEditHandle == 2) {
+      ptCtrl1.x = x; ptCtrl1.y = y;
+    } else if (nEditHandle == 3) {
+      ptCtrl2.x = x; ptCtrl2.y = y;
+    }
+    nEditHandle = -1;
+    state = STATE_EDITING;
+    HistoryPushToolSessionById(TOOL_CURVE, "Adjust Curve");
+    break;
   default: break;
   }
   UpdateDraftLayer();
@@ -201,4 +276,59 @@ void BezierToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
     Overlay_DrawHandle(&ctx, ptCtrl1.x, ptCtrl1.y, OVERLAY_HANDLE_CIRCLE, TRUE);
   if (state >= STATE_DRAG_CTRL2)
     Overlay_DrawHandle(&ctx, ptCtrl2.x, ptCtrl2.y, OVERLAY_HANDLE_CIRCLE, TRUE);
+  if (state == STATE_EDITING || state == STATE_DRAG_EDIT_HANDLE) {
+    RECT rcBounds;
+    BezierGetBounds(&rcBounds);
+    CommitBar_Draw(&ctx, &rcBounds);
+  }
+}
+
+BezierToolSnapshot *BezierTool_CreateSnapshot(void) {
+  if (state == STATE_IDLE)
+    return NULL;
+  BezierToolSnapshot *snapshot =
+      (BezierToolSnapshot *)calloc(1, sizeof(BezierToolSnapshot));
+  if (!snapshot)
+    return NULL;
+  snapshot->state = state;
+  snapshot->ptStart = ptStart;
+  snapshot->ptEnd = ptEnd;
+  snapshot->ptCtrl1 = ptCtrl1;
+  snapshot->ptCtrl2 = ptCtrl2;
+  snapshot->drawButton = nDrawButton;
+  return snapshot;
+}
+
+void BezierTool_DestroySnapshot(BezierToolSnapshot *snapshot) {
+  free(snapshot);
+}
+
+void BezierTool_ApplySnapshot(const BezierToolSnapshot *snapshot) {
+  if (Interaction_IsActive())
+    Interaction_EndQuiet();
+  BezierReset();
+
+  if (!snapshot) {
+    InvalidateCanvas();
+    return;
+  }
+
+  state = (BezierState)snapshot->state;
+  if (state == STATE_DRAG_CTRL1 || state == STATE_DRAG_CTRL2 ||
+      state == STATE_DRAG_EDIT_HANDLE)
+    state = STATE_EDITING;
+  ptStart = snapshot->ptStart;
+  ptEnd = snapshot->ptEnd;
+  ptCtrl1 = snapshot->ptCtrl1;
+  ptCtrl2 = snapshot->ptCtrl2;
+  nDrawButton = snapshot->drawButton;
+  nEditHandle = -1;
+
+  if (!Interaction_IsActive()) {
+    Interaction_BeginEx(GetCanvasWindow(), ptStart.x, ptStart.y, nDrawButton,
+                        TOOL_CURVE, FALSE);
+  }
+
+  UpdateDraftLayer();
+  InvalidateCanvas();
 }

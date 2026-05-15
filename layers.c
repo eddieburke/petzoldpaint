@@ -7,6 +7,7 @@
 
 #include "peztold_core.h"
 #include "draw.h"
+#include "history.h"
 #include "pixel_ops.h"
 #include "layers.h"
 #include "canvas.h"
@@ -651,6 +652,18 @@ BYTE *LayersGetActiveColorBits(void) {
   if (s_layerCount <= 0 || s_activeIndex < 0 || s_activeIndex >= s_layerCount)
     return NULL;
   return s_layers[s_activeIndex].colorBits;
+}
+
+BYTE *LayersGetLayerColorBits(int layerIndex) {
+  if (layerIndex < 0 || layerIndex >= s_layerCount)
+    return NULL;
+  return s_layers[layerIndex].colorBits;
+}
+
+BYTE *Layers_BeginWrite(void) {
+  int idx = LayersGetActiveIndex();
+  History_SnapshotLayer(idx);
+  return LayersGetActiveColorBits();
 }
 
 /* LayersGetActiveColorDC returns an HDC with the active layer's color
