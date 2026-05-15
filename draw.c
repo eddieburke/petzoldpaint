@@ -177,104 +177,21 @@ void DrawPixelAlpha(BYTE *bits, int width, int height, int x, int y,
   int sb = GetBValue(color);
   PixelOps_BlendPixel(sr, sg, sb, alpha, px, mode);
 }
- 
-void DrawLineAAAlpha(BYTE *bits, int width, int height, float x1, float y1,
-                     float x2, float y2, float radius, COLORREF color,
-                     BYTE alpha, int mode) {
-  float dx = x2 - x1;
-  float dy = y2 - y1;
-  float len = sqrtf(dx * dx + dy * dy);
-  if (len < 0.1f) {
-    DrawCircleAAAlpha(bits, width, height, (int)x1, (int)y1, radius, color,
-                      alpha, mode);
-    return;
-  }
- 
-  int steps = (int)ceilf(len * 2.0f);
-  for (int i = 0; i <= steps; i++) {
-    float t = (float)i / (float)steps;
-    float px = x1 + t * dx;
-    float py = y1 + t * dy;
-    DrawCircleAAAlpha(bits, width, height, (int)px, (int)py, radius, color,
-                      alpha, mode);
-  }
-}
- 
-void DrawCircleAAAlpha(BYTE *bits, int width, int height, int x, int y,
-                        float radius, COLORREF color, BYTE alpha, int mode) {
-   int r = (int)(radius + 1.0f);
-   for (int dy = -r; dy <= r; dy++) {
-     for (int dx = -r; dx <= r; dx++) {
-       float dist = sqrtf((float)(dx * dx + dy * dy));
-       if (dist <= radius - 0.5f) {
-         DrawPixelAlpha(bits, width, height, x + dx, y + dy, color, alpha, mode);
-       } else if (dist < radius + 0.5f) {
-         float coverage = radius + 0.5f - dist;
-         DrawPixelAlpha(bits, width, height, x + dx, y + dy, color,
-                        (BYTE)(alpha * coverage), mode);
-       }
-     }
-   }
-}
 
-void DrawLineAAAlphaSoft(BYTE *bits, int width, int height, float x1, float y1,
-                          float x2, float y2, float radius, COLORREF color,
-                          BYTE alpha, int mode, float edgeSoftness);
-
-void DrawCircleAAAlphaSoft(BYTE *bits, int width, int height, int x, int y,
-                           float radius, COLORREF color, BYTE alpha, int mode,
-                           float edgeSoftness) {
-   int r = (int)(radius + 1.0f);
-   float falloffStart = radius - 1.0f;
-   if (edgeSoftness < 0.01f)
-     falloffStart = radius - 0.1f;
-   else if (edgeSoftness > 0.99f)
-     falloffStart = radius - 2.0f;
-   else
-     falloffStart = radius - 1.0f - edgeSoftness;
-
-   for (int dy = -r; dy <= r; dy++) {
-     for (int dx = -r; dx <= r; dx++) {
-       float dist = sqrtf((float)(dx * dx + dy * dy));
-       if (dist <= falloffStart) {
-         DrawPixelAlpha(bits, width, height, x + dx, y + dy, color, alpha, mode);
-       } else if (dist < radius + 0.5f) {
-         float t = (radius + 0.5f - dist) / (radius + 0.5f - falloffStart);
-         float coverage = t * t * (3.0f - 2.0f * t);
-         DrawPixelAlpha(bits, width, height, x + dx, y + dy, color,
-                        (BYTE)(alpha * coverage), mode);
-       }
-     }
-   }
-}
-
-void DrawLineAlpha(BYTE *bits, int width, int height, int x1, int y1, int x2,
-                   int y2, int thickness, COLORREF color, BYTE alpha,
-                   int mode) {
-  if (thickness <= 0)
-    return;
- 
+void DrawLineSpineEach(BYTE *bits, int width, int height, int x1, int y1, int x2,
+                       int y2, DrawLineSpineFn fn, void *userData) {
   int dx = abs(x2 - x1);
   int dy = abs(y2 - y1);
   int sx = (x1 < x2) ? 1 : -1;
   int sy = (y1 < y2) ? 1 : -1;
   int err = dx - dy;
- 
   int x = x1;
   int y = y1;
- 
-  int halfThick = (thickness - 1) / 2;
- 
-  while (1) {
-    for (int ty = -halfThick; ty <= halfThick; ty++) {
-      for (int tx = -halfThick; tx <= halfThick; tx++) {
-        DrawPixelAlpha(bits, width, height, x + tx, y + ty, color, alpha, mode);
-      }
-    }
- 
+
+  for (;;) {
+    fn(bits, width, height, x, y, userData);
     if (x == x2 && y == y2)
       break;
- 
     int e2 = 2 * err;
     if (e2 > -dy) {
       err -= dy;
@@ -285,6 +202,42 @@ void DrawLineAlpha(BYTE *bits, int width, int height, int x1, int y1, int x2,
       y += sy;
     }
   }
+}
+
+typedef struct {
+  int halfLo;
+  int halfHi;
+  COLORREF color;
+  BYTE alpha;
+  int mode;
+} DrawLineAlphaThickCtx;
+
+static void DrawLineAlphaThickVisit(BYTE *bits, int width, int height, int x,
+                                    int y, void *userData) {
+  DrawLineAlphaThickCtx *c = (DrawLineAlphaThickCtx *)userData;
+  for (int ty = -c->halfLo; ty <= c->halfHi; ty++) {
+    for (int tx = -c->halfLo; tx <= c->halfHi; tx++) {
+      DrawPixelAlpha(bits, width, height, x + tx, y + ty, c->color, c->alpha,
+                     c->mode);
+    }
+  }
+}
+
+void DrawLineAlpha(BYTE *bits, int width, int height, int x1, int y1, int x2,
+                   int y2, int thickness, COLORREF color, BYTE alpha,
+                   int mode) {
+  if (thickness <= 0)
+    return;
+
+  /* Symmetric odd/even thickness: e.g. 2 -> 2×2 stamp perpendicular to spine. */
+  DrawLineAlphaThickCtx ctx;
+  ctx.halfLo = thickness / 2;
+  ctx.halfHi = (thickness - 1) / 2;
+  ctx.color = color;
+  ctx.alpha = alpha;
+  ctx.mode = mode;
+  DrawLineSpineEach(bits, width, height, x1, y1, x2, y2, DrawLineAlphaThickVisit,
+                    &ctx);
 }
  
 void DrawCircleAlpha(BYTE *bits, int width, int height, int x, int y,
@@ -298,7 +251,28 @@ void DrawCircleAlpha(BYTE *bits, int width, int height, int x, int y,
     }
   }
 }
- 
+
+void DrawLineStampCircles(BYTE *bits, int width, int height, float x1, float y1,
+                          float x2, float y2, float radius, COLORREF color,
+                          BYTE alpha, int mode) {
+  float dx = x2 - x1;
+  float dy = y2 - y1;
+  if (dx * dx + dy * dy < 0.01f) {
+    int ir = (int)ceilf(radius);
+    if (ir < 1)
+      ir = 1;
+    DrawCircleAlpha(bits, width, height, (int)x1, (int)y1, ir, color, alpha,
+                    mode);
+    return;
+  }
+
+  int thick = (int)ceilf(2.0f * radius);
+  if (thick < 1)
+    thick = 1;
+  DrawLineAlpha(bits, width, height, (int)x1, (int)y1, (int)x2, (int)y2, thick,
+                color, alpha, mode);
+}
+
 void DrawRectAlpha(BYTE *bits, int width, int height, int x, int y, int w,
                     int h, COLORREF color, BYTE alpha, int mode) {
   if (!bits || w <= 0 || h <= 0)
@@ -396,54 +370,69 @@ float irx2 = irx * irx;
   }
 }
  
+/* Rounded rectangle: IQ-style rounded-box SDF; outline = band -thick <= d <= 0. */
+static float sd_rounded_rect(float px, float py, float half_w, float half_h,
+                             float rad) {
+  if (rad <= 0.f) {
+    float ox = fabsf(px) - half_w;
+    float oy = fabsf(py) - half_h;
+    float ax = fmaxf(ox, 0.f);
+    float ay = fmaxf(oy, 0.f);
+    return sqrtf(ax * ax + ay * ay) + fminf(fmaxf(ox, oy), 0.f);
+  }
+  float bx = half_w - rad;
+  float by = half_h - rad;
+  float qx = fabsf(px) - bx;
+  float qy = fabsf(py) - by;
+  float ax = fmaxf(qx, 0.f);
+  float ay = fmaxf(qy, 0.f);
+  return sqrtf(ax * ax + ay * ay) - rad;
+}
+
 void DrawRoundedRectAlpha(BYTE *bits, int width, int height, int x, int y,
                           int w, int h, int radius, COLORREF color, BYTE alpha,
                           BOOL bFill, int thickness, int mode) {
+  if (!bits || w <= 0 || h <= 0)
+    return;
+
   if (radius * 2 > w)
     radius = w / 2;
   if (radius * 2 > h)
     radius = h / 2;
   if (radius < 0)
     radius = 0;
- 
-  int r2 = radius * radius;
-int innerR = radius - thickness;
-   int innerR2 = innerR > 0 ? innerR * innerR : -1;
- 
+
+  float hw = w * 0.5f;
+  float hh = h * 0.5f;
+  float rad = (float)radius;
+  int thick = thickness;
+  if (!bFill && thick < 1)
+    thick = 1;
+  float band = (float)thick;
+
   for (int j = 0; j < h; j++) {
     int py = y + j;
     if (py < 0 || py >= height)
       continue;
- 
+
     for (int i = 0; i < w; i++) {
       int px = x + i;
       if (px < 0 || px >= width)
         continue;
- 
-      // Determine if the current pixel falls into one of the 4 corner zones
-      int cx = (i < radius) ? (radius - 1 - i)
-                            : ((i >= w - radius) ? (i - (w - radius)) : -1);
-      int cy = (j < radius) ? (radius - 1 - j)
-                            : ((j >= h - radius) ? (j - (h - radius)) : -1);
- 
-      BOOL inCorner = (cx >= 0 && cy >= 0);
-      int dist2 = inCorner ? (cx * cx + cy * cy) : 0;
- 
-      if (inCorner && dist2 > r2)
-        continue; // Outside outer radius curve
- 
-      if (!bFill) {
-        if (inCorner) {
-          if (dist2 < innerR2)
-            continue; // Inside inner radius curve
-        } else {
-          // Standard straight-edge outline thickness check
-          if (i >= thickness && i < w - thickness && j >= thickness &&
-              j < h - thickness)
-            continue;
-        }
+
+      float pxf = (i + 0.5f) - hw;
+      float pyf = (j + 0.5f) - hh;
+      float d = sd_rounded_rect(pxf, pyf, hw, hh, rad);
+
+      if (bFill) {
+        if (d > 0.f)
+          continue;
+      } else {
+        /* Outer boundary d==0; inward offset by thickness is d == -thick. */
+        if (d > 0.f || d < -band)
+          continue;
       }
- 
+
       DrawPixelAlpha(bits, width, height, px, py, color, alpha, mode);
     }
   }
@@ -464,26 +453,4 @@ void EraseRectAlpha(BYTE *bits, int width, int height, int x, int y, int w,
       row[px] = 0;
     }
   }
-}
-
-void DrawLineAAAlphaSoft(BYTE *bits, int width, int height, float x1, float y1,
-                          float x2, float y2, float radius, COLORREF color,
-                          BYTE alpha, int mode, float edgeSoftness) {
-   float dx = x2 - x1;
-   float dy = y2 - y1;
-   float len = sqrtf(dx * dx + dy * dy);
-   if (len < 0.1f) {
-     DrawCircleAAAlphaSoft(bits, width, height, (int)x1, (int)y1, radius, color,
-                           alpha, mode, edgeSoftness);
-     return;
-   }
-
-   int steps = (int)ceilf(len * 2.0f);
-   for (int i = 0; i <= steps; i++) {
-     float t = (float)i / (float)steps;
-     float px = x1 + t * dx;
-     float py = y1 + t * dy;
-     DrawCircleAAAlphaSoft(bits, width, height, (int)px, (int)py, radius, color,
-                           alpha, mode, edgeSoftness);
-   }
 }

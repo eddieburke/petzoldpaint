@@ -2,6 +2,7 @@
 #include "../peztold_core.h"
 
 #include "../floodfill.h"
+#include "../gdi_utils.h"
 #include "../helpers.h"
 #include "../history.h"
 #include "../layers.h"

@@ -119,16 +119,22 @@ static BYTE CalcHighlighterAlpha(void) {
 void HighlighterToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   Interaction_Begin(hWnd, x, y, nButton, TOOL_HIGHLIGHTER);
 
-  BYTE alpha = ComposeOpacity(CalcHighlighterAlpha(), GetOpacityForButton(nButton));
   BYTE *bits = LayersGetActiveColorBits();
-  if (bits) {
-    DrawCircleAAAlphaSoft(bits, Canvas_GetWidth(), Canvas_GetHeight(), x, y,
-                          GetHighlighterSize() / 2.0f, GetColorForButton(nButton),
-                          alpha, GetHighlighterBlendMode(),
-                          (float)nHighlighterEdgeSoftness / 100.0f);
-    LayersMarkDirty();
-    Interaction_MarkModified();
+  if (!bits) {
+    Interaction_Abort();
+    return;
   }
+  BYTE alpha = ComposeOpacity(CalcHighlighterAlpha(), GetOpacityForButton(nButton));
+  {
+    int sz = GetHighlighterSize();
+    int r = sz / 2;
+    if (r < 1)
+      r = 1;
+    DrawCircleAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), x, y, r,
+                      GetColorForButton(nButton), alpha, GetHighlighterBlendMode());
+  }
+  LayersMarkDirty();
+  Interaction_MarkModified();
   InvalidateCanvas();
 }
 
@@ -142,12 +148,16 @@ void HighlighterToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
   if (bits) {
     POINT lp;
     Interaction_GetLastPoint(&lp);
-    DrawLineAAAlphaSoft(bits, Canvas_GetWidth(), Canvas_GetHeight(),
-                        (float)lp.x, (float)lp.y,
-                        (float)x, (float)y, GetHighlighterSize() / 2.0f,
-                        GetColorForButton(Interaction_GetDrawButton()), alpha,
-                        GetHighlighterBlendMode(),
-                        (float)nHighlighterEdgeSoftness / 100.0f);
+    {
+      int sz = GetHighlighterSize();
+      int thick = sz;
+      if (thick < 1)
+        thick = 1;
+      DrawLineAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), lp.x, lp.y, x,
+                    y, thick,
+                    GetColorForButton(Interaction_GetDrawButton()), alpha,
+                    GetHighlighterBlendMode());
+    }
     LayersMarkDirty();
     Interaction_MarkModified();
   }

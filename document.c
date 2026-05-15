@@ -48,7 +48,6 @@ void Doc_ClearFile(void)        { g_doc.currentFile[0] = L'\0'; }
 /* Scroll */
 int Doc_GetScrollX(void)        { return g_doc.scrollX; }
 int Doc_GetScrollY(void)        { return g_doc.scrollY; }
-void Doc_SetScroll(int x, int y){ g_doc.scrollX = x; g_doc.scrollY = y; }
 
 /* Zoom */
 double Doc_GetZoom(void)        { return g_doc.zoomPercent; }

@@ -479,7 +479,6 @@ void SetCurrentTool(int nTool) {
   /* Finalize the outgoing tool */
   Tool_FinalizeCurrentState();
 
-  int oldTool = Tool_GetCurrent();
   currentTool = nTool;
 
   /* Activate the incoming tool */

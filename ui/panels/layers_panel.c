@@ -1,5 +1,6 @@
 #include "layers_panel.h"
 #include "../../canvas.h"
+#include "../../gdi_utils.h"
 #include "../../peztold_core.h"
 
 #include "../../helpers.h"

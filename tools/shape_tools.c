@@ -73,16 +73,13 @@ static void DrawShapeToBits(BYTE *bits, int width, int height) {
   int w = (nBrushWidth > 0 ? nBrushWidth : 1);
 
   switch (s_Shape.activeToolId) {
-  case TOOL_LINE:
-    if (nBrushWidth <= 1) {
-      DrawLineAlpha(bits, width, height, s_Shape.ptStart.x, s_Shape.ptStart.y,
-                    s_Shape.ptEnd.x, s_Shape.ptEnd.y, 1, fg, fgAlpha, LAYER_BLEND_NORMAL);
-    } else {
-      DrawLineAAAlpha(bits, width, height, (float)s_Shape.ptStart.x,
-                      (float)s_Shape.ptStart.y, (float)s_Shape.ptEnd.x,
-                      (float)s_Shape.ptEnd.y, nBrushWidth / 2.0f, fg, fgAlpha, LAYER_BLEND_NORMAL);
-    }
+  case TOOL_LINE: {
+    int lineW = (nBrushWidth > 0 ? nBrushWidth : 1);
+    DrawLineAlpha(bits, width, height, s_Shape.ptStart.x, s_Shape.ptStart.y,
+                  s_Shape.ptEnd.x, s_Shape.ptEnd.y, lineW, fg, fgAlpha,
+                  LAYER_BLEND_NORMAL);
     break;
+  }
  
   case TOOL_RECT: {
     RECT rc = GetRectFromPoints(s_Shape.ptStart.x, s_Shape.ptStart.y,

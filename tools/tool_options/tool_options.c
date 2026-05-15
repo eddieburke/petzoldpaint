@@ -41,14 +41,6 @@ int nCrayonBrightnessRange = 35;
 int nCrayonSaturationRange = 30;
 int nCrayonHueShiftRange = 10;
 
-static int g_brushSize = 1;
-static int g_brushShape = 0;
-
-int ToolOptions_GetBrushShape(void) { return g_brushShape; }
-void ToolOptions_SetBrushShape(int shape) { g_brushShape = shape; }
-int ToolOptions_GetBrushSize(void) { return g_brushSize; }
-void ToolOptions_SetBrushSize(int size) { g_brushSize = size; }
-
 static int storedLineWidth = 1;
 static int storedBrushId = 8;
 static int storedEraserId = 1;
@@ -645,15 +637,12 @@ static void DrawZoomOptions(HDC hdc, RECT *prcClient) {
 
 static void ActivateLineWidthOptions(void) {
   nBrushWidth = storedLineWidth;
-  ToolOptions_SetBrushSize(storedLineWidth);
 }
 static void ActivateBrushOptions(void) {
   nBrushWidth = storedBrushId;
-  ToolOptions_SetBrushSize(storedBrushId);
 }
 static void ActivateEraserOptions(void) {
   nBrushWidth = storedEraserId;
-  ToolOptions_SetBrushSize(storedEraserId);
 }
 
 static BOOL LineWidthOptionsLButtonDown(HWND hwnd, int x, int y) {
@@ -662,7 +651,6 @@ static BOOL LineWidthOptionsLButtonDown(HWND hwnd, int x, int y) {
   if (nRow >= 0 && nRow < 5) {
     nBrushWidth = nRow + 1;
     storedLineWidth = nBrushWidth;
-    ToolOptions_SetBrushSize(nBrushWidth);
     InvalidateWindow(hwnd);
     InvalidateCanvas();
     return TRUE;
@@ -711,7 +699,6 @@ static BOOL BrushOptionsLButtonDown(HWND hwnd, int x, int y) {
     int idx = row * 3 + col;
     nBrushWidth = idx + 1;
     storedBrushId = nBrushWidth;
-    ToolOptions_SetBrushSize(nBrushWidth);
     InvalidateWindow(hwnd);
     InvalidateCanvas();
     return TRUE;
@@ -732,7 +719,6 @@ static BOOL EraserOptionsLButtonDown(HWND hwnd, int x, int y) {
     int idx = row * 2 + col;
     nBrushWidth = idx + 1;
     storedEraserId = nBrushWidth;
-    ToolOptions_SetBrushSize(nBrushWidth);
     InvalidateWindow(hwnd);
     InvalidateCanvas();
     return TRUE;
@@ -797,23 +783,6 @@ static BOOL ZoomOptionsMouseMove(HWND hwnd, int y) {
   return TRUE;
 }
 
-static BOOL ShapeOptionsLButtonDown(HWND hwnd, int x, int y) {
-  int nShapeBtnH = 20;
-  int nShapeTotalH = 3 * (nShapeBtnH + OPTION_GAP);
-  int yStart = OPTIONS_MARGIN;
-
-  if (y < yStart + nShapeTotalH) {
-    int nRow = (y - yStart) / (nShapeBtnH + OPTION_GAP);
-    if (nRow >= 0 && nRow < 3) {
-      nShapeDrawType = nRow;
-      InvalidateWindow(hwnd);
-      InvalidateCanvas();
-      return TRUE;
-    }
-  }
-  return FALSE;
-}
-
 static BOOL ShapeWithLineOptionsLButtonDown(HWND hwnd, int x, int y) {
   int nShapeBtnH = 20;
   int nShapeTotalH = 3 * (nShapeBtnH + OPTION_GAP);
@@ -837,7 +806,6 @@ static BOOL ShapeWithLineOptionsLButtonDown(HWND hwnd, int x, int y) {
       if (nRow >= 0 && nRow < 5) {
         nBrushWidth = nRow + 1;
         storedLineWidth = nBrushWidth;
-        ToolOptions_SetBrushSize(nBrushWidth);
         InvalidateWindow(hwnd);
         InvalidateCanvas();
         return TRUE;
@@ -959,7 +927,6 @@ static BOOL HighlighterOptions_LButtonDown(HWND hwnd, int x, int y) {
   if (nRow >= 0 && nRow < 5) {
     nBrushWidth = nRow + 1;
     SetStoredLineWidth(nBrushWidth);
-    ToolOptions_SetBrushSize(nBrushWidth);
     InvalidateWindow(hwnd);
     InvalidateCanvas();
     return TRUE;
@@ -1089,7 +1056,6 @@ static BOOL CrayonOptions_LButtonDown(HWND hwnd, int x, int y) {
   if (nRow >= 0 && nRow < 5) {
     nBrushWidth = nRow + 1;
     SetStoredLineWidth(nBrushWidth);
-    ToolOptions_SetBrushSize(nBrushWidth);
     InvalidateWindow(hwnd);
     InvalidateCanvas();
     return TRUE;

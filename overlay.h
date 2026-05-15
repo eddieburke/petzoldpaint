@@ -43,9 +43,6 @@ void Overlay_DrawPolyHandles(const OverlayContext* ctx, const POINT* ptsBitmap, 
 /* Draw selection frame (marching ants or dashed) around rectangle */
 void Overlay_DrawSelectionFrame(const OverlayContext* ctx, const RECT* rcBitmap, BOOL bDotted);
 
-/* Draw a dotted/dashed rectangle outline */
-void Overlay_DrawDottedRect(const OverlayContext* ctx, const RECT* rcBitmap);
-
 /* Draw a line between two bitmap points */
 void Overlay_DrawLine(const OverlayContext* ctx, int x1Bmp, int y1Bmp, int x2Bmp, int y2Bmp, 
                       COLORREF color, int penStyle);

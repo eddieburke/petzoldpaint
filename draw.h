@@ -54,18 +54,19 @@ void ClearClientRect(HDC hdc, HWND hwnd, HBRUSH hBrush);
 /* Drawing Primitives with Alpha and Blend Mode */
 void DrawPixelAlpha(BYTE *bits, int width, int height, int x, int y,
                     COLORREF color, BYTE alpha, int mode);
-void DrawLineAAAlpha(BYTE *bits, int width, int height, float x1, float y1,
-                     float x2, float y2, float radius, COLORREF color,
-                     BYTE alpha, int mode);
-void DrawCircleAAAlpha(BYTE *bits, int width, int height, int x, int y,
-                        float radius, COLORREF color, BYTE alpha, int mode);
-void DrawCircleAAAlphaSoft(BYTE *bits, int width, int height, int x, int y,
-                           float radius, COLORREF color, BYTE alpha, int mode,
-                           float edgeSoftness);
-void DrawLineAAAlphaSoft(BYTE *bits, int width, int height, float x1, float y1,
-                          float x2, float y2, float radius, COLORREF color,
-                          BYTE alpha, int mode, float edgeSoftness);
 
+/* Integer Bresenham spine (8-connected); invokes fn once per pixel including ends. */
+typedef void (*DrawLineSpineFn)(BYTE *bits, int width, int height, int x, int y,
+                                void *userData);
+void DrawLineSpineEach(BYTE *bits, int width, int height, int x1, int y1, int x2,
+                       int y2, DrawLineSpineFn fn, void *userData);
+
+/* Float segment → integer Bresenham spine with axis-aligned thickness stamp. */
+void DrawLineStampCircles(BYTE *bits, int width, int height, float x1, float y1,
+                          float x2, float y2, float radius, COLORREF color,
+                          BYTE alpha, int mode);
+
+/* Axis-aligned stamp per spine pixel; thickness supports even widths (2×2, …). */
 void DrawLineAlpha(BYTE *bits, int width, int height, int x1, int y1, int x2,
                    int y2, int thickness, COLORREF color, BYTE alpha,
                    int mode);
@@ -78,15 +79,17 @@ void DrawRectOutlineAlpha(BYTE *bits, int width, int height, int x, int y,
                           int w, int h, COLORREF color, BYTE alpha,
                           int thickness, int mode);
 
+void EraseRectAlpha(BYTE *bits, int width, int height, int x, int y, int w,
+                    int h);
+
 void DrawEllipseAlpha(BYTE *bits, int width, int height, int x, int y, int w,
                       int h, COLORREF color, BYTE alpha, BOOL bFill,
                       int thickness, int mode);
 
+/* Rounded rect via signed-distance field; outline is band -thickness <= d <= 0. */
 void DrawRoundedRectAlpha(BYTE *bits, int width, int height, int x, int y,
                           int w, int h, int radius, COLORREF color, BYTE alpha,
                           BOOL bFill, int thickness, int mode);
-void EraseRectAlpha(BYTE *bits, int width, int height, int x, int y, int w,
-                    int h);
 
 /*------------------------------------------------------------
     Compositing and Fill

@@ -1,10 +1,10 @@
 /*------------------------------------------------------------------------------
- * DRAWING_PRIMITIVES.C
+ * drawing_primitives.c
  *
- * Shared Drawing Primitives
- *
- * Implements low-level drawing logic for freehand tools (Pencil, Brush,
- * Eraser, Airbrush). Handles size calculation and pixel/shape rendering.
+ * Low-level drawing helpers for freehand tools (pencil, brush, eraser,
+ * airbrush). Brush strokes follow the same integer line spine as the pencil
+ * (DrawLineSpineEach / DrawLineAlpha); brush shape is stamped at each spine
+ * pixel.
  *----------------------------------------------------------------------------*/
 
 #include "drawing_primitives.h"
@@ -124,27 +124,31 @@ void DrawPrim_DrawBrushPoint(BYTE *bits, int width, int height, int x, int y,
   }
 }
 
+typedef struct {
+  COLORREF color;
+  BYTE alpha;
+  int brushWidthIndex;
+} DrawPrim_BrushLineCtx;
+
+static void DrawPrim_BrushLineVisit(BYTE *bits, int width, int height, int x,
+                                    int y, void *userData) {
+  DrawPrim_BrushLineCtx *c = (DrawPrim_BrushLineCtx *)userData;
+  DrawPrim_DrawBrushPoint(bits, width, height, x, y, c->color, c->alpha,
+                          c->brushWidthIndex);
+}
+
 void DrawPrim_DrawBrushLine(BYTE *bits, int width, int height, int x1, int y1,
                             int x2, int y2, COLORREF color, BYTE alpha,
                             int brushWidthIndex) {
-  int dx = x2 - x1;
-  int dy = y2 - y1;
-  int adx = (dx >= 0) ? dx : -dx;
-  int ady = (dy >= 0) ? dy : -dy;
-  int steps = adx + ady; // Manhattan distance for 4-connectivity (no gaps)
-
-  if (steps == 0) {
+  if (x1 == x2 && y1 == y2) {
     DrawPrim_DrawBrushPoint(bits, width, height, x1, y1, color, alpha,
                             brushWidthIndex);
     return;
   }
 
-  for (int i = 1; i <= steps; i++) {
-    int ix = x1 + (dx * i + (steps / 2 * (dx < 0 ? -1 : 1))) / steps;
-    int iy = y1 + (dy * i + (steps / 2 * (dy < 0 ? -1 : 1))) / steps;
-    DrawPrim_DrawBrushPoint(bits, width, height, ix, iy, color, alpha,
-                            brushWidthIndex);
-  }
+  DrawPrim_BrushLineCtx ctx = {color, alpha, brushWidthIndex};
+  DrawLineSpineEach(bits, width, height, x1, y1, x2, y2, DrawPrim_BrushLineVisit,
+                    &ctx);
 }
 
 /*------------------------------------------------------------------------------

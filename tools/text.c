@@ -40,16 +40,9 @@
 
 static TextFontState s_font = {0};
 
-TextFontState* TextFont_GetState(void) { return &s_font; }
-HFONT TextFont_GetHandle(void) { return s_font.hFont; }
 void TextFont_SetFaceName(const char* f) { if(f) lstrcpyn(s_font.lf.lfFaceName, f, LF_FACESIZE); }
 void TextFont_SetSize(int s) { if(s>=1 && s<=999) s_font.nSize = s; }
-void TextFont_ToggleBold(void) { s_font.bBold = !s_font.bBold; }
-void TextFont_ToggleItalic(void) { s_font.bItalic = !s_font.bItalic; }
-void TextFont_ToggleUnderline(void) { s_font.bUnderline = !s_font.bUnderline; }
-void TextFont_ToggleStrikeout(void) { s_font.bStrikeout = !s_font.bStrikeout; }
 void TextFont_GetLogFont(LOGFONT* p) { if(p) memcpy(p, &s_font.lf, sizeof(LOGFONT)); }
-void TextFont_Cleanup(void) { if(s_font.hFont) DeleteObject(s_font.hFont); }
 
 void TextFont_Init(void) {
     memset(&s_font, 0, sizeof(TextFontState));
@@ -101,7 +94,7 @@ static TextState s_text = {0};
 
 // Forward decls
 void TextToolbar_Show(BOOL bShow);
-void TextToolbar_UpdateButtonStates(void);
+static void TextToolbar_UpdateButtonStates(void);
 static void TextEdit_UpdatePosition(void);
 static void OnTextFontChanged(void);
 static void TextEdit_Destroy(void);
@@ -183,11 +176,6 @@ BOOL CancelText(void) {
 
 BOOL IsTextEditing(void) { return s_text.mode != TEXT_NONE; }
 void TextTool_Deactivate(void) { if (s_text.mode != TEXT_NONE) CommitText(NULL); }
-BOOL TextTool_Cancel(void) { return CancelText(); }
-void TextToolCleanup(void) { if (s_font.hFont) DeleteObject(s_font.hFont); }
-void TextToolSetOpaque(BOOL b) { s_text.bOpaque = b; }
-BOOL TextToolIsOpaque(void) { return s_text.bOpaque; }
-HWND TextToolGetEditHwnd(void) { return s_text.hEdit; }
 
 // ============================================================================
 // Edit Control & Toolbar
@@ -369,21 +357,6 @@ void TextToolOnMouseUp(HWND hwnd, int x, int y, int btn) {
     InvalidateCanvas();
 }
 
-void TextToolDrawGhost(HDC hdc) {
-    if (s_text.mode != TEXT_EDITING || !s_text.hEdit) return;
-    int len = GetWindowTextLengthA(s_text.hEdit); if (len <= 0) return;
-    BYTE* bits = LayersGetDraftBits(); if (!bits) return;
-    LayersClearDraft();
-    char* buf = malloc(len + 1); if (buf) {
-        GetWindowTextA(s_text.hEdit, buf, len + 1);
-        if (s_text.bOpaque) DrawRectAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), s_text.rcBox.left, s_text.rcBox.top, s_text.rcBox.right-s_text.rcBox.left, s_text.rcBox.bottom-s_text.rcBox.top, Palette_GetSecondaryColor(), Palette_GetSecondaryOpacity(), LAYER_BLEND_NORMAL);
-        int ins = TEXT_MARGIN + TEXT_EDIT_INSET;
-        TextRender_ToActive(buf, len, (s_text.rcBox.right-s_text.rcBox.left)-ins*2, (s_text.rcBox.bottom-s_text.rcBox.top)-ins*2, s_text.rcBox.left+ins, s_text.rcBox.top+ins, bits);
-        free(buf);
-    }
-    LayersMarkDirty();
-}
-
 void TextToolDrawOverlay(HDC hdc, double scale, int dx, int dy) {
     if (s_text.mode == TEXT_NONE) return;
     OverlayContext ctx; Overlay_Init(&ctx, hdc, scale, dx, dy);
@@ -393,15 +366,13 @@ void TextToolDrawOverlay(HDC hdc, double scale, int dx, int dy) {
         CommitBar_Draw(&ctx, &s_text.rcBox);
 }
 
-void TextToolOnKeyDown(HWND hwnd, WPARAM wp) {}
-void TextToolOnChar(HWND hwnd, WPARAM wp) {}
 void TextToolOnViewportChanged(HWND hwnd) {
     if (s_text.mode == TEXT_EDITING || s_text.mode == TEXT_RESIZING) {
         ApplyTextFont();
         TextEdit_UpdatePosition();
     }
 }
-void TextToolbar_UpdateButtonStates(void) {
+static void TextToolbar_UpdateButtonStates(void) {
     if (!hToolbar) return;
     CheckDlgButton(hToolbar, IDC_TEXT_BOLD, s_font.bBold ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hToolbar, IDC_TEXT_ITALIC, s_font.bItalic ? BST_CHECKED : BST_UNCHECKED);
@@ -409,10 +380,8 @@ void TextToolbar_UpdateButtonStates(void) {
     CheckDlgButton(hToolbar, IDC_TEXT_STRIKEOUT, s_font.bStrikeout ? BST_CHECKED : BST_UNCHECKED);
 }
 
-void TextToolbar_Destroy(void) { if(hToolbar) { DestroyWindow(hToolbar); hToolbar=NULL; } }
 void TextToolbar_Show(BOOL bNum) { if(bNum) { if(!hToolbar) { WNDCLASSEX wc={0}; wc.cbSize=sizeof(WNDCLASSEX); wc.lpfnWndProc=TextToolbarWndProc; wc.hInstance=hInst; wc.hbrBackground=(HBRUSH)(COLOR_BTNFACE+1); wc.lpszClassName="PeztoldTextToolbar"; wc.hCursor=LoadCursor(NULL, IDC_ARROW); RegisterClassEx(&wc); hToolbar=CreateWindowEx(WS_EX_TOOLWINDOW,"PeztoldTextToolbar","Fonts",WS_POPUP|WS_CAPTION|WS_SYSMENU,100,100,430,80,hMainWnd,NULL,hInst,NULL); } ShowWindow(hToolbar, SW_SHOWNOACTIVATE); } else if(hToolbar) ShowWindow(hToolbar, SW_HIDE); }
 BOOL TextToolbar_IsVisible(void) { return hToolbar && IsWindowVisible(hToolbar); }
-HWND TextToolbar_GetHwnd(void) { return hToolbar; }
 
 static char* TextTool_DuplicateCurrentText(void) {
     if (!s_text.hEdit) return NULL;

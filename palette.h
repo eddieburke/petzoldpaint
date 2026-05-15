@@ -6,9 +6,13 @@
 typedef struct {
     COLORREF colors[16];
 } CustomColors;
-void InitializePalette();
+
 BOOL ChooseColorDialog(HWND hWnd, COLORREF* color);
 void SetCustomColors(const COLORREF* colors);
+
+typedef struct {
+    BYTE r, g, b, a;
+} RGBA;
 
 COLORREF Palette_GetPrimaryColor(void);
 void Palette_SetPrimaryColor(COLORREF c);
@@ -21,5 +25,7 @@ void Palette_SetSecondaryColor(COLORREF c);
 COLORREF* Palette_GetSecondaryColorPtr(void);
 BYTE Palette_GetSecondaryOpacity(void);
 void Palette_SetSecondaryOpacity(BYTE opacity);
+
+BOOL Palette_ChooseColorWithAlpha(HWND hWnd, RGBA* outRgba);
 
 #endif

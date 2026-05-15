@@ -14,7 +14,6 @@
 #include "../interaction.h"
 #include "../layers.h"
 #include "tool_options/tool_options.h"
-#include <math.h>
 
 static int GetPenSize(void) {
   int sizes[] = {1, 2, 3, 4, 5};
@@ -33,8 +32,13 @@ static void DrawPenPoint(BYTE *bits, int width, int height, int x, int y,
     DrawPixelAlpha(bits, width, height, x, y, color, alpha, LAYER_BLEND_NORMAL);
     return;
   }
-  DrawCircleAAAlpha(bits, width, height, x, y, size / 2.0f, color, alpha,
+  {
+    int r = (size + 1) / 2;
+    if (r < 1)
+      r = 1;
+    DrawCircleAlpha(bits, width, height, x, y, r, color, alpha,
                     LAYER_BLEND_NORMAL);
+  }
 }
 
 static void DrawPenLine(BYTE *bits, int width, int height, int x1, int y1,
@@ -45,21 +49,23 @@ static void DrawPenLine(BYTE *bits, int width, int height, int x1, int y1,
                   LAYER_BLEND_NORMAL);
     return;
   }
-  DrawLineAAAlpha(bits, width, height, (float)x1, (float)y1, (float)x2,
-                  (float)y2, size / 2.0f, color, alpha, LAYER_BLEND_NORMAL);
+  DrawLineAlpha(bits, width, height, x1, y1, x2, y2, size, color, alpha,
+                LAYER_BLEND_NORMAL);
 }
 
 void PenToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   Interaction_Begin(hWnd, x, y, nButton, TOOL_PEN);
 
   BYTE *bits = LayersGetActiveColorBits();
-  if (bits) {
-    BYTE alpha = GetOpacityForButton(nButton);
-    DrawPenPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(), x, y,
-                 GetColorForButton(nButton), alpha);
-    LayersMarkDirty();
-    Interaction_MarkModified();
+  if (!bits) {
+    Interaction_Abort();
+    return;
   }
+  BYTE alpha = GetOpacityForButton(nButton);
+  DrawPenPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(), x, y,
+               GetColorForButton(nButton), alpha);
+  LayersMarkDirty();
+  Interaction_MarkModified();
   InvalidateCanvas();
 }
 

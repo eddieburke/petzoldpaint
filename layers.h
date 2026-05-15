@@ -1,87 +1,69 @@
 #ifndef LAYERS_H
 #define LAYERS_H
-#include "gdi_utils.h"
-#include "helpers.h"
 #include <windows.h>
 #include "palette.h"
 
-typedef enum {
-  LAYER_BLEND_NORMAL = 0,
-  LAYER_BLEND_MULTIPLY,
-  LAYER_BLEND_SCREEN,
-  LAYER_BLEND_OVERLAY,
-  LAYER_BLEND_COUNT
-} LayerBlendMode;
+typedef enum { LAYER_BLEND_NORMAL=0, LAYER_BLEND_MULTIPLY, LAYER_BLEND_SCREEN, LAYER_BLEND_OVERLAY, LAYER_BLEND_COUNT } LayerBlendMode;
 
-BOOL LayersInit(int width, int height);
+BOOL LayersInit(int w, int h);
 void LayersDestroy(void);
-BOOL LayersResize(int newWidth, int newHeight);
+BOOL LayersResize(int w, int h);
 
 int LayersGetCount(void);
 int LayersGetActiveIndex(void);
-BOOL LayersSetActiveIndex(int index);
+BOOL LayersSetActiveIndex(int i);
 
 BOOL LayersAddLayer(const char *name);
-BOOL LayersDeleteLayer(int index);
-BOOL LayersMoveLayer(int fromIndex, int toIndex);
-BOOL LayersMergeDown(int index);
+BOOL LayersDeleteLayer(int i);
+BOOL LayersMoveLayer(int f, int t);
+BOOL LayersMergeDown(int i);
 
-BOOL LayersGetVisible(int index);
-void LayersSetVisible(int index, BOOL visible);
+BOOL LayersGetVisible(int i);
+void LayersSetVisible(int i, BOOL v);
+BYTE LayersGetOpacity(int i);
+void LayersSetOpacity(int i, BYTE o);
+int LayersGetBlendMode(int i);
+void LayersSetBlendMode(int i, int b);
+void LayersGetName(int i, char *out, int sz);
 
-BYTE LayersGetOpacity(int index);
-void LayersSetOpacity(int index, BYTE opacity);
-
-int LayersGetBlendMode(int index);
-void LayersSetBlendMode(int index, int blendMode);
-
-void LayersGetName(int index, char *outName, int outSize);
-void LayersSetName(int index, const char *name);
-
-void GetLayerDisplayName(int layerIndex, char *out, int outSize);
-void HistoryPushLayerOpacity(int layerIndex, int oldPercent, int newPercent);
-void HistoryPushLayerVisibility(int layerIndex, BOOL oldVisible,
-                                BOOL newVisible);
-void HistoryPushLayerBlendMode(int layerIndex, int oldMode, int newMode);
-void HistoryPushLayerMove(int fromIndex, int toIndex);
+void GetLayerDisplayName(int i, char *out, int sz);
+void HistoryPushLayerOpacity(int i, int o, int n);
+void HistoryPushLayerVisibility(int i, BOOL o, BOOL n);
+void HistoryPushLayerBlendMode(int i, int o, int n);
+void HistoryPushLayerMove(int f, int t);
 
 HBITMAP LayersGetActiveColorBitmap(void);
 BYTE *LayersGetActiveColorBits(void);
-BYTE *LayersGetLayerColorBits(int layerIndex);
 BYTE *Layers_BeginWrite(void);
-HDC LayersGetActiveColorDC(HBITMAP *phOld);
+HDC LayersGetActiveColorDC(HBITMAP *ph);
 
-HBITMAP LayersGetCompositeBitmap(BOOL bCheckerboard);
-HBITMAP LayersFlattenToBitmap(COLORREF bgColor);
-HBITMAP LayersFlattenToBitmapWithAlpha(BYTE **outBits);
-COLORREF LayersSampleCompositeColor(int x, int y, COLORREF bgColor);
+HBITMAP LayersGetCompositeBitmap(BOOL check);
+HBITMAP LayersFlattenToBitmap(COLORREF bg);
+HBITMAP LayersFlattenToBitmapWithAlpha(BYTE **out);
+COLORREF LayersSampleCompositeColor(int x, int y, COLORREF bg);
 void LayersMarkDirty(void);
-void LayersMarkDirtyRect(const RECT *pRect);
+void LayersMarkDirtyRect(const RECT *r);
 
-/* Draft Layer API — tools draw previews here; compositor renders above active
- */
 BYTE *LayersGetDraftBits(void);
 void LayersClearDraft(void);
 void LayersMergeDraftToActive(void);
 BOOL LayersIsDraftDirty(void);
 void LayersEnsureDraft(void);
 
-typedef struct LayerSnapshot LayerSnapshot;
+typedef struct LayerSnapshot {
+    int width, height, layerCount, activeIndex;
+    struct { HBITMAP colorBmp; BYTE *colorBits; BYTE opacity; int blendMode; BOOL visible; char name[32]; } layers[32];
+} LayerSnapshot;
+
 LayerSnapshot *LayersCreateSnapshot(void);
-BOOL LayersApplySnapshot(LayerSnapshot *snapshot);
-void LayersDestroySnapshot(LayerSnapshot *snapshot);
+BOOL LayersApplySnapshot(LayerSnapshot *s);
+void LayersDestroySnapshot(LayerSnapshot *s);
 
 BOOL LayersLoadFromBitmap(HBITMAP hBmp);
-BOOL LayersLoadFromPixels(int width, int height, const BYTE *bgra, int stride,
-                          BOOL useAlpha);
-typedef void (*RawBitmapTransformFunc)(BYTE *pSrc, int srcW, int srcH,
-                                       BYTE *pDst, int dstW, int dstH,
-                                       void *pUserData);
-BOOL LayersApplyTransformToAll(int newWidth, int newHeight,
-                               BitmapTransformFunc pfnTransform,
-                               void *pUserData);
-BOOL LayersApplyRawTransformToAll(int newWidth, int newHeight,
-                                  RawBitmapTransformFunc pfnTransform,
-                                  void *pUserData);
+BOOL LayersLoadFromPixels(int w, int h, const BYTE *bgra, int stride, BOOL useAlpha);
+
+typedef void (*RawBitmapTransformFunc)(BYTE *src, int sw, int sh, BYTE *dst, int dw, int dh, void *pUserData);
+
+BOOL LayersApplyRawTransformToAll(int nw, int nh, RawBitmapTransformFunc fn, void *pUserData);
 
 #endif

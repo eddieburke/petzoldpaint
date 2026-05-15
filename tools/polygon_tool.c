@@ -112,19 +112,20 @@ static void DrawPolygonToDraft(void) {
 
   COLORREF fg = (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryColor() : Palette_GetPrimaryColor();
   BYTE fgAlpha = (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryOpacity() : Palette_GetPrimaryOpacity();
-  float radius = (nBrushWidth > 0 ? nBrushWidth : 1) / 2.0f;
+  int lineW = (nBrushWidth > 0 ? nBrushWidth : 1);
 
   for (int i = 0; i < polygon.count - 1; i++) {
-    DrawLineAAAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), (float)polygon.points[i].x,
-                    (float)polygon.points[i].y, (float)polygon.points[i + 1].x,
-                    (float)polygon.points[i + 1].y, radius, fg, fgAlpha, LAYER_BLEND_NORMAL);
+    DrawLineAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(),
+                  polygon.points[i].x, polygon.points[i].y,
+                  polygon.points[i + 1].x, polygon.points[i + 1].y, lineW, fg,
+                  fgAlpha, LAYER_BLEND_NORMAL);
   }
 
   if (polygon.count > 0) {
     POINT last = polygon.points[polygon.count - 1];
-    DrawLineAAAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), (float)last.x,
-                    (float)last.y, (float)ptRubberBand.x, (float)ptRubberBand.y,
-                    radius, fg, (BYTE)(fgAlpha / 2), LAYER_BLEND_NORMAL);
+    DrawLineAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(), last.x, last.y,
+                  ptRubberBand.x, ptRubberBand.y, lineW, fg,
+                  (BYTE)(fgAlpha / 2), LAYER_BLEND_NORMAL);
   }
 
   LayersMarkDirty();
@@ -152,7 +153,7 @@ static void CommitPolygonInternal(void) {
     COLORREF bg = (nDrawButton == MK_RBUTTON) ? Palette_GetPrimaryColor() : Palette_GetSecondaryColor();
     BYTE fgAlpha = (nDrawButton == MK_RBUTTON) ? Palette_GetSecondaryOpacity() : Palette_GetPrimaryOpacity();
     BYTE bgAlpha = (nDrawButton == MK_RBUTTON) ? Palette_GetPrimaryOpacity() : Palette_GetSecondaryOpacity();
-    float radius = (nBrushWidth > 0 ? nBrushWidth : 1) / 2.0f;
+    int lineW = (nBrushWidth > 0 ? nBrushWidth : 1);
 
     if ((nShapeDrawType == 1 || nShapeDrawType == 2) && polygon.count >= 3) {
       FillPolygonAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(),
@@ -162,10 +163,10 @@ static void CommitPolygonInternal(void) {
     if (nShapeDrawType == 0 || nShapeDrawType == 2) {
       for (int i = 0; i < polygon.count; i++) {
         int next = (i + 1) % polygon.count;
-        DrawLineAAAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(),
-                        (float)polygon.points[i].x, (float)polygon.points[i].y,
-                        (float)polygon.points[next].x,
-                        (float)polygon.points[next].y, radius, fg, fgAlpha, LAYER_BLEND_NORMAL);
+        DrawLineAlpha(bits, Canvas_GetWidth(), Canvas_GetHeight(),
+                      polygon.points[i].x, polygon.points[i].y,
+                      polygon.points[next].x, polygon.points[next].y, lineW, fg,
+                      fgAlpha, LAYER_BLEND_NORMAL);
       }
     }
   }

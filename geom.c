@@ -169,6 +169,8 @@ void CoordBmpToScr(int xBmp, int yBmp, int* xScr, int* yScr)
 void CoordScrToBmpExDouble(int xScr, int yScr, double* xBmp, double* yBmp,
                           double scale, int offX, int offY)
 {
+    /* Document / bitmap coords: origin top-left, +y downward (matches top-down
+     * layer DIBs from layers.c CreateDIBSection with negative biHeight). */
     /* 
      * Use the center of the screen pixel to avoid top-left bias.
      * Returning doubles allows tools to handle sub-pixel interpolation 

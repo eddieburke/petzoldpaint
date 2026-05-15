@@ -34,15 +34,12 @@ typedef struct TextToolSnapshot {
 void TextToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
 void TextToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
 void TextToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
-void TextToolOnKeyDown(HWND hWnd, WPARAM wParam);
-void TextToolOnChar(HWND hWnd, WPARAM wParam);
 void TextToolOnViewportChanged(HWND hWnd);
 
 /*------------------------------------------------------------------------------
  * Rendering & Overlay
  *----------------------------------------------------------------------------*/
 
-void TextToolDrawGhost(HDC hdc);
 void TextToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
 
 /*------------------------------------------------------------------------------
@@ -53,10 +50,6 @@ void CommitText(HWND hWndParent);
 BOOL CancelText(void);
 BOOL IsTextEditing(void);
 void ApplyTextFont(void);
-BOOL TextToolIsOpaque(void);
-void TextToolSetOpaque(BOOL bOpaque);
-HWND TextToolGetEditHwnd(void);
-void TextToolCleanup(void);
 void TextTool_Deactivate(void);
 TextToolSnapshot *TextTool_CreateSnapshot(void);
 void TextTool_DestroySnapshot(TextToolSnapshot *snapshot);

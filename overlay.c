@@ -117,22 +117,6 @@ void Overlay_DrawSelectionFrame(const OverlayContext *ctx, const RECT *rcBitmap,
   DrawSelectionFrame(ctx->hdc, &rcScreen, bDotted);
 }
 
-void Overlay_DrawDottedRect(const OverlayContext *ctx, const RECT *rcBitmap) {
-  RECT rcScreen;
-  RectBmpToScrEx(rcBitmap, &rcScreen, ctx->dScale, ctx->nDestX, ctx->nDestY);
-
-  HPEN hOldPen;
-  HPEN hPen = CreatePenAndSelect(ctx->hdc, PS_DOT, 1, RGB(0, 0, 0), &hOldPen);
-  HBRUSH hOldBrush = (HBRUSH)SelectObject(ctx->hdc, GetStockObject(NULL_BRUSH));
-
-  Rectangle(ctx->hdc, rcScreen.left, rcScreen.top, rcScreen.right,
-            rcScreen.bottom);
-
-SelectObject(ctx->hdc, hOldBrush);
-  RestorePen(ctx->hdc, hOldPen);
-  Gdi_DeletePen(hPen);
-}
-
 /*------------------------------------------------------------
    Line Drawing Functions
 ------------------------------------------------------------*/

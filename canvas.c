@@ -8,6 +8,7 @@
 #include "peztold_core.h"
 #include "controller.h"
 #include "cursors.h"
+#include "gdi_utils.h"
 #include "geom.h"
 #include "history.h"
 #include "layers.h"
@@ -140,20 +141,6 @@ void DestroyCanvas(void) {
 }
 
 
-
-void UpdateCanvas(HDC hdc, int x, int y, int w, int h) {
-  HDC hTempDC;
-  HBITMAP hOldBmp;
-
-  if (!LayersGetCompositeBitmap(FALSE))
-    return;
-
-  hTempDC = CreateTempDC(hdc);
-  hOldBmp = (HBITMAP)SelectObject(hTempDC, LayersGetCompositeBitmap(FALSE));
-  BitBlt(hdc, x, y, w, h, hTempDC, x, y, SRCCOPY);
-  SelectObject(hTempDC, hOldBmp);
-  DeleteTempDC(hTempDC);
-}
 
 void ClearCanvas(COLORREF color) {
   BYTE *bits = Layers_BeginWrite();
@@ -397,11 +384,6 @@ void CreateCanvasWindow(HWND hParent) {
 
 HWND GetCanvasWindow(void) { return hCanvasWnd; }
 
-
-void ResizeCanvasWindow(int x, int y, int w, int h) {
-  if (hCanvasWnd)
-    MoveWindow(hCanvasWnd, x, y, w, h, TRUE);
-}
 
 void RefreshCanvasRect(RECT *pRect) {
   if (hCanvasWnd) {

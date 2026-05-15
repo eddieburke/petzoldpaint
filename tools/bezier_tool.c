@@ -83,7 +83,7 @@ static void DrawBezierSegment(BYTE *bits, int width, int height, COLORREF color,
     float t2 = t * t, t3 = t2 * t;
     float x = u3 * p0.x + 3 * u2 * t * p1.x + 3 * u * t2 * p2.x + t3 * p3.x;
     float y = u3 * p0.y + 3 * u2 * t * p1.y + 3 * u * t2 * p2.y + t3 * p3.y;
-    DrawLineAAAlpha(bits, width, height, prevX, prevY, x, y, radius, color,
+    DrawLineStampCircles(bits, width, height, prevX, prevY, x, y, radius, color,
                     alpha, LAYER_BLEND_NORMAL);
     prevX = x;
     prevY = y;

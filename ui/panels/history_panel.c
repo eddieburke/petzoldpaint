@@ -1,5 +1,6 @@
 #include "history_panel.h"
 #include "../../canvas.h"
+#include "../../gdi_utils.h"
 #include "../../peztold_core.h"
 
 #include "../../helpers.h"
@@ -103,9 +104,8 @@ static void HandleHistorySelection(void) {
   if (sel == LB_ERR)
     return;
 
-  // Jump to selected history state
+  /* Jump applies state; ApplyNode notifies observers so list stays in sync. */
   HistoryJumpTo(sel);
-  RefreshHistoryList();
 }
 
 static void HistoryPanel_OnCoreEvent(CoreEvent ev) {

@@ -4,123 +4,53 @@
 #include "history.h"
 #include "layers.h"
 
-static struct {
-  BOOL isDrawing;
-  BOOL pixelsModified;
-  int drawButton;
-  int toolId;
-  POINT lastPoint;
-  HWND capWnd;
-  BOOL useCapture;
-} s_ix;
+static struct { BOOL active, modified, capture; int btn, tool, lx, ly; HWND hWnd; } ix;
 
-void Interaction_BeginEx(HWND hWnd, int x, int y, int nButton, int toolId,
-                         BOOL captureMouse) {
-  Layers_BeginWrite();
-  s_ix.isDrawing = TRUE;
-  s_ix.pixelsModified = FALSE;
-  s_ix.drawButton = nButton;
-  s_ix.toolId = toolId;
-  s_ix.lastPoint.x = x;
-  s_ix.lastPoint.y = y;
-  s_ix.capWnd = hWnd;
-  s_ix.useCapture = captureMouse;
-  if (hWnd && captureMouse)
-    SetCapture(hWnd);
+static void EndState(void) { ix.active = ix.modified = FALSE; ix.capture = TRUE; ix.hWnd = NULL; ReleaseCapture(); }
+
+void Interaction_BeginEx(HWND hWnd, int x, int y, int btn, int tool, BOOL capture) {
+    Layers_BeginWrite();
+    ix.active = TRUE; ix.modified = FALSE; ix.btn = btn; ix.tool = tool;
+    ix.lx = x; ix.ly = y; ix.hWnd = hWnd; ix.capture = capture;
+    if (hWnd && capture) SetCapture(hWnd);
 }
 
-void Interaction_Begin(HWND hWnd, int x, int y, int nButton, int toolId) {
-  Interaction_BeginEx(hWnd, x, y, nButton, toolId, TRUE);
-}
-
-void Interaction_UpdateLastPoint(int x, int y) {
-  s_ix.lastPoint.x = x;
-  s_ix.lastPoint.y = y;
-}
-
-void Interaction_MarkModified(void) { s_ix.pixelsModified = TRUE; }
-
-BOOL Interaction_IsActive(void) { return s_ix.isDrawing; }
-
-BOOL Interaction_IsModified(void) { return s_ix.pixelsModified; }
+void Interaction_Begin(HWND hWnd, int x, int y, int btn, int tool) { Interaction_BeginEx(hWnd, x, y, btn, tool, TRUE); }
+void Interaction_UpdateLastPoint(int x, int y) { ix.lx = x; ix.ly = y; }
+void Interaction_MarkModified(void) { ix.modified = TRUE; }
+BOOL Interaction_IsActive(void) { return ix.active; }
+BOOL Interaction_IsModified(void) { return ix.modified; }
 
 BOOL Interaction_Commit(const char *label) {
-  if (!s_ix.isDrawing)
-    return FALSE;
-  BOOL hadDraft = LayersIsDraftDirty();
-  if (hadDraft)
-    LayersMergeDraftToActive();
-  if (hadDraft || s_ix.pixelsModified)
-    LayersMarkDirty();
-  if (s_ix.pixelsModified || hadDraft)
-    HistoryPushToolActionById(s_ix.toolId, label ? label : "Draw");
-  else
-    Core_Notify(EV_PIXELS_CHANGED);
-  s_ix.isDrawing = FALSE;
-  s_ix.pixelsModified = FALSE;
-  s_ix.capWnd = NULL;
-  s_ix.useCapture = TRUE;
-  ReleaseCapture();
-  SetDocumentDirty();
-  InvalidateCanvas();
-  History_ClearPendingLayerSnapshot();
-  return TRUE;
+    if (!ix.active) return FALSE;
+    BOOL draft = LayersIsDraftDirty();
+    if (draft) LayersMergeDraftToActive();
+    if (draft || ix.modified) LayersMarkDirty();
+    if (ix.modified || draft) HistoryPushToolActionById(ix.tool, label ? label : "Draw");
+    else Core_Notify(EV_PIXELS_CHANGED);
+    EndState(); SetDocumentDirty(); InvalidateCanvas(); History_ClearPendingLayerSnapshot();
+    return TRUE;
 }
 
 void Interaction_Abort(void) {
-  if (!s_ix.isDrawing)
-    return;
-  LayersClearDraft();
-  History_AbortPendingLayerWrite();
-  s_ix.isDrawing = FALSE;
-  s_ix.pixelsModified = FALSE;
-  s_ix.capWnd = NULL;
-  s_ix.useCapture = TRUE;
-  ReleaseCapture();
-  InvalidateCanvas();
-  Core_Notify(EV_PIXELS_CHANGED);
+    if (!ix.active) return;
+    LayersClearDraft(); History_AbortPendingLayerWrite(); EndState(); InvalidateCanvas(); Core_Notify(EV_PIXELS_CHANGED);
 }
 
 void Interaction_EndQuiet(void) {
-  if (!s_ix.isDrawing)
-    return;
-  s_ix.isDrawing = FALSE;
-  s_ix.pixelsModified = FALSE;
-  s_ix.capWnd = NULL;
-  s_ix.useCapture = TRUE;
-  ReleaseCapture();
-  SetDocumentDirty();
-  InvalidateCanvas();
-  History_ClearPendingLayerSnapshot();
+    if (!ix.active) return;
+    EndState(); SetDocumentDirty(); InvalidateCanvas(); History_ClearPendingLayerSnapshot();
 }
 
-BOOL Interaction_IsActiveButton(int nButton) {
-  return (nButton & (MK_LBUTTON | MK_RBUTTON)) != 0;
+BOOL Interaction_IsActiveButton(int btn) { return ix.active && (btn & ix.btn) != 0; }
+
+void Interaction_OnCaptureLost(const char *label) {
+    if (!ix.active) return;
+    if (ix.modified) HistoryPushToolActionById(ix.tool, label ? label : "Draw");
+    else Core_Notify(EV_PIXELS_CHANGED);
+    EndState(); SetDocumentDirty(); InvalidateCanvas(); History_ClearPendingLayerSnapshot();
 }
 
-void Interaction_OnCaptureLost(const char *defaultLabel) {
-  if (!s_ix.isDrawing)
-    return;
-  if (s_ix.pixelsModified)
-    HistoryPushToolActionById(s_ix.toolId, defaultLabel ? defaultLabel : "Draw");
-  else
-    Core_Notify(EV_PIXELS_CHANGED);
-  s_ix.isDrawing = FALSE;
-  s_ix.pixelsModified = FALSE;
-  s_ix.capWnd = NULL;
-  s_ix.useCapture = TRUE;
-  SetDocumentDirty();
-  InvalidateCanvas();
-  History_ClearPendingLayerSnapshot();
-}
-
-int Interaction_GetActiveToolId(void) {
-  return s_ix.isDrawing ? s_ix.toolId : -1;
-}
-
-int Interaction_GetDrawButton(void) { return s_ix.drawButton; }
-
-void Interaction_GetLastPoint(POINT *outPt) {
-  if (outPt)
-    *outPt = s_ix.lastPoint;
-}
+int Interaction_GetActiveToolId(void) { return ix.active ? ix.tool : -1; }
+int Interaction_GetDrawButton(void) { return ix.btn; }
+void Interaction_GetLastPoint(POINT *out) { if (out) { out->x = ix.lx; out->y = ix.ly; } }

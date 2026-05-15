@@ -37,7 +37,6 @@ void           Doc_SetFile(const wchar_t *path);
 void        Doc_ClearFile(void);
 int         Doc_GetScrollX(void);
 int         Doc_GetScrollY(void);
-void        Doc_SetScroll(int x, int y);
 double      Doc_GetZoom(void);
 void        Doc_SetZoom(double z);
 

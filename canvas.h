@@ -5,14 +5,12 @@
 BOOL CreateCanvas(int width, int height);
 BOOL ResizeCanvas(int newWidth, int newHeight);
 void DestroyCanvas(void);
-void UpdateCanvas(HDC hdc, int x, int y, int w, int h);
 void ClearCanvas(COLORREF color);
 BOOL Undo(void);
 BOOL Redo(void);
 
 void CreateCanvasWindow(HWND hParent);
 HWND GetCanvasWindow(void);
-void ResizeCanvasWindow(int x, int y, int w, int h);
 void RefreshCanvasRect(RECT* pRect);
 void ResetCanvasScroll(void);
 void GetCanvasViewportOrigin(int* pX, int* pY);

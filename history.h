@@ -5,27 +5,6 @@
 
 typedef struct ToolSessionSnapshot ToolSessionSnapshot;
 
-typedef enum HistoryEntryKind {
-  HIST_ENTRY_FULL,
-  HIST_ENTRY_LAYER_PIXELS,
-  HIST_ENTRY_TOOL_SESSION
-} HistoryEntryKind;
-
-// History entry structure
-typedef struct HistoryEntry {
-  HistoryEntryKind kind;
-  LayerSnapshot *snapshot;
-  int activeLayerIndex;
-  int deltaLayerIndex;
-  size_t deltaByteCount;
-  BYTE *deltaBefore;
-  BYTE *deltaAfter;
-  ToolSessionSnapshot *toolSession;
-  char *description;
-  struct HistoryEntry *next;
-  struct HistoryEntry *prev;
-} HistoryEntry;
-
 // History system functions
 void HistoryInit(void);
 void HistoryDestroy(void);
@@ -33,8 +12,6 @@ BOOL HistoryPush(const char* description);
 void HistoryReportPushFailure(const char* context);
 BOOL HistoryUndo(void);
 BOOL HistoryRedo(void);
-BOOL HistoryCanUndo(void);
-BOOL HistoryCanRedo(void);
 void HistoryClear(void);
 BOOL HistoryJumpTo(int index);
 int HistoryGetPosition(void);  // Returns current position (0 = beginning, count-1 = end)

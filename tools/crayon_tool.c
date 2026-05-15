@@ -738,6 +738,12 @@ void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
    InitNoiseTextures();
    Interaction_Begin(hWnd, x, y, nButton, TOOL_CRAYON);
 
+  BYTE *bits = LayersGetActiveColorBits();
+  if (!bits) {
+    Interaction_Abort();
+    return;
+  }
+
   // Generate new random seed for this stroke
   s_currentNoiseSeed = (int)GetTickCount() + (x * 1619) + (y * 31337);
 
@@ -747,16 +753,13 @@ void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   Interaction_UpdateLastPoint(x, y);
 
   // Draw initial point
-  BYTE *bits = LayersGetActiveColorBits();
-  if (bits) {
-    int size = GetCrayonSize();
-    float radius = size / 2.0f;
-    BYTE colorAlpha = GetOpacityForButton(Interaction_GetDrawButton());
-    DrawCrayonSpot(bits, Canvas_GetWidth(), Canvas_GetHeight(), (float)x, (float)y, radius,
-                   GetColorForButton(Interaction_GetDrawButton()), colorAlpha, 1.0f, 1.0f, 0.0f);
-    LayersMarkDirty();
-    Interaction_MarkModified();
-  }
+  int size = GetCrayonSize();
+  float radius = size / 2.0f;
+  BYTE colorAlpha = GetOpacityForButton(Interaction_GetDrawButton());
+  DrawCrayonSpot(bits, Canvas_GetWidth(), Canvas_GetHeight(), (float)x, (float)y, radius,
+                 GetColorForButton(Interaction_GetDrawButton()), colorAlpha, 1.0f, 1.0f, 0.0f);
+  LayersMarkDirty();
+  Interaction_MarkModified();
   InvalidateCanvas();
 }
 

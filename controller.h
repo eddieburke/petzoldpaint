@@ -21,9 +21,6 @@ typedef enum {
     RESIZE_HANDLE_CORNER
 } ResizeHandleType;
 
-/* Initialisation */
-void Controller_Init(void);
-
 /* Window message handlers */
 void Controller_HandleSize(HWND hwnd);
 void Controller_HandleMouseDown(HWND hwnd, int screenX, int screenY, int btn);

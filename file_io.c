@@ -8,6 +8,7 @@
 #include "peztold_core.h"
 #include "canvas.h"
 #include "file_io.h"
+#include "gdi_utils.h"
 #include "layers.h"
 #include <commdlg.h>
 #include <limits.h>

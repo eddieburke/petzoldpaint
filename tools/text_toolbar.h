@@ -20,23 +20,10 @@
 #define IDC_TEXT_OPAQUE 1006
 #define IDC_TEXT_TRANSPARENT 1007
 
-/* Destroy toolbar window */
-void TextToolbar_Destroy(void);
-
 /* Show/hide toolbar */
 void TextToolbar_Show(BOOL bShow);
 
-/* Get toolbar window handle (for compatibility) */
-HWND TextToolbar_GetHwnd(void);
-
 /* Check if toolbar is visible (for compatibility) */
 BOOL TextToolbar_IsVisible(void);
-
-/* Compatibility aliases */
-#define GetTextToolbar TextToolbar_GetHwnd
-#define IsTextToolbarVisible TextToolbar_IsVisible
-
-/* Update button states to reflect current font settings */
-void TextToolbar_UpdateButtonStates(void);
 
 #endif /* TEXT_TOOLBAR_H */

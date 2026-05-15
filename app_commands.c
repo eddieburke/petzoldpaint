@@ -10,6 +10,7 @@
 #include "image_transforms.h"
 #include "layers.h"
 #include "commit_bar.h"
+#include "palette.h"
 
 #include "tools/selection_tool.h"
 #include "tools/text_tool.h"
