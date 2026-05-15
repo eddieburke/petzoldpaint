@@ -13,7 +13,6 @@
 #include "palette.h"
 
 #include "tools/selection_tool.h"
-#include "tools/text_tool.h"
 #include "tools/tool_options/tool_options.h"
 #include "ui/widgets/colorbox.h"
 #include "ui/widgets/statusbar.h"
@@ -32,9 +31,8 @@ typedef struct {
 
 static BOOL HandleZoomMenu(HWND hwnd, WORD id) {
   static const ZoomMenuItem kZoomItems[] = {
-      {IDM_ZOOM_12, 12.5},   {IDM_ZOOM_25, 25.0},   {IDM_ZOOM_50, 50.0},
-      {IDM_ZOOM_100, 100.0}, {IDM_ZOOM_200, 200.0}, {IDM_ZOOM_400, 400.0},
-      {IDM_ZOOM_800, 800.0}};
+      {IDM_ZOOM_100, 100.0},
+      {IDM_ZOOM_400, 400.0}};
 
   for (int i = 0; i < (int)(sizeof(kZoomItems) / sizeof(kZoomItems[0])); i++) {
     if (kZoomItems[i].id == id) {
@@ -217,10 +215,6 @@ BOOL AppCommands_OnCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
   case IDM_SHOW_COMMIT_BAR:
     CommitBar_SetEnabled(!CommitBar_IsEnabled());
     InvalidateCanvas();
-    return TRUE;
-
-  case IDM_TEXTTOOLBAR:
-    TextToolbar_Show(!TextToolbar_IsVisible());
     return TRUE;
 
   case IDM_INVERT_SELECTION:

@@ -207,8 +207,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_CONTEXTMENU:
         {
             HWND hTargetWnd = (HWND)wParam;
-            int screenX = LOWORD(lParam);
-            int screenY = HIWORD(lParam);
+            int screenX = (int)(short)LOWORD(lParam);
+            int screenY = (int)(short)HIWORD(lParam);
 
             if (screenX == -1) {
                 POINT pt;

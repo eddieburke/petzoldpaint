@@ -353,6 +353,14 @@ LRESULT CALLBACK CanvasWndProc(HWND hwnd, UINT message, WPARAM wParam,
   case WM_MOUSEWHEEL:
     Controller_HandleMouseWheel(hwnd, wParam, lParam);
     return 0;
+
+  case WM_HSCROLL:
+    Controller_HandleScroll(hwnd, SB_HORZ, LOWORD(wParam));
+    return 0;
+
+  case WM_VSCROLL:
+    Controller_HandleScroll(hwnd, SB_VERT, LOWORD(wParam));
+    return 0;
   }
 
   return DefWindowProc(hwnd, message, wParam, lParam);

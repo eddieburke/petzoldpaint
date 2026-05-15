@@ -3,8 +3,6 @@
 ------------------------------------------------------------*/
 
 #include "peztold_core.h"
-#include "draw.h"
-#include "gdi_utils.h"
 #include "history.h"
 #include "pixel_ops.h"
 #include "layers.h"
@@ -156,7 +154,6 @@ void HistoryPushLayerMove(int f,int t){char nm[64];GetLayerDisplayName(f,nm,64);
 HBITMAP LayersGetActiveColorBitmap(void){return lc>0&&act>=0&&act<lc?lyr[act].bmp:NULL;}
 BYTE *LayersGetActiveColorBits(void){return lc>0&&act>=0&&act<lc?lyr[act].bits:NULL;}
 BYTE *Layers_BeginWrite(void){History_SnapshotLayer(act); return LayersGetActiveColorBits();}
-HDC LayersGetActiveColorDC(HBITMAP *ph){HBITMAP h=LayersGetActiveColorBitmap(); if(!h)return NULL; return GetBitmapDC(h,ph);}
 
 static void Composite(BYTE *dst, int ww, int hh, BOOL check, COLORREF bg){
     if(check)PixelOps_FillCheckerboard(dst,ww,hh); else PixelOps_Fill(dst,ww,hh,bg,255);

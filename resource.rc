@@ -47,10 +47,6 @@ BEGIN
         MENUITEM "&Save\tCtrl+S",          IDM_SAVE
         MENUITEM "Save &As...",            IDM_SAVEAS
         MENUITEM SEPARATOR
-        MENUITEM "Page Se&tup...",         IDM_PAGESETUP
-        MENUITEM "&Print...\tCtrl+P",      IDM_PRINT
-        MENUITEM "Print Pre&view",         IDM_PRINTPREVIEW
-        MENUITEM SEPARATOR
         MENUITEM "E&xit\tAlt+F4",          IDM_EXIT
     END
     POPUP "&Edit"
@@ -63,13 +59,9 @@ BEGIN
         MENUITEM "&Paste\tCtrl+V",         IDM_PASTE
         MENUITEM "Cle&ar Selection\tDel",  IDM_CLEAR
         MENUITEM "Select &All\tCtrl+A",    IDM_SELECTALL
-        MENUITEM SEPARATOR
-        MENUITEM "Paste &From...",         57600
     END
     POPUP "&View"
     BEGIN
-        MENUITEM "&Tool Box\tCtrl+T",      IDM_TOOLBOX, CHECKED
-        MENUITEM "&Color Box\tCtrl+L",     IDM_COLORBOX, CHECKED
         MENUITEM "&Status Bar",            IDM_STATUSBAR, CHECKED
         MENUITEM "Show &Commit Bar",       IDM_SHOW_COMMIT_BAR, CHECKED
         MENUITEM SEPARATOR
@@ -77,7 +69,6 @@ BEGIN
         BEGIN
             MENUITEM "&Normal Size\tCtrl+PgUp", IDM_ZOOM_100
             MENUITEM "&Large Size\tCtrl+PgDn",  IDM_ZOOM_400
-            MENUITEM "C&ustom...",              IDM_ZOOM_100
         END
         MENUITEM "&View Bitmap\tCtrl+F",   IDM_PRESETS
     END
@@ -93,9 +84,23 @@ BEGIN
     BEGIN
         MENUITEM "&Edit Colors...",        IDM_EDIT_COLORS
     END
-    POPUP "&Help"
+END
+
+IDR_CONTEXT_MENU MENU DISCARDABLE
+BEGIN
+    POPUP ""
     BEGIN
-        MENUITEM "&About PeztoldPaint",    57664
+        MENUITEM "Cu&t",                   IDM_CUT
+        MENUITEM "&Copy",                  IDM_COPY
+        MENUITEM "&Paste",                 IDM_PASTE
+        MENUITEM "Cle&ar Selection",       IDM_CLEAR
+        MENUITEM SEPARATOR
+        MENUITEM "&Invert Selection",      IDM_INVERT_SELECTION
+        MENUITEM "Flip &Horizontal",       IDM_FLIP_HORZ
+        MENUITEM "Flip &Vertical",         IDM_FLIP_VERT
+        MENUITEM "Rotate &90 Degrees",     IDM_ROTATE_90
+        MENUITEM "Rotate &180 Degrees",    IDM_ROTATE_180
+        MENUITEM "Rotate &270 Degrees",    IDM_ROTATE_270
     END
 END
 
@@ -110,13 +115,10 @@ BEGIN
     "N",            IDM_NEW,                VIRTKEY, CONTROL
     "O",            IDM_OPEN,               VIRTKEY, CONTROL
     "S",            IDM_SAVE,               VIRTKEY, CONTROL
-    "P",            IDM_PRINT,              VIRTKEY, CONTROL
     "X",            IDM_CUT,                VIRTKEY, CONTROL
     "C",            IDM_COPY,               VIRTKEY, CONTROL
     "V",            IDM_PASTE,              VIRTKEY, CONTROL
     "A",            IDM_SELECTALL,          VIRTKEY, CONTROL
-    "T",            IDM_TOOLBOX,            VIRTKEY, CONTROL
-    "L",            IDM_COLORBOX,           VIRTKEY, CONTROL
     "R",            IDM_FLIPROTATE,         VIRTKEY, CONTROL
     "W",            IDM_RESIZESKEW,         VIRTKEY, CONTROL
     "I",            IDM_INVERT,             VIRTKEY, CONTROL

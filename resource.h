@@ -6,9 +6,6 @@
 #define IDM_OPEN         57601
 #define IDM_SAVE         57603
 #define IDM_SAVEAS       57604
-#define IDM_PAGESETUP    57605
-#define IDM_PRINT        57607
-#define IDM_PRINTPREVIEW 57609
 #define IDM_EXIT         57665
 #define IDM_UNDO         57643
 #define IDM_REDO         57644
@@ -18,15 +15,12 @@
 #define IDM_CLEAR        57632
 #define IDM_SELECTALL    57642
 #define IDM_INVERT_SELECTION 59506
-#define IDM_TOOLBOX      59415
-#define IDM_COLORBOX     59416
 #define IDM_STATUSBAR    59393
 #define IDM_FLIPROTATE   37680
 #define IDM_RESIZESKEW   37681
 #define IDM_INVERT       37682
 #define IDM_ATTRIBUTES   37683
 #define IDM_CLEARIMAGE   37684
-#define IDM_TEXTTOOLBAR  37678
 #define IDM_EDIT_COLORS  6869
 #define IDM_ROTATE_90    6100
 #define IDM_ROTATE_180   6101
@@ -92,13 +86,8 @@
 
 
 // Zoom Menu Items
-#define IDM_ZOOM_12   59507
-#define IDM_ZOOM_25   59508
-#define IDM_ZOOM_50   59509
 #define IDM_ZOOM_100  59510
-#define IDM_ZOOM_200  59511
 #define IDM_ZOOM_400  59512
-#define IDM_ZOOM_800  59513
 #define IDM_PRESETS   59520
 #define IDM_SHOW_COMMIT_BAR 59521
 

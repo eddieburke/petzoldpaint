@@ -37,7 +37,6 @@ void UpdateCanvasAfterModification(void);
 ------------------------------------------------------------*/
 
 void HistoryPushFormatted(const char *format, ...);
-void HistoryPushToolAction(const char *toolName, const char *action);
 void HistoryPushToolActionById(int toolId, const char *action);
 const char *GetToolName(int toolId);
 
