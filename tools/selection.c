@@ -80,6 +80,7 @@ typedef struct {
 static SelectionState s_sel = {0};
 static SelectionMode s_modeAtDragStart = SEL_NONE;
 static BOOL s_dragMoved = FALSE;
+static int s_toolAtDragStart = TOOL_SELECT;
 
 // Forward declarations
 static void UpdateSelectionDraftLayer(void);
@@ -97,6 +98,7 @@ static void Selection_ComputeRotatedSampleExtents(const RECT *rcBounds,
                                                   double *pCy, int *pSx, int *pSy,
                                                   int *pEx, int *pEy);
 static void Selection_GetOverlayFrameRect(RECT *out);
+static const char *Selection_GetHistoryAction(void);
 
 // ============================================================================
 // State Management
@@ -118,6 +120,11 @@ void SelectionClearState(void) {
 BOOL IsSelectionActive(void) { return s_sel.mode != SEL_NONE; }
 
 BOOL SelectionIsDragging(void) { return s_sel.nDragMode != HT_NONE; }
+
+static const char *Selection_GetHistoryAction(void) {
+    return (s_modeAtDragStart == SEL_NONE) ? "Create Selection"
+                                           : "Adjust Selection";
+}
 
 // ============================================================================
 // Lifting Pixels
@@ -704,6 +711,7 @@ void SelectionToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
     if (nButton == MK_RBUTTON) return;
     s_modeAtDragStart = s_sel.mode;
     s_dragMoved = FALSE;
+    s_toolAtDragStart = Tool_GetCurrent();
     if (s_sel.mode != SEL_NONE) {
         RECT rcCommitBar;
         Selection_GetOverlayFrameRect(&rcCommitBar);
@@ -736,7 +744,7 @@ void SelectionToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
     }
     s_sel.nDragMode = HT_BODY;
     s_sel.ptDragStart = (POINT){x, y}; s_sel.rcBounds = (RECT){x, y, x, y};
-    if (Tool_GetCurrent() == TOOL_FREEFORM) {
+    if (s_toolAtDragStart == TOOL_FREEFORM) {
         Poly_Clear(&s_sel.freeformPts);
         Poly_Add(&s_sel.freeformPts, x, y);
     }
@@ -751,7 +759,7 @@ void SelectionToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
         s_sel.rot.fAngle = s_sel.rot.fLastAngle + (cur - s_sel.rot.fStartAngle);
     } else if (s_sel.nDragMode == HT_BODY && s_modeAtDragStart == SEL_NONE) {
         s_dragMoved = TRUE;
-        if (Tool_GetCurrent() == TOOL_FREEFORM) {
+        if (s_toolAtDragStart == TOOL_FREEFORM) {
             Poly_Add(&s_sel.freeformPts, x, y);
             s_sel.rcBounds = Poly_GetBounds(&s_sel.freeformPts);
         } else {
@@ -781,16 +789,17 @@ void SelectionToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
         SelectionClearState();
         LayersClearDraft();
         InvalidateCanvas();
-    } else if (Tool_GetCurrent() == TOOL_FREEFORM && s_sel.freeformPts.count > 2) {
+    } else if (s_toolAtDragStart == TOOL_FREEFORM && s_sel.freeformPts.count > 2) {
         s_sel.hRegion = Poly_CreateRegion(&s_sel.freeformPts);
     }
 
     if (s_dragMoved && s_sel.mode != SEL_NONE) {
-        HistoryPushToolSessionById(TOOL_SELECT, "Adjust Selection");
+        HistoryPushToolSessionById(TOOL_SELECT, Selection_GetHistoryAction());
     }
 
     s_sel.nDragMode = HT_NONE;
     s_dragMoved = FALSE;
+    s_toolAtDragStart = TOOL_SELECT;
 }
 
 void SelectionTool_OnCaptureLost(void) {
