@@ -24,7 +24,6 @@ int nBrushWidth = 1;
 int nSprayRadius = 2;
 int nShapeDrawType = SHAPE_BORDER_ONLY;
 
-// Highlighter options
 int nHighlighterTransparency = 40;
 int nHighlighterBlendMode = 0;
 int nHighlighterEdgeSoftness = 50;
@@ -32,7 +31,6 @@ int nHighlighterOpacity = 85;
 int nHighlighterSizeVariation = 20;
 int nHighlighterTexture = 30;
 
-// Crayon options
 int nCrayonDensity = 45;
 int nCrayonTextureIntensity = 60;
 int nCrayonSprayAmount = 40;
@@ -174,29 +172,26 @@ void DrawOptionButtonFrame(HDC hdc, RECT *prc, BOOL bSelected) {
   }
 }
 
-// Draw a glossy, skeuomorphic gradient background for selected buttons
 static void DrawGlossySelection(HDC hdc, RECT *prc) {
   int w = prc->right - prc->left;
   int h = prc->bottom - prc->top;
-  int sheenH = h / 3; // Top portion for the sheen highlight
+  int sheenH = h / 3;
 
-  // Main gradient: lighter blue at top to darker blue at bottom
   TRIVERTEX vert[4];
   GRADIENT_RECT gRect[2];
 
-  // Bottom section: main blue gradient
   vert[0].x = prc->left;
   vert[0].y = prc->top + sheenH;
-  vert[0].Red = 0x3000;   // ~48
-  vert[0].Green = 0x6000; // ~96
-  vert[0].Blue = 0xD000;  // ~208
+  vert[0].Red = 0x3000;
+  vert[0].Green = 0x6000;
+  vert[0].Blue = 0xD000;
   vert[0].Alpha = 0x0000;
 
   vert[1].x = prc->right;
   vert[1].y = prc->bottom;
-  vert[1].Red = 0x1000;   // ~16
-  vert[1].Green = 0x2800; // ~40
-  vert[1].Blue = 0x8000;  // ~128
+  vert[1].Red = 0x1000;
+  vert[1].Green = 0x2800;
+  vert[1].Blue = 0x8000;
   vert[1].Alpha = 0x0000;
 
   gRect[0].UpperLeft = 0;
@@ -204,24 +199,22 @@ static void DrawGlossySelection(HDC hdc, RECT *prc) {
 
   GradientFill(hdc, vert, 2, gRect, 1, GRADIENT_FILL_RECT_V);
 
-  // Top sheen section: lighter highlight gradient (glassy sheen)
   vert[0].x = prc->left;
   vert[0].y = prc->top;
-  vert[0].Red = 0xA000;   // ~160 - bright highlight
-  vert[0].Green = 0xD000; // ~208
-  vert[0].Blue = 0xFF00;  // ~255
+  vert[0].Red = 0xA000;
+  vert[0].Green = 0xD000;
+  vert[0].Blue = 0xFF00;
   vert[0].Alpha = 0x0000;
 
   vert[1].x = prc->right;
   vert[1].y = prc->top + sheenH;
-  vert[1].Red = 0x4000;   // ~64
-  vert[1].Green = 0x7800; // ~120
-  vert[1].Blue = 0xE000;  // ~224
+  vert[1].Red = 0x4000;
+  vert[1].Green = 0x7800;
+  vert[1].Blue = 0xE000;
   vert[1].Alpha = 0x0000;
 
   GradientFill(hdc, vert, 2, gRect, 1, GRADIENT_FILL_RECT_V);
 
-  // Add a subtle bottom highlight line for depth
   HPEN hOldPen;
   HPEN hHighlight = CreatePenAndSelect(hdc, PS_SOLID, 1, RGB(100, 140, 200), &hOldPen);
   if (hHighlight) {
@@ -239,10 +232,8 @@ static void DrawSelectionOptions(HDC hdc, RECT *prcClient) {
   HDC hMemDC;
   HBRUSH hBr, hOldBr;
 
-  // Check if selection is active to show commit bar
   BOOL bHasSelection = IsSelectionActive();
 
-  // Draw commit bar at top when selection is active
   if (bHasSelection) {
     int barY;
     RECT rcCommit, rcCancel;
@@ -250,11 +241,9 @@ static void DrawSelectionOptions(HDC hdc, RECT *prcClient) {
     int btnH = SEL_COMMIT_BTN_H;
     int btnW = SEL_COMMIT_BTN_W;
 
-    // Commit button (checkmark)
     rc = rcCommit;
     DrawOptionButtonFrame(hdc, &rc, FALSE);
 
-    // Draw checkmark
     HPEN hOldPen;
     HPEN hPen = CreatePenAndSelect(hdc, PS_SOLID, 2, RGB(0, 150, 0), &hOldPen);
     MoveToEx(hdc, rc.left + 6, rc.top + btnH / 2, NULL);
@@ -263,11 +252,9 @@ static void DrawSelectionOptions(HDC hdc, RECT *prcClient) {
     RestorePen(hdc, hOldPen);
     Gdi_DeletePen(hPen);
 
-    // Cancel button (X)
     rc = rcCancel;
     DrawOptionButtonFrame(hdc, &rc, FALSE);
 
-    // Draw X
     hPen = CreatePenAndSelect(hdc, PS_SOLID, 2, RGB(200, 0, 0), &hOldPen);
     MoveToEx(hdc, rc.left + 6, rc.top + 4, NULL);
     LineTo(hdc, rc.left + btnW - 6, rc.top + btnH - 4);
@@ -430,7 +417,6 @@ static void DrawBrushOptions(HDC hdc, RECT *prcClient) {
 
     BOOL bSelected = (nBrushWidth == (i + 1));
 
-    // Simple border for small brush cells - no button frame needed
     if (bSelected) {
       HBRUSH hBr = GetSysColorBrush(COLOR_HIGHLIGHT);
       FrameRect(hdc, &rc, hBr);
@@ -530,7 +516,6 @@ static void DrawShapeOptions(HDC hdc, RECT *prcClient) {
 
     BOOL bSelected = (nShapeDrawType == i);
 
-    // For selected options, fill with black background and draw simple border
     if (bSelected) {
       FillRect(hdc, &rc, GetStockObject(BLACK_BRUSH));
       DrawEdge(hdc, &rc, EDGE_SUNKEN, BF_RECT);

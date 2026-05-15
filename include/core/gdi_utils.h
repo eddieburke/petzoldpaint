@@ -35,4 +35,4 @@ HFONT CreateClearTypeFont(int size, int weight, BOOL bItalic,
 HFONT CreateSegoiUIFont(int size, int weight);
 void SetupTextRender(HDC hdc, COLORREF color);
 
-#endif /* GDI_UTILS_H */
+#endif

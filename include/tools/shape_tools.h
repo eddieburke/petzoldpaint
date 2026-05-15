@@ -25,7 +25,6 @@ void ShapeTool_CommitPending(void);
 ShapeToolSnapshot *ShapeTool_CreateSnapshot(void);
 void ShapeTool_DestroySnapshot(ShapeToolSnapshot *snapshot);
 void ShapeTool_ApplySnapshot(const ShapeToolSnapshot *snapshot);
-/* Tool VTable lifecycle hooks */
 void ShapeTool_Deactivate(void);
 BOOL ShapeTool_Cancel(void);
 

@@ -5,4 +5,4 @@
 
 void FillToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
 
-#endif // FILL_TOOL_H
+#endif

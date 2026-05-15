@@ -85,7 +85,6 @@
 #define IDC_JPEG_USE_BG_COLOR 155
 
 
-// Zoom Menu Items
 #define IDM_ZOOM_100  59510
 #define IDM_ZOOM_400  59512
 #define IDM_PRESETS   59520

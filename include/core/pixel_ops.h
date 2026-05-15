@@ -4,11 +4,9 @@
 #include <windows.h>
 
 
-/* Invert RGB colors, preserving Alpha (Transparency Mask) */
 void PixelOps_InvertColors(BYTE *bits, int width, int height);
 
 
-/* Set all pixels to specific color (filling RGB, setting Alpha) */
 void PixelOps_Fill(BYTE *bits, int width, int height, COLORREF color,
                    BYTE alpha);
 
@@ -48,7 +46,6 @@ static inline void PixelOps_BlendPixel(int sr, int sg, int sb, int sa,
   if (!px || sa == 0)
     return;
 
-  /* Fast-path: Normal mode fully opaque source overwrites destination */
   if (mode == 0 /* LAYER_BLEND_NORMAL */ && sa == 255) {
     px[0] = (BYTE)sb;
     px[1] = (BYTE)sg;
@@ -62,7 +59,6 @@ static inline void PixelOps_BlendPixel(int sr, int sg, int sb, int sa,
   int dr = px[2];
   int da = px[3];
 
-  /* Calculate composite alpha: sa + da*(255-sa)/255 */
   int invSa = 255 - sa;
   int dstTerm = (da * invSa + 127) / 255;
   int outA = sa + dstTerm;
@@ -72,7 +68,6 @@ static inline void PixelOps_BlendPixel(int sr, int sg, int sb, int sa,
     return;
   }
 
-  /* Apply blend mode to source and destination channels if not Normal */
   int srcR = sr, srcG = sg, srcB = sb;
   if (mode != 0 /* LAYER_BLEND_NORMAL */) {
     srcR = PixelOps_ApplyBlendMode((BYTE)sr, (BYTE)dr, mode);
@@ -80,7 +75,6 @@ static inline void PixelOps_BlendPixel(int sr, int sg, int sb, int sa,
     srcB = PixelOps_ApplyBlendMode((BYTE)sb, (BYTE)db, mode);
   }
 
-  /* Porter-Duff over: (src*sa + dst*dstTerm) / outA */
   int outR = (srcR * sa + dr * dstTerm + outA / 2) / outA;
   int outG = (srcG * sa + dg * dstTerm + outA / 2) / outA;
   int outB = (srcB * sa + db * dstTerm + outA / 2) / outA;
@@ -97,12 +91,10 @@ static inline void PixelOps_BlendPixel(int sr, int sg, int sb, int sa,
 }
 
 
-/* Fill with checkerboard pattern (UI/Preview helper) */
 void PixelOps_FillCheckerboard(BYTE *bits, int width, int height);
 void PixelOps_FillCheckerboardRect(BYTE *bits, int width, int height,
                                    int startX, int startY, int endX, int endY);
 
-/* Bitmap transformations */
 void PixelOps_Flip(BYTE *bits, int width, int height, BOOL bHorz);
 
 #endif

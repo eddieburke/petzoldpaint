@@ -12,22 +12,20 @@ extern int nBrushWidth;
 extern int nSprayRadius;
 extern int nShapeDrawType;
 
-// Highlighter options
-extern int nHighlighterTransparency; // 0-255 (0=fully opaque, 255=fully transparent)
-extern int nHighlighterBlendMode;    // 0=multiply, 1=screen, 2=overlay
-extern int nHighlighterEdgeSoftness; // 0-100
-extern int nHighlighterOpacity;      // 0-100
-extern int nHighlighterSizeVariation; // 0-100
-extern int nHighlighterTexture;      // 0-100
+extern int nHighlighterTransparency;
+extern int nHighlighterBlendMode;
+extern int nHighlighterEdgeSoftness;
+extern int nHighlighterOpacity;
+extern int nHighlighterSizeVariation;
+extern int nHighlighterTexture;
 
-// Crayon options
-extern int nCrayonDensity;         // 0-100 (0=sparse, 100=dense)
-extern int nCrayonTextureIntensity; // 0-100
-extern int nCrayonSprayAmount;     // 0-100
-extern int nCrayonColorVariation;  // 0-100
-extern int nCrayonBrightnessRange; // 0-100
-extern int nCrayonSaturationRange; // 0-100
-extern int nCrayonHueShiftRange;   // 0-100
+extern int nCrayonDensity;
+extern int nCrayonTextureIntensity;
+extern int nCrayonSprayAmount;
+extern int nCrayonColorVariation;
+extern int nCrayonBrightnessRange;
+extern int nCrayonSaturationRange;
+extern int nCrayonHueShiftRange;
 #define SHAPE_BORDER_ONLY   0
 #define SHAPE_BORDER_FILL   1
 #define SHAPE_SOLID         2

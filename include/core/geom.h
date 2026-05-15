@@ -27,7 +27,6 @@ void ClampRectToCanvas(RECT* rc, int cvsW, int cvsH);
 #define HT_BL    6
 #define HT_L     7
 
-/* Rotation handles (optional expansion) */
 #define HT_ROTATE_TL 10
 #define HT_ROTATE_TR 11
 #define HT_ROTATE_BR 12
@@ -62,4 +61,4 @@ void ScreenDeltaToBitmap(int dx, int dy, int* outDx, int* outDy);
 
 int HitTestBoxHandles(const RECT* rc, int x, int y, int tolerance);
 
-#endif /* GEOM_H */
+#endif

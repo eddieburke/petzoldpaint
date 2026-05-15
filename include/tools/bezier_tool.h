@@ -14,15 +14,12 @@ typedef struct BezierToolSnapshot {
   int drawButton;
 } BezierToolSnapshot;
 
-/* Mouse Event Handlers */
 void BezierToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
 void BezierToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
 void BezierToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
 
-/* Overlay (screen-space control handles) */
 void BezierToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
 
-/* State / Lifecycle */
 BOOL IsCurvePending(void);
 BOOL BezierTool_Cancel(void);
 void BezierTool_Deactivate(void);
