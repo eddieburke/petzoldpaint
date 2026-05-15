@@ -4,9 +4,6 @@
 #include <stdio.h>
 #include <strsafe.h>
 
-/*------------------------------------------------------------
-   Slot registration: apply and save-current per (cat, slot)
-  ------------------------------------------------------------*/
 
 typedef struct {
     PresetApplyFn apply;
@@ -15,9 +12,6 @@ typedef struct {
 
 static SlotReg s_slotReg[PRESET_CAT_COUNT][PRESET_MAX_SLOTS];
 
-/*------------------------------------------------------------
-   Preset entry storage
-  ------------------------------------------------------------*/
 
 typedef struct {
     char name[MAX_PRESET_NAME];
@@ -29,9 +23,6 @@ typedef struct {
 static PresetEntry s_entries[PRESET_CAT_COUNT][PRESET_MAX_SLOTS][MAX_PRESETS];
 static int s_counts[PRESET_CAT_COUNT][PRESET_MAX_SLOTS];
 
-/*------------------------------------------------------------
-   API Implementation
-  ------------------------------------------------------------*/
 
 void Preset_RegisterSlot(PresetCategory cat, int slot,
     PresetApplyFn applyFn, PresetSaveCurrentFn saveCurrentFn)

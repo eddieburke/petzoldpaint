@@ -1,7 +1,3 @@
-/*------------------------------------------------------------
-    draw.c - Handle drawing, themed UI, and pixel primitives
-------------------------------------------------------------*/
-
 #include "draw.h"
 #include "gdi_utils.h"
 #include "geom.h"
@@ -36,8 +32,6 @@ void DrawSelectionFrame(HDC hdc, RECT *rc, BOOL bDotted) {
 
   SelectObject(hdc, hOldBr);
 }
-
-/* HitTestBoxHandlesEx removed - use HitTestBoxHandles from geom.h */
 
 void ResizeRect(RECT *rc, int handle, int dx, int dy, int minSize,
                 BOOL bKeepAspect) {
@@ -94,9 +88,6 @@ LPCTSTR GetHandleCursor(int handleId) {
   }
 }
 
-/*------------------------------------------------------------
-    Themed Drawing
-------------------------------------------------------------*/
 
 BOOL IsThemeEnabled(void) { return IsThemeActive() && IsAppThemed(); }
 
@@ -142,9 +133,6 @@ void ClearClientRect(HDC hdc, HWND hwnd, HBRUSH hBrush) {
   FillRect(hdc, &rc, hBrush);
 }
 
-/*------------------------------------------------------------
-    Drawing Primitives
-------------------------------------------------------------*/
 
 void DrawPixelAlpha(BYTE *bits, int width, int height, int x, int y,
                      COLORREF color, BYTE alpha, int mode) {

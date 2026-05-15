@@ -1,12 +1,3 @@
-/*------------------------------------------------------------------------------
- * PEN_TOOL.C
- *
- * Ballpoint Pen Tool Implementation
- *
- * Implements the ballpoint pen tool, which draws smooth lines with
- * anti-aliasing to simulate ink.
- *----------------------------------------------------------------------------*/
-
 #include "pen_tool.h"
 #include "canvas.h"
 #include "draw.h"

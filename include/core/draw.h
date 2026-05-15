@@ -1,25 +1,15 @@
-/*------------------------------------------------------------
-    draw.h - Handle drawing, themed UI, and pixel primitives
-------------------------------------------------------------*/
-
 #ifndef DRAW_H
 #define DRAW_H
 
 #include <windows.h>
 #include "geom.h"
 
-/*------------------------------------------------------------
-    Handle identifiers: use geom.h (HT_* / HANDLE_SIZE).
-------------------------------------------------------------*/
 
 void DrawSelectionFrame(HDC hdc, RECT *rc, BOOL bDotted);
 void ResizeRect(RECT *rc, int handle, int dx, int dy, int minSize,
                 BOOL bKeepAspect);
 LPCTSTR GetHandleCursor(int handleId);
 
-/*------------------------------------------------------------
-    Themed Drawing
-------------------------------------------------------------*/
 
 BOOL IsThemeEnabled(void);
 BOOL DrawThemedBackground(HDC hdc, LPCWSTR className, int part, int state,
@@ -28,9 +18,6 @@ void DrawThemedButtonState(HDC hdc, RECT *prc, int state);
 void DrawThemedButton(HDC hdc, RECT *prc, BOOL bPressed);
 void ClearClientRect(HDC hdc, HWND hwnd, HBRUSH hBrush);
 
-/*------------------------------------------------------------
-    Drawing Primitives
-------------------------------------------------------------*/
 
 /* Drawing Primitives with Alpha and Blend Mode */
 void DrawPixelAlpha(BYTE *bits, int width, int height, int x, int y,
@@ -72,9 +59,6 @@ void DrawRoundedRectAlpha(BYTE *bits, int width, int height, int x, int y,
                           int w, int h, int radius, COLORREF color, BYTE alpha,
                           BOOL bFill, int thickness, int mode);
 
-/*------------------------------------------------------------
-    Compositing and Fill
-------------------------------------------------------------*/
 
 #include "pixel_ops.h"
 

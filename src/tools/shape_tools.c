@@ -1,21 +1,3 @@
-/*------------------------------------------------------------------------------
- * SHAPE_TOOLS.C
- *
- * Shape Drawing Tools Implementation
- *
- * Implements the standard vector-like shape tools: Line, Rectangle, Ellipse,
- * and Rounded Rectangle.
- *
- * Architecture (Draft Layer model):
- * - MouseDown : Record start point, clear draft layer.
- * - MouseMove : Clear draft, redraw current shape to draft layer.
- * - MouseUp   : Merge draft to active layer, push history, reset state.
- * - onDeactivate / onCancel : Clear draft, reset state.
- *
- * No ghost/preview-buffer callbacks needed — the compositor renders the
- * draft layer above the active layer automatically every frame.
- *----------------------------------------------------------------------------*/
-
 #include "shape_tools.h"
 #include "canvas.h"
 #include "draw.h"
@@ -31,9 +13,6 @@
 #include "interaction.h"
 #include <stdlib.h>
 
-/*------------------------------------------------------------------------------
- * Tool State Definitions
- *----------------------------------------------------------------------------*/
 
 typedef enum {
   SHAPE_STATE_IDLE = 0, // No active shape
@@ -42,9 +21,6 @@ typedef enum {
   SHAPE_STATE_RESIZING  // Dragging handles/body
 } ShapeState;
 
-/*------------------------------------------------------------------------------
- * Internal State Variables
- *----------------------------------------------------------------------------*/
 
 static struct {
   ShapeState state;
@@ -58,12 +34,6 @@ static struct {
   POINT ptEndOrig;
 } s_Shape = {SHAPE_STATE_IDLE, 0, {0, 0}, {0, 0}, 0};
 
-/*------------------------------------------------------------------------------
- * DrawShapeToBits
- *
- * Core renderer — writes the current shape into the given pixel buffer.
- * Used for both the live draft preview and the final merge-to-active.
- *----------------------------------------------------------------------------*/
 
 static void DrawShapeToBits(BYTE *bits, int width, int height) {
   COLORREF fg = GetColorForButton(s_Shape.drawButton);
@@ -134,12 +104,6 @@ static void DrawShapeToBits(BYTE *bits, int width, int height) {
   }
 }
 
-/*------------------------------------------------------------------------------
- * UpdateDraftLayer
- *
- * Clears the draft and redraws the current shape into it.
- * Called every MouseMove so the compositor shows a live preview.
- *----------------------------------------------------------------------------*/
 
 static void UpdateDraftLayer(void) {
   if (s_Shape.state == SHAPE_STATE_IDLE)
@@ -155,9 +119,6 @@ static void UpdateDraftLayer(void) {
   LayersMarkDirty();
 }
 
-/*------------------------------------------------------------------------------
- * State Management
- *----------------------------------------------------------------------------*/
 
 static void ResetShapeState(void) {
   s_Shape.state = SHAPE_STATE_IDLE;
@@ -205,9 +166,6 @@ void ShapeTool_CommitPending(void) {
   CommitShapeAction("Draw Shape");
 }
 
-/*------------------------------------------------------------------------------
- * Event Handlers
- *----------------------------------------------------------------------------*/
 
 void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
   if (nButton == MK_RBUTTON && s_Shape.state != SHAPE_STATE_IDLE) {
@@ -334,9 +292,6 @@ void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
   }
 }
 
-/*------------------------------------------------------------------------------
- * Overlay Drawing (screen-space handles — unchanged)
- *----------------------------------------------------------------------------*/
 
 void ShapeToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
   if (s_Shape.state == SHAPE_STATE_IDLE)

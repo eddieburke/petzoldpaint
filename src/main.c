@@ -1,10 +1,3 @@
-/*------------------------------------------------------------
-   MAIN.C -- Main Application Entry Point and Window Procedure
-   
-   This module contains the WinMain entry point and the main
-   window procedure that handles application-wide messages.
-  ------------------------------------------------------------*/
-
 #include "peztold_core.h"
 #include "app_commands.h"
 #include "canvas.h"
@@ -22,26 +15,14 @@
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-/*------------------------------------------------------------
-   Global Variables
-  ------------------------------------------------------------*/
 
 HINSTANCE hInst;
 HWND hMainWnd;
 
-/*------------------------------------------------------------
-   Forward Declarations
-  ------------------------------------------------------------*/
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void ResizeLayout(HWND hwnd);
 
-/*------------------------------------------------------------
-   WinMain
-   
-   Application entry point. Initializes the application and
-   enters the message loop.
-  ------------------------------------------------------------*/
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    PWSTR szCmdLine, int iCmdShow)
@@ -103,11 +84,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     return (int)msg.wParam;
 }
 
-/*------------------------------------------------------------
-   ResizeLayout
-   
-   Repositions all child windows when the main window is resized.
-  ------------------------------------------------------------*/
 
 void ResizeLayout(HWND hwnd)
 {
@@ -151,12 +127,6 @@ void ResizeLayout(HWND hwnd)
     }
 }
 
-/*------------------------------------------------------------
-   WndProc
-   
-   Main window procedure. Handles application-wide messages
-   and menu commands.
-  ------------------------------------------------------------*/
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {

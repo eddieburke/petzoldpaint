@@ -1,7 +1,3 @@
-/*------------------------------------------------------------
-   app_commands.h - Menu command and init-menu-popup handlers
-------------------------------------------------------------*/
-
 #ifndef APP_COMMANDS_H
 #define APP_COMMANDS_H
 

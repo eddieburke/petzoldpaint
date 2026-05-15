@@ -7,9 +7,6 @@
 #include "pixel_ops.h"
 #include <windows.h>
 
-/*------------------------------------------------------------------------------
- * Selection Tool Event Handlers
- *----------------------------------------------------------------------------*/
 
 void SelectionToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
 void SelectionToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
@@ -20,9 +17,6 @@ void SelectionToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY); /
 void SelectionTool_Deactivate(void);
 BOOL SelectionTool_Cancel(ToolCancelReason reason);
 
-/*------------------------------------------------------------------------------
- * State Management
- *----------------------------------------------------------------------------*/
 
 void SelectionClearState(void);
 void CommitSelection(void);
@@ -31,9 +25,6 @@ BOOL IsSelectionActive(void);
 BOOL SelectionIsDragging(void);
 BOOL IsPointInSelection(int x, int y);
 
-/*------------------------------------------------------------------------------
- * Clipboard / Edit Operations
- *----------------------------------------------------------------------------*/
 
 void SelectionCopy(void);
 void SelectionCut(void);
@@ -43,18 +34,12 @@ void SelectionInvertColors(void);
 void SelectionDelete(void);
 void SelectionSelectAll(void);
 
-/*------------------------------------------------------------------------------
- * Transform Operations
- *----------------------------------------------------------------------------*/
 
 void SelectionRotate(int degrees);
 void SelectionFlip(BOOL bHorz);
 int SelectionGetCursorId(int x, int y);
 void SelectionMove(int dx, int dy);
 
-/*------------------------------------------------------------------------------
- * Snapshot System (History)
- *----------------------------------------------------------------------------*/
 
 #include "poly_store.h"
 

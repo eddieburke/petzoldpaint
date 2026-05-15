@@ -1,7 +1,3 @@
-/*------------------------------------------------------------
-    poly_store.c - Dynamic POINT array for polygon/freeform tools
-------------------------------------------------------------*/
-
 #include "poly_store.h"
 #include "geom.h"
 #include <stdlib.h>

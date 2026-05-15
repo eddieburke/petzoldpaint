@@ -1,7 +1,3 @@
-/*------------------------------------------------------------
-    geom.c - Math, geometry, polygon, and coordinate conversion
-------------------------------------------------------------*/
-
 #define _USE_MATH_DEFINES
 #include "peztold_core.h"
 #include "canvas.h"
@@ -12,9 +8,6 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-/*------------------------------------------------------------
-    Math and Geometry
-------------------------------------------------------------*/
 
 int DistSq(int x1, int y1, int x2, int y2)
 {
@@ -131,9 +124,6 @@ BOOL IsAltDown(void)
     return (GetKeyState(VK_MENU) & 0x8000) != 0;
 }
 
-/*------------------------------------------------------------
-    Coordinate Conversion
-------------------------------------------------------------*/
 
 double GetZoomScale(void)
 {

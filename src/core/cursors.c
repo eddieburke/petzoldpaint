@@ -1,10 +1,3 @@
-/*------------------------------------------------------------
-   CURSORS.C -- Cursor Management
-   
-   This module handles cursor display for different tools
-   and selection handles.
-  ------------------------------------------------------------*/
-
 #include "cursors.h"
 #include "resource.h"
 #include "tools.h"
@@ -13,9 +6,6 @@
 #include "geom.h"
 #include "tools/selection_tool.h"
 
-/*------------------------------------------------------------
-   Internal Cursor Functions
-  ------------------------------------------------------------*/
 
 static void SetAppCursor(int nID)
 {
@@ -27,12 +17,6 @@ static void SetPlatformCursor(LPCTSTR lpCursorName)
     SetCursor(LoadCursor(NULL, lpCursorName));
 }
 
-/*------------------------------------------------------------
-   SetToolCursor
-   
-   Sets the cursor based on the current tool and position.
-   Returns TRUE if a cursor was set.
-  ------------------------------------------------------------*/
 
 BOOL SetToolCursor(int nToolId, int x, int y)
 {

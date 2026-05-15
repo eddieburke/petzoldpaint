@@ -1,11 +1,3 @@
-/*------------------------------------------------------------
-   FLOODFILL.C -- Flood Fill Algorithm Implementation
-
-   This module implements the flood fill algorithm using a
-   stack-based DFS approach for better performance and
-   simpler memory management.
-  ------------------------------------------------------------*/
-
 #include "floodfill.h"
 #include "canvas.h"
 #include "helpers.h"

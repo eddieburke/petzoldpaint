@@ -3,13 +3,6 @@
 
 #include <windows.h>
 
-/*------------------------------------------------------------
-   Controller Layer
-
-   Separates application logic from WndProc message handling.
-   CanvasWndProc delegates to Controller_* functions, keeping
-   canvas.c focused on windowing and rendering.
-------------------------------------------------------------*/
 
 #define TIMER_AIRBRUSH 101
 

@@ -12,9 +12,9 @@ Events covered:
 
 Legend:
 - Capture: `SetCapture` / `ReleaseCapture`
-- History: `HistoryPushToolActionById(...)`
+- History: `HistoryPush(...)`
 - Dirty flag: `SetDocumentDirty()`
-- Redraw: `InvalidateCanvas`, `InvalidateCanvasRect`, draft/layer dirty calls
+- Redraw: `InvalidateRect(GetCanvasWindow(), ...)`, draft/layer dirty calls
 - Button state: stored draw button (`s_nDrawButton`, `drawButton`) and state transitions
 
 ## 1) Freehand family (Pencil, Brush, Eraser, Airbrush)

@@ -3,11 +3,6 @@
 
 #include <windows.h>
 
-/*------------------------------------------------------------
-   Text Font Management
-   
-   Handles font creation and state management for text tool.
-------------------------------------------------------------*/
 
 /* Font state structure */
 typedef struct {

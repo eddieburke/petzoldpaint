@@ -1,16 +1,3 @@
-/*------------------------------------------------------------------------------
- * BEZIER_TOOL.C
- *
- * Bezier Curve Drawing Tool Implementation (Draft Layer model)
- *
- * State Machine:
- * 1. STATE_DRAWING_LINE : Drag to define P0 (start) and P3 (end).
- * 2. STATE_WAIT_CTRL1   : Click/drag to position P1.
- * 3. STATE_DRAG_CTRL1   : Dragging P1.
- * 4. STATE_WAIT_CTRL2   : Click/drag to position P2.
- * 5. STATE_DRAG_CTRL2   : Dragging P2 — on MouseUp the curve is committed.
- *----------------------------------------------------------------------------*/
-
 #include "bezier_tool.h"
 #include "canvas.h"
 #include "draw.h"

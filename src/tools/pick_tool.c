@@ -1,12 +1,3 @@
-/*------------------------------------------------------------------------------
- * PICK_TOOL.C
- *
- * Color Picker Tool Implementation
- *
- * Implements the color picker (dropper) tool, which samples colors from the
- * composite canvas image and updates the active foreground or background color.
- *----------------------------------------------------------------------------*/
-
 #include "pick_tool.h"
 #include "canvas.h"
 #include "helpers.h"
@@ -14,9 +5,6 @@
 #include "ui/widgets/colorbox.h"
 #include "palette.h"
 
-/*------------------------------------------------------------------------------
- * Pick Tool Internals
- *----------------------------------------------------------------------------*/
 
 static COLORREF SampleColorAtPoint(int x, int y) {
   return LayersSampleCompositeColor(x, y, Palette_GetSecondaryColor());
@@ -40,9 +28,6 @@ static void HandlePickInteraction(int x, int y, int nButton) {
   ApplyPickedColor(color, nButton);
 }
 
-/*------------------------------------------------------------------------------
- * Pick Tool Public API
- *----------------------------------------------------------------------------*/
 
 void PickToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;

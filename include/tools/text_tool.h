@@ -7,9 +7,6 @@
 #include "text_toolbar.h"
 #include <windows.h>
 
-/*------------------------------------------------------------------------------
- * Global Font State
- *----------------------------------------------------------------------------*/
 
 extern HFONT hTextFont;
 extern LOGFONT lfTextFont;
@@ -27,24 +24,15 @@ typedef struct TextToolSnapshot {
   char *text;
 } TextToolSnapshot;
 
-/*------------------------------------------------------------------------------
- * Event Handlers
- *----------------------------------------------------------------------------*/
 
 void TextToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
 void TextToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
 void TextToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
 void TextToolOnViewportChanged(HWND hWnd);
 
-/*------------------------------------------------------------------------------
- * Rendering & Overlay
- *----------------------------------------------------------------------------*/
 
 void TextToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
 
-/*------------------------------------------------------------------------------
- * State Management / Actions
- *----------------------------------------------------------------------------*/
 
 void CommitText(HWND hWndParent);
 BOOL CancelText(void);

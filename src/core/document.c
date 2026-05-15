@@ -2,9 +2,6 @@
 #include <string.h>
 #include <strsafe.h>
 
-/*------------------------------------------------------------
-   Singleton document instance
-------------------------------------------------------------*/
 
 static Document g_doc = {
     800,                    /* width         */
@@ -16,9 +13,6 @@ static Document g_doc = {
     100.0                   /* zoomPercent   */
 };
 
-/*------------------------------------------------------------
-   Accessors
-------------------------------------------------------------*/
 
 Document* GetDocument(void) {
     return &g_doc;

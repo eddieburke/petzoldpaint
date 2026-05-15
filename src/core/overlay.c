@@ -1,11 +1,3 @@
-/*------------------------------------------------------------
-   OVERLAY.C -- Screen-Space Overlay Drawing
-
-   This module provides functions for drawing UI overlays in
-   screen-space coordinates, ensuring they remain crisp at
-   any zoom level.
-  ------------------------------------------------------------*/
-
 #include "overlay.h"
 #include "canvas.h"
 #include "draw.h"
@@ -13,17 +5,7 @@
 #include "geom.h"
 #include "helpers.h"
 #include <stdlib.h>
-
-/*------------------------------------------------------------
-   Constants
-  ------------------------------------------------------------*/
-
-/* #define HANDLE_SIZE 5 (moved to geom.h) */
 #define HANDLE_GRAB 5
-
-/*------------------------------------------------------------
-   Context Initialization
-  ------------------------------------------------------------*/
 
 void Overlay_Init(OverlayContext *ctx, HDC hdc, double dScale, int nDestX,
                   int nDestY) {
@@ -32,12 +14,6 @@ void Overlay_Init(OverlayContext *ctx, HDC hdc, double dScale, int nDestX,
   ctx->vp.offX = nDestX;
   ctx->vp.offY = nDestY;
 }
-
-/* Overlay_BmpToScr removed - use CoordBmpToScr from geom.h */
-
-/*------------------------------------------------------------
-   Handle Drawing Functions
-  ------------------------------------------------------------*/
 
 void Overlay_DrawHandle(const OverlayContext *ctx, int xBmp, int yBmp, int type,
                         BOOL bHollow) {
@@ -87,10 +63,6 @@ void Overlay_DrawPolyHandles(const OverlayContext *ctx, const POINT *ptsBitmap,
   }
 }
 
-/*------------------------------------------------------------
-   Hit Testing with Zoom Adjustment
-  ------------------------------------------------------------*/
-
 int Overlay_HitTestBoxHandles(const RECT *rcBmp, int xBmp, int yBmp) {
   double dScale = GetZoomScale();
   int tolerance = (int)(6.0 / dScale);
@@ -99,9 +71,6 @@ int Overlay_HitTestBoxHandles(const RECT *rcBmp, int xBmp, int yBmp) {
   return HitTestBoxHandles(rcBmp, xBmp, yBmp, tolerance);
 }
 
-/*------------------------------------------------------------
-   Selection Frame Drawing Functions
-  ------------------------------------------------------------*/
 
 void Overlay_DrawSelectionFrame(const OverlayContext *ctx, const RECT *rcBitmap,
                                 BOOL bDotted) {
@@ -113,9 +82,6 @@ void Overlay_DrawSelectionFrame(const OverlayContext *ctx, const RECT *rcBitmap,
   DrawSelectionFrame(ctx->hdc, &rcScreen, bDotted);
 }
 
-/*------------------------------------------------------------
-   Line Drawing Functions
-------------------------------------------------------------*/
 
 void Overlay_DrawLine(const OverlayContext *ctx, int x1Bmp, int y1Bmp,
                       int x2Bmp, int y2Bmp, COLORREF color, int penStyle) {

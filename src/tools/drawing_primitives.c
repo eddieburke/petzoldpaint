@@ -1,20 +1,8 @@
-/*------------------------------------------------------------------------------
- * drawing_primitives.c
- *
- * Low-level drawing helpers for freehand tools (pencil, brush, eraser,
- * airbrush). Brush strokes follow the same integer line spine as the pencil
- * (DrawLineSpineEach / DrawLineAlpha); brush shape is stamped at each spine
- * pixel.
- *----------------------------------------------------------------------------*/
-
 #include "drawing_primitives.h"
 #include "draw.h"
 #include "layers.h"
 #include <stdlib.h>
 
-/*------------------------------------------------------------------------------
- * Brush Size Helpers
- *----------------------------------------------------------------------------*/
 
 int DrawPrim_GetBrushSize(int brushWidthIndex) {
    if (brushWidthIndex < 1) brushWidthIndex = 1;
@@ -40,9 +28,6 @@ int DrawPrim_GetSprayRadius(int sprayRadiusIndex) {
 }
 
 
-/*------------------------------------------------------------------------------
- * Pencil Implementation
- *----------------------------------------------------------------------------*/
 
 void DrawPrim_DrawPencilPoint(BYTE *bits, int width, int height, int x, int y,
                               COLORREF color, BYTE alpha) {
@@ -54,9 +39,6 @@ void DrawPrim_DrawPencilLine(BYTE *bits, int width, int height, int x1, int y1,
   DrawLineAlpha(bits, width, height, x1, y1, x2, y2, 1, color, alpha, LAYER_BLEND_NORMAL);
 }
 
-/*------------------------------------------------------------------------------
- * Eraser Implementation
- *----------------------------------------------------------------------------*/
 
 void DrawPrim_DrawEraserPoint(BYTE *bits, int width, int height, int x, int y,
                                COLORREF color, int brushWidthIndex) {
@@ -72,9 +54,6 @@ void DrawPrim_DrawEraserPoint(BYTE *bits, int width, int height, int x, int y,
   EraseRectAlpha(bits, width, height, x - half, y - half, size, size);
 }
 
-/*------------------------------------------------------------------------------
- * Brush Point & Line Implementation
- *----------------------------------------------------------------------------*/
 
 void DrawPrim_DrawBrushPoint(BYTE *bits, int width, int height, int x, int y,
                              COLORREF color, BYTE alpha, int brushWidthIndex) {
@@ -152,9 +131,6 @@ void DrawPrim_DrawBrushLine(BYTE *bits, int width, int height, int x1, int y1,
                     &ctx);
 }
 
-/*------------------------------------------------------------------------------
- * Spray / Airbrush Implementation
- *----------------------------------------------------------------------------*/
 
 void DrawPrim_DrawSprayPoint(BYTE *bits, int width, int height, int x, int y,
                               COLORREF color, BYTE alpha, int sprayRadiusIndex) {
