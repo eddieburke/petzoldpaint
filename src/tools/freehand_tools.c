@@ -9,6 +9,7 @@
 #include "drawing_primitives.h"
 #include "tool_options/tool_options.h"
 #include "interaction.h"
+#include "tools.h"
 #include <stdlib.h>
 
 typedef void (*PointFn)(BYTE*,int,int,int,int,COLORREF,BYTE,int);
@@ -79,7 +80,8 @@ static void DrawInterp(BYTE *b, int w, int h, const Policy *p, int x1, int y1,
         p->pt(b, w, h, x1 + (dx*i)/steps, y1 + (dy*i)/steps, c, a, sz);
 }
 
-void FreehandTool_OnMouseDown(HWND hWnd, int x, int y, int btn, int tool) {
+void FreehandTool_OnMouseDown(HWND hWnd, int x, int y, int btn) {
+    int tool = Tool_GetCurrent();
     const Policy *p = GetPol(tool);
     if (!p || !p->pt) return;
     if (Interaction_IsActive()) {
@@ -95,8 +97,8 @@ void FreehandTool_OnMouseDown(HWND hWnd, int x, int y, int btn, int tool) {
     Interaction_FlushStrokeRedraw();
 }
 
-void FreehandTool_OnMouseMove(HWND hWnd, int x, int y, int btn, int toolId) {
-    (void)hWnd; (void)toolId;
+void FreehandTool_OnMouseMove(HWND hWnd, int x, int y, int btn) {
+    (void)hWnd;
     if (!Interaction_IsActive() || !Interaction_IsActiveButton(btn)) return;
     const Policy *p = ActivePolicy();
     if (!p || !p->pt) return;
@@ -110,23 +112,23 @@ void FreehandTool_OnMouseMove(HWND hWnd, int x, int y, int btn, int toolId) {
     Interaction_UpdateLastPoint(x, y);
 }
 
-void FreehandTool_OnMouseUp(HWND hWnd, int x, int y, int btn, int toolId) {
-    (void)hWnd; (void)x; (void)y; (void)btn; (void)toolId;
+void FreehandTool_OnMouseUp(HWND hWnd, int x, int y, int btn) {
+    (void)hWnd; (void)x; (void)y; (void)btn;
     Interaction_Commit("Draw");
 }
 
 void AirbrushTool_OnMouseDown(HWND hWnd, int x, int y, int btn) {
-    FreehandTool_OnMouseDown(hWnd, x, y, btn, TOOL_AIRBRUSH);
+    FreehandTool_OnMouseDown(hWnd, x, y, btn);
     if (Interaction_IsActive() && hWnd) SetTimer(hWnd, TIMER_AIRBRUSH, 30, NULL);
 }
 
 void AirbrushTool_OnMouseMove(HWND hWnd, int x, int y, int btn) {
-    FreehandTool_OnMouseMove(hWnd, x, y, btn, TOOL_AIRBRUSH);
+    FreehandTool_OnMouseMove(hWnd, x, y, btn);
 }
 
 void AirbrushTool_OnMouseUp(HWND hWnd, int x, int y, int btn) {
     if (hWnd) KillTimer(hWnd, TIMER_AIRBRUSH);
-    FreehandTool_OnMouseUp(hWnd, x, y, btn, TOOL_AIRBRUSH);
+    FreehandTool_OnMouseUp(hWnd, x, y, btn);
 }
 
 void FreehandTool_OnTimerTick(void) {
@@ -158,11 +160,6 @@ BOOL FreehandTool_Cancel(void) {
     EndAirbrushTimer();
     Interaction_Abort();
     return TRUE;
-}
-
-int GetActiveFreehandTool(void) {
-    const Policy *p = ActivePolicy();
-    return p ? p->id : -1;
 }
 
 BOOL IsFreehandDrawing(void) { return ActivePolicy() != NULL; }

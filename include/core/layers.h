@@ -28,8 +28,6 @@ int LayersGetBlendMode(int i);
 BOOL LayersSetBlendMode(int i, int b);
 void LayersGetName(int i, char *out, int sz);
 
-void GetLayerDisplayName(int i, char *out, int sz);
-
 HBITMAP LayersGetActiveColorBitmap(void);
 BYTE *LayersGetActiveColorBits(void);
 BYTE *Layers_BeginWrite(void);

@@ -12,7 +12,6 @@ typedef struct {
 #define OVERLAY_HANDLE_CIRCLE  1
 
 void Overlay_Init(OverlayContext* ctx, HDC hdc, double dScale, int nDestX, int nDestY);
-void Overlay_BmpToScr(const OverlayContext* ctx, int xBmp, int yBmp, int* xScr, int* yScr);
 void Overlay_DrawHandle(const OverlayContext* ctx, int xBmp, int yBmp, int type, BOOL bHollow);
 void Overlay_DrawBoxHandles(const OverlayContext* ctx, const RECT* rcBitmap);
 void Overlay_DrawPolyHandles(const OverlayContext* ctx, const POINT* ptsBitmap, int count);

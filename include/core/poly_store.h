@@ -18,7 +18,6 @@ BOOL Poly_Add(PolyStore *p, int x, int y);
 void Poly_SetLast(PolyStore *p, int x, int y);
 POINT Poly_GetLast(PolyStore *p);
 HRGN Poly_CreateRegion(PolyStore *p);
-HRGN Poly_CreateRegionEx(PolyStore *p, int fillMode);
 BOOL Poly_Copy(PolyStore *dst, const PolyStore *src);
 
 #endif

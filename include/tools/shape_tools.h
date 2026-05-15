@@ -12,13 +12,12 @@ typedef struct ShapeToolSnapshot {
 } ShapeToolSnapshot;
 
 
-void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId);
-void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId);
-void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId);
+void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton);
+void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton);
+void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton);
 
 
 BOOL IsShapePending(void);
-BOOL ShapeTool_IsBusy(void);
 void ShapeTool_CommitPending(void);
 ShapeToolSnapshot *ShapeTool_CreateSnapshot(void);
 void ShapeTool_DestroySnapshot(ShapeToolSnapshot *snapshot);

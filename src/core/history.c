@@ -174,7 +174,7 @@ BOOL HistoryJumpTo(int idx) {
 int HistoryGetPosition(void) { return pos; }
 int HistoryGetCount(void) { return count; }
 
-const char *HistoryGetDescription(int idx) {
+static const char *HistoryGetDescription(int idx) {
     HistNode *n = head;
     for (int i = 0; i < idx && n; i++) n = n->next;
     return n ? n->desc : NULL;

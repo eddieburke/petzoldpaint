@@ -14,7 +14,7 @@ int DrawPrim_GetBrushSize(int brushWidthIndex) {
    return 5;
 }
 
-int DrawPrim_GetBrushRow(int brushWidthIndex) {
+static int DrawPrim_GetBrushRow(int brushWidthIndex) {
    if (brushWidthIndex < 1) brushWidthIndex = 1;
    return (brushWidthIndex - 1) / 3;
 }

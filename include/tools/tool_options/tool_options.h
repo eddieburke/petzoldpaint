@@ -34,5 +34,4 @@ void SetStoredLineWidth(int width);
 void CreateToolOptions(HWND hParent);
 HWND GetToolOptionsWindow(void);
 void UpdateToolOptions(int nNewTool);
-int GetToolOptionsHeight(void);
 #endif

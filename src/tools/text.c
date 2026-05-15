@@ -90,7 +90,7 @@ static void OnTextFontChanged(void);
 static void TextEdit_Destroy(void);
 static char *TextTool_DuplicateCurrentText(void);
 
-void ApplyTextFont(void) {
+static void ApplyTextFont(void) {
     TextFont_Apply();
     if (s_text.hEdit) {
         if (s_text.hEditFont) DeleteObject(s_text.hEditFont);
@@ -144,7 +144,7 @@ void TextRender_ToActive(const char* txt, int len, int tw, int th, int dx, int d
     DeleteObject(hTmp);
 }
 
-void CommitText(HWND hParent) {
+static void CommitText(HWND hParent) {
     if (s_text.mode == TEXT_NONE || !s_text.hEdit) return;
     int len = GetWindowTextLengthA(s_text.hEdit);
     if (len > 0) {

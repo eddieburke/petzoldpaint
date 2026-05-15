@@ -226,14 +226,6 @@ int LayersGetBlendMode(int i){return i>=0&&i<lc?lyr[i].blend:0;}
 BOOL LayersSetBlendMode(int i, int b){if(i<0||i>=lc||lyr[i].blend==b)return FALSE;lyr[i].blend=b;MarkFullDirty();return TRUE;}
 void LayersGetName(int i, char *out, int sz){if(i>=0&&i<lc&&out&&sz>0)strncpy_s(out,sz,lyr[i].name,_TRUNCATE);}
 
-void GetLayerDisplayName(int i, char *out, int sz) {
-    if (!out || sz <= 0)
-        return;
-    LayersGetName(i, out, sz);
-    if (!out[0])
-        snprintf(out, (size_t)sz, "Layer %d", i + 1);
-}
-
 static void LogLastError(const char* msg) {
     char buf[256];
     snprintf(buf, sizeof(buf), "PetzoldPaint Error: %s (Error %lu)\n", msg, GetLastError());

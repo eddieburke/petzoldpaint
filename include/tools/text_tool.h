@@ -34,11 +34,9 @@ void TextTool_OnViewportChanged(HWND hWnd);
 void TextTool_DrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
 
 
-void CommitText(HWND hWndParent);
 BOOL TextTool_Cancel(void);
 BOOL IsTextEditing(void);
 BOOL TextTool_TryEditUndo(void);
-void ApplyTextFont(void);
 void TextTool_Deactivate(void);
 TextToolSnapshot *TextTool_CreateSnapshot(void);
 void TextTool_DestroySnapshot(TextToolSnapshot *snapshot);

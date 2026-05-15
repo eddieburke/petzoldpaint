@@ -136,10 +136,3 @@ cleanup_fail:
   s_stackCap = 0;
   return FALSE;
 }
-
-void FloodFillCleanup(void) {
-  free(s_stack);
-  s_stack = NULL;
-  s_stackCount = 0;
-  s_stackCap = 0;
-}

@@ -16,7 +16,6 @@ void HistoryClear(void);
 BOOL HistoryJumpTo(int index);
 int HistoryGetPosition(void);
 int HistoryGetCount(void);
-const char* HistoryGetDescription(int index);
 void HistoryGetDescriptionAt(int index, char* out, int outSize);
 
 void HistoryPushSession(const char *description);

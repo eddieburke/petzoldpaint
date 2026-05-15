@@ -35,9 +35,9 @@ static struct {
   POINT ptEndOrig;
 } s_Shape = {SHAPE_STATE_IDLE, 0, {0, 0}, {0, 0}, 0};
 
-static void SnapEndpointIfShift(int toolId, int *x, int *y) {
+static void SnapEndpointIfShift(int *x, int *y) {
   if (!IsShiftDown()) return;
-  if (toolId == TOOL_LINE)
+  if (s_Shape.activeToolId == TOOL_LINE)
     SnapToAngle(s_Shape.ptStart.x, s_Shape.ptStart.y, x, y, 45);
   else
     SnapToSquare(s_Shape.ptStart.x, s_Shape.ptStart.y, x, y);
@@ -103,7 +103,6 @@ static void ResetShapeState(void) {
 }
 
 BOOL IsShapePending(void) { return s_Shape.state != SHAPE_STATE_IDLE; }
-BOOL ShapeTool_IsBusy(void) { return IsShapePending(); }
 
 void ShapeTool_Deactivate(void) {
   if (s_Shape.state == SHAPE_STATE_IDLE) return;
@@ -129,7 +128,9 @@ void ShapeTool_CommitPending(void) {
 }
 
 
-void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
+void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  int toolId = Tool_GetCurrent();
+
   if (nButton == MK_RBUTTON && s_Shape.state != SHAPE_STATE_IDLE) {
     ShapeTool_Cancel();
     return;
@@ -174,15 +175,15 @@ void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
   }
 }
 
-void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
+void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   (void)nButton;
-  if (s_Shape.state == SHAPE_STATE_IDLE || s_Shape.activeToolId != toolId)
+  if (s_Shape.state == SHAPE_STATE_IDLE)
     return;
 
   if (s_Shape.state == SHAPE_STATE_CREATING) {
     int endX = x, endY = y;
-    SnapEndpointIfShift(toolId, &endX, &endY);
+    SnapEndpointIfShift(&endX, &endY);
 
     if (s_Shape.ptEnd.x != endX || s_Shape.ptEnd.y != endY) {
       s_Shape.ptEnd.x = endX;
@@ -216,14 +217,14 @@ void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
   }
 }
 
-void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
+void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   (void)nButton;
   if (s_Shape.state == SHAPE_STATE_IDLE)
     return;
-  if (s_Shape.state == SHAPE_STATE_CREATING && s_Shape.activeToolId == toolId) {
+  if (s_Shape.state == SHAPE_STATE_CREATING) {
     int endX = x, endY = y;
-    SnapEndpointIfShift(toolId, &endX, &endY);
+    SnapEndpointIfShift(&endX, &endY);
     s_Shape.ptEnd.x = endX;
     s_Shape.ptEnd.y = endY;
     UpdateDraftLayer();
@@ -233,7 +234,7 @@ void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
     return;
   }
 
-  if (s_Shape.state == SHAPE_STATE_RESIZING && s_Shape.activeToolId == toolId) {
+  if (s_Shape.state == SHAPE_STATE_RESIZING) {
     if (GetCapture() == hWnd)
       ReleaseCapture();
     s_Shape.state = SHAPE_STATE_EDITING;

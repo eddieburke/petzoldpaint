@@ -38,41 +38,20 @@ static struct {
 typedef void (*PointerFn)(HWND, int, int, int);
 typedef void (*OverlayFn)(HDC, double, int, int);
 typedef void (*VoidFn)(void);
-typedef void (*CancelFn)(ToolCancelReason);
 typedef BOOL (*BusyFn)(void);
 
 typedef struct {
   PointerFn down, move, up, dblclick;
   OverlayFn overlay;
   VoidFn    deactivate;
-  CancelFn  cancel;
+  VoidFn    cancel;
   BusyFn    isBusy;
   const char *captureLostLabel;
 } ToolVTable;
 
-/* Adapters: forward to impls that need extra args, or signature-bridge cancel. */
-static void FH_Down(HWND h,int x,int y,int b){ FreehandTool_OnMouseDown(h,x,y,b,Tool_GetCurrent()); }
-static void FH_Move(HWND h,int x,int y,int b){ FreehandTool_OnMouseMove(h,x,y,b,Tool_GetCurrent()); }
-static void FH_Up  (HWND h,int x,int y,int b){ FreehandTool_OnMouseUp  (h,x,y,b,Tool_GetCurrent()); }
-
-static void SH_Down(HWND h,int x,int y,int b){ ShapeTool_OnMouseDown(h,x,y,b,Tool_GetCurrent()); }
-static void SH_Move(HWND h,int x,int y,int b){ ShapeTool_OnMouseMove(h,x,y,b,Tool_GetCurrent()); }
-static void SH_Up  (HWND h,int x,int y,int b){ ShapeTool_OnMouseUp  (h,x,y,b,Tool_GetCurrent()); }
-
-static void C_Freehand   (ToolCancelReason r){(void)r; FreehandTool_Cancel();}
-static void C_Shape      (ToolCancelReason r){(void)r; ShapeTool_Cancel();}
-static void C_Bezier     (ToolCancelReason r){(void)r; BezierTool_Cancel();}
-static void C_Polygon    (ToolCancelReason r){(void)r; PolygonTool_Cancel();}
-static void C_Pen        (ToolCancelReason r){(void)r; PenTool_Cancel();}
-static void C_Highlighter(ToolCancelReason r){(void)r; HighlighterTool_Cancel();}
-static void C_Crayon     (ToolCancelReason r){(void)r; CrayonTool_Cancel();}
-static void C_Magnifier  (ToolCancelReason r){(void)r; MagnifierTool_Deactivate();}
-static void C_Text       (ToolCancelReason r){(void)r; TextTool_Cancel();}
-static void C_Selection  (ToolCancelReason r){ SelectionTool_Cancel(r); }
-
-#define VT_SELECTION   { SelectionTool_OnMouseDown, SelectionTool_OnMouseMove, SelectionTool_OnMouseUp, NULL, SelectionTool_DrawOverlay, SelectionTool_Deactivate, C_Selection, NULL, NULL }
-#define VT_FREEHAND    { FH_Down, FH_Move, FH_Up, NULL, NULL, FreehandTool_Deactivate, C_Freehand, IsFreehandDrawing, "Draw" }
-#define VT_SHAPE       { SH_Down, SH_Move, SH_Up, NULL, ShapeTool_DrawOverlay, ShapeTool_Deactivate, C_Shape, ShapeTool_IsBusy, "Draw Shape" }
+#define VT_SELECTION   { SelectionTool_OnMouseDown, SelectionTool_OnMouseMove, SelectionTool_OnMouseUp, NULL, SelectionTool_DrawOverlay, SelectionTool_Deactivate, NULL, NULL, NULL }
+#define VT_FREEHAND    { FreehandTool_OnMouseDown, FreehandTool_OnMouseMove, FreehandTool_OnMouseUp, NULL, NULL, FreehandTool_Deactivate, (VoidFn)FreehandTool_Cancel, IsFreehandDrawing, "Draw" }
+#define VT_SHAPE       { ShapeTool_OnMouseDown, ShapeTool_OnMouseMove, ShapeTool_OnMouseUp, NULL, ShapeTool_DrawOverlay, ShapeTool_Deactivate, (VoidFn)ShapeTool_Cancel, IsShapePending, "Draw Shape" }
 
 static const ToolVTable s_tools[TOOL_CRAYON + 1] = {
   [TOOL_FREEFORM]   = VT_SELECTION,
@@ -80,20 +59,20 @@ static const ToolVTable s_tools[TOOL_CRAYON + 1] = {
   [TOOL_ERASER]     = VT_FREEHAND,
   [TOOL_PENCIL]     = VT_FREEHAND,
   [TOOL_BRUSH]      = VT_FREEHAND,
-  [TOOL_AIRBRUSH]   = { AirbrushTool_OnMouseDown, AirbrushTool_OnMouseMove, AirbrushTool_OnMouseUp, NULL, NULL, FreehandTool_Deactivate, C_Freehand, IsFreehandDrawing, "Draw" },
+  [TOOL_AIRBRUSH]   = { AirbrushTool_OnMouseDown, AirbrushTool_OnMouseMove, AirbrushTool_OnMouseUp, NULL, NULL, FreehandTool_Deactivate, (VoidFn)FreehandTool_Cancel, IsFreehandDrawing, "Draw" },
   [TOOL_FILL]       = { FillTool_OnMouseDown, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
   [TOOL_PICK]       = { PickTool_OnMouseDown, PickTool_OnMouseMove, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-  [TOOL_MAGNIFIER]  = { MagnifierTool_OnMouseDown, MagnifierTool_OnMouseMove, MagnifierTool_OnMouseUp, NULL, MagnifierTool_DrawOverlay, MagnifierTool_Deactivate, C_Magnifier, NULL, NULL },
-  [TOOL_TEXT]       = { TextTool_OnMouseDown, TextTool_OnMouseMove, TextTool_OnMouseUp, NULL, TextTool_DrawOverlay, TextTool_Deactivate, C_Text, IsTextEditing, NULL },
+  [TOOL_MAGNIFIER]  = { MagnifierTool_OnMouseDown, MagnifierTool_OnMouseMove, MagnifierTool_OnMouseUp, NULL, MagnifierTool_DrawOverlay, MagnifierTool_Deactivate, (VoidFn)MagnifierTool_Deactivate, NULL, NULL },
+  [TOOL_TEXT]       = { TextTool_OnMouseDown, TextTool_OnMouseMove, TextTool_OnMouseUp, NULL, TextTool_DrawOverlay, TextTool_Deactivate, (VoidFn)TextTool_Cancel, IsTextEditing, NULL },
   [TOOL_LINE]       = VT_SHAPE,
   [TOOL_RECT]       = VT_SHAPE,
   [TOOL_ELLIPSE]    = VT_SHAPE,
   [TOOL_ROUNDRECT]  = VT_SHAPE,
-  [TOOL_CURVE]      = { BezierTool_OnMouseDown, BezierTool_OnMouseMove, BezierTool_OnMouseUp, NULL, BezierTool_DrawOverlay, BezierTool_Deactivate, C_Bezier, IsCurvePending, "Draw Curve" },
-  [TOOL_POLYGON]    = { PolygonTool_OnMouseDown, PolygonTool_OnMouseMove, PolygonTool_OnMouseUp, PolygonTool_OnDoubleClick, PolygonTool_DrawOverlay, PolygonTool_Deactivate, C_Polygon, IsPolygonPending, "Draw Polygon" },
-  [TOOL_PEN]        = { PenTool_OnMouseDown, PenTool_OnMouseMove, PenTool_OnMouseUp, NULL, NULL, PenTool_Deactivate, C_Pen, IsPenDrawing, NULL },
-  [TOOL_HIGHLIGHTER]= { HighlighterTool_OnMouseDown, HighlighterTool_OnMouseMove, HighlighterTool_OnMouseUp, NULL, NULL, HighlighterTool_Deactivate, C_Highlighter, IsHighlighterDrawing, NULL },
-  [TOOL_CRAYON]     = { CrayonTool_OnMouseDown, CrayonTool_OnMouseMove, CrayonTool_OnMouseUp, NULL, NULL, CrayonTool_Deactivate, C_Crayon, IsCrayonDrawing, NULL },
+  [TOOL_CURVE]      = { BezierTool_OnMouseDown, BezierTool_OnMouseMove, BezierTool_OnMouseUp, NULL, BezierTool_DrawOverlay, BezierTool_Deactivate, (VoidFn)BezierTool_Cancel, IsCurvePending, "Draw Curve" },
+  [TOOL_POLYGON]    = { PolygonTool_OnMouseDown, PolygonTool_OnMouseMove, PolygonTool_OnMouseUp, PolygonTool_OnDoubleClick, PolygonTool_DrawOverlay, PolygonTool_Deactivate, (VoidFn)PolygonTool_Cancel, IsPolygonPending, "Draw Polygon" },
+  [TOOL_PEN]        = { PenTool_OnMouseDown, PenTool_OnMouseMove, PenTool_OnMouseUp, NULL, NULL, PenTool_Deactivate, (VoidFn)PenTool_Cancel, IsPenDrawing, NULL },
+  [TOOL_HIGHLIGHTER]= { HighlighterTool_OnMouseDown, HighlighterTool_OnMouseMove, HighlighterTool_OnMouseUp, NULL, NULL, HighlighterTool_Deactivate, (VoidFn)HighlighterTool_Cancel, IsHighlighterDrawing, NULL },
+  [TOOL_CRAYON]     = { CrayonTool_OnMouseDown, CrayonTool_OnMouseMove, CrayonTool_OnMouseUp, NULL, NULL, CrayonTool_Deactivate, (VoidFn)CrayonTool_Cancel, IsCrayonDrawing, NULL },
 };
 
 static const ToolVTable *VT(int toolId) {
@@ -122,8 +101,12 @@ static int ResolveActiveToolForMoveUp(HWND hWnd) {
 }
 
 static void ToolCancelInternal(int toolId, ToolCancelReason reason) {
+  if (toolId == TOOL_SELECT || toolId == TOOL_FREEFORM) {
+    SelectionTool_Cancel(reason);
+    return;
+  }
   const ToolVTable *vt = VT(toolId);
-  if (vt && vt->cancel) vt->cancel(reason);
+  if (vt && vt->cancel) vt->cancel();
 }
 
 void ToolCancel(ToolCancelReason reason, BOOL skipSelectionTools) {
@@ -232,12 +215,6 @@ void InitializeTools(void) {
   HighlighterTool_RegisterPresets();
   Preset_LoadAll();
 }
-
-void CommitCurrentSelection(void) {
-  if (IsSelectionActive()) CommitSelection();
-}
-
-void ClearSelection(void) { SelectionDelete(); }
 
 void ToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
   const ToolVTable *vt = VT(Tool_GetCurrent());

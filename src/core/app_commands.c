@@ -178,7 +178,7 @@ BOOL AppCommands_OnCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 
   case IDM_CLEAR:
     ToolCancel(TOOL_CANCEL_INTERRUPT, TRUE);
-    ClearSelection();
+    SelectionDelete();
     SetDocumentDirty();
     return TRUE;
 

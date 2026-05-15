@@ -12,9 +12,8 @@ int Doc_GetHeight(void)         { return g_doc.height; }
 void Doc_SetSize(int w, int h)  { g_doc.width = w; g_doc.height = h; }
 
 BOOL Doc_IsDirty(void)          { return g_doc.dirty; }
-void Doc_SetDirty(void)         { g_doc.dirty = TRUE; }
 void Doc_ClearDirty(void)       { g_doc.dirty = FALSE; }
-void SetDocumentDirty(void)     { Doc_SetDirty(); }
+void SetDocumentDirty(void)     { g_doc.dirty = TRUE; }
 
 const wchar_t* Doc_GetFile(void) { return g_doc.currentFile; }
 void Doc_SetFile(const wchar_t *p) {
