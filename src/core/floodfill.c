@@ -48,7 +48,7 @@ BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor,
   if (hasSelection && !IsPointInSelection(startX, startY))
     return FALSE;
 
-  size_t needed = (size_t)w * (size_t)h + 2;
+  size_t needed = (size_t)h * 2 + 100;
   if (needed > SIZE_MAX / sizeof(Span))
     return FALSE;
   free(s_stack);
