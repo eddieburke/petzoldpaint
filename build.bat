@@ -13,9 +13,12 @@ if not exist "%VCVARS%" (
 
 call "%VCVARS%" x64
 
+:: Ensure build directory exists
+if not exist "build" mkdir build
+
 :: Compile resources
 :: Use full paths to avoid RC1110 errors
-rc /nologo /fo"%~dp0resource.res" "%~dp0resource.rc"
+rc /nologo /fo"%~dp0build\resource.res" /i "%~dp0include\core" "%~dp0src\resource.rc"
 
 if errorlevel 1 (
     echo [ERROR] Resource compilation failed.
@@ -23,29 +26,33 @@ if errorlevel 1 (
 )
 
 :: Core files
-set CORE_FILES=main.c canvas.c tools.c draw.c layers.c helpers.c gdi_utils.c geom.c file_io.c history.c floodfill.c palette.c app_commands.c cursors.c overlay.c image_transforms.c poly_store.c pixel_ops.c document.c controller.c peztold_core.c interaction.c commit_bar.c tool_session.c
-
+set CORE_FILES=src/main.c src/core/canvas.c src/core/tools.c src/core/draw.c src/core/layers.c src/core/helpers.c src/core/gdi_utils.c src/core/geom.c src/core/file_io.c src/core/history.c src/core/floodfill.c src/core/palette.c src/core/app_commands.c src/core/cursors.c src/core/overlay.c src/core/image_transforms.c src/core/poly_store.c src/core/pixel_ops.c src/core/document.c src/core/controller.c src/core/peztold_core.c src/core/interaction.c src/core/commit_bar.c src/core/tool_session.c
 
 :: Tool files
-set TOOL_FILES=tools/bezier_tool.c tools/crayon_tool.c tools/drawing_primitives.c tools/fill_tool.c tools/freehand_tools.c tools/highlighter_tool.c tools/magnifier_tool.c tools/pen_tool.c tools/pick_tool.c tools/polygon_tool.c tools/selection.c tools/shape_tools.c tools/text.c
+set TOOL_FILES=src/tools/bezier_tool.c src/tools/crayon_tool.c src/tools/drawing_primitives.c src/tools/fill_tool.c src/tools/freehand_tools.c src/tools/highlighter_tool.c src/tools/magnifier_tool.c src/tools/pen_tool.c src/tools/pick_tool.c src/tools/polygon_tool.c src/tools/selection.c src/tools/shape_tools.c src/tools/text.c
 
 :: UI and Panel files
-set UI_FILES=ui/widgets/colorbox.c ui/widgets/statusbar.c ui/widgets/toolbar.c ui/panels/history_panel.c ui/panels/layers_panel.c
+set UI_FILES=src/ui/widgets/colorbox.c src/ui/widgets/statusbar.c src/ui/widgets/toolbar.c src/ui/panels/history_panel.c src/ui/panels/layers_panel.c
 
 :: Tool Options files
-set OPTION_FILES=tools/tool_options/presets.c tools/tool_options/tool_options.c
+set OPTION_FILES=src/tools/tool_options/presets.c src/tools/tool_options/tool_options.c
 
 :: Libraries
 set LIBS=gdi32.lib user32.lib comdlg32.lib shell32.lib msimg32.lib comctl32.lib uxtheme.lib dwmapi.lib ole32.lib windowscodecs.lib uuid.lib oleaut32.lib
 
+:: Include paths
+set INCLUDES=/I include /I include/core /I include/tools /I include/tools/tool_options /I include/ui/panels /I include/ui/widgets
+
 :: Compile
-cl /nologo /Zi /W3 /D_CRT_SECURE_NO_WARNINGS /I. ^
+cl /nologo /Zi /W3 /D_CRT_SECURE_NO_WARNINGS %INCLUDES% ^
     %CORE_FILES% ^
     %TOOL_FILES% ^
     %UI_FILES% ^
     %OPTION_FILES% ^
-    resource.res ^
-    /Fe:PeztoldPaint.exe ^
+    build\resource.res ^
+    /Fo:build\ ^
+    /Fd:build\ ^
+    /Fe:build\PeztoldPaint.exe ^
     /link /SUBSYSTEM:WINDOWS %LIBS%
 
 if %ERRORLEVEL% equ 0 (
