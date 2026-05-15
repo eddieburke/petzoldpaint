@@ -27,7 +27,6 @@ void Gdi_DeleteFont(HFONT hFont);
 HDC GetCanvasBitmapDC(HBITMAP *phOld);
 void ReleaseCanvasBitmapDC(HDC hdc, HBITMAP hOld);
 HDC GetBitmapDC(HBITMAP hBmp, HBITMAP *phOld);
-void ReleaseBitmapDC(HDC hdc, HBITMAP hOld);
 
 /*------------------------------------------------------------
     Bitmap Utilities
@@ -47,7 +46,6 @@ HBITMAP TransformBitmap(HBITMAP hSrc, int nSrcW, int nSrcH, int nDstW,
                         void *pUserData);
 
 #include "pixel_ops.h"
-#define PremultiplyAlpha(bits, count) PixelOps_Premultiply((bits), (count), 1)
 #define Transform_Flip PixelOps_Flip
 
 /*------------------------------------------------------------
@@ -58,13 +56,5 @@ HFONT CreateClearTypeFont(int size, int weight, BOOL bItalic,
                           const char *faceName);
 HFONT CreateSegoiUIFont(int size, int weight);
 void SetupTextRender(HDC hdc, COLORREF color);
-
-/*------------------------------------------------------------
-    Preview Buffer Helpers
-------------------------------------------------------------*/
-
-BOOL GetDibBitsFromHdc(HDC hdc, BYTE **outBits, int *outWidth, int *outHeight);
-BOOL GetPreviewBufferBits(HDC hdc, BYTE **outBits, int *outWidth,
-                          int *outHeight);
 
 #endif /* GDI_UTILS_H */

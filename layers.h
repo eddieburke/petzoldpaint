@@ -35,7 +35,6 @@ void HistoryPushLayerMove(int f, int t);
 HBITMAP LayersGetActiveColorBitmap(void);
 BYTE *LayersGetActiveColorBits(void);
 BYTE *Layers_BeginWrite(void);
-HDC LayersGetActiveColorDC(HBITMAP *ph);
 
 HBITMAP LayersGetCompositeBitmap(BOOL check);
 HBITMAP LayersFlattenToBitmap(COLORREF bg);

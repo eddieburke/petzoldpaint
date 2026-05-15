@@ -79,12 +79,6 @@ void HistoryPushFormatted(const char* format, ...)
     }
 }
 
-void HistoryPushToolAction(const char* toolName, const char* action)
-{
-    if (!toolName || !action) return;
-    HistoryPushToolActionForActiveLayer(toolName, action);
-}
-
 const char* GetToolName(int toolId)
 {
     static const char* toolNames[] = {
@@ -117,5 +111,5 @@ const char* GetToolName(int toolId)
 
 void HistoryPushToolActionById(int toolId, const char* action)
 {
-    HistoryPushToolAction(GetToolName(toolId), action);
+    HistoryPushToolActionForActiveLayer(GetToolName(toolId), action);
 }

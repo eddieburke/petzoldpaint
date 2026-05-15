@@ -4,7 +4,6 @@
 
 #include "gdi_utils.h"
 #include "layers.h"
-#include <stdlib.h>
 
 /*------------------------------------------------------------
     GDI Resource Management
@@ -133,15 +132,6 @@ HDC GetBitmapDC(HBITMAP hBmp, HBITMAP *phOld) {
   return hMemDC;
 }
 
-void ReleaseBitmapDC(HDC hdc, HBITMAP hOld) {
-  if (hdc) {
-    if (hOld) {
-      SelectObject(hdc, hOld);
-    }
-    DeleteTempDC(hdc);
-  }
-}
-
 /*------------------------------------------------------------
     Bitmap Utilities
 ------------------------------------------------------------*/
@@ -254,39 +244,4 @@ HFONT CreateSegoiUIFont(int size, int weight) {
 void SetupTextRender(HDC hdc, COLORREF color) {
   SetBkMode(hdc, TRANSPARENT);
   SetTextColor(hdc, color);
-}
-
-/*------------------------------------------------------------
-    Preview Buffer Helpers
-------------------------------------------------------------*/
-
-BOOL GetDibBitsFromHdc(HDC hdc, BYTE **outBits, int *outWidth, int *outHeight) {
-  if (!hdc || !outBits || !outWidth || !outHeight)
-    return FALSE;
-
-  *outBits = NULL;
-  *outWidth = 0;
-  *outHeight = 0;
-
-  HBITMAP hBmp = (HBITMAP)GetCurrentObject(hdc, OBJ_BITMAP);
-  if (!hBmp)
-    return FALSE;
-
-  BITMAP bm;
-  if (GetObject(hBmp, sizeof(bm), &bm) != sizeof(bm))
-    return FALSE;
-
-  if (bm.bmBitsPixel != 32 || !bm.bmBits)
-    return FALSE;
-
-  *outBits = (BYTE *)bm.bmBits;
-  *outWidth = bm.bmWidth;
-  *outHeight = abs(bm.bmHeight);
-
-  return TRUE;
-}
-
-BOOL GetPreviewBufferBits(HDC hdc, BYTE **outBits, int *outWidth,
-                          int *outHeight) {
-  return GetDibBitsFromHdc(hdc, outBits, outWidth, outHeight);
 }
