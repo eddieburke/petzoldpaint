@@ -1,38 +1,37 @@
 #ifndef GDI_UTILS_H
 #define GDI_UTILS_H
-
 #include <windows.h>
-
-
 HDC GetScreenDC(void);
 void ReleaseScreenDC(HDC hdc);
 HDC CreateTempDC(HDC hdcRef);
 void DeleteTempDC(HDC hdc);
-HPEN CreatePenAndSelect(HDC hdc, int style, int width, COLORREF color,
-                        HPEN *phOld);
+typedef struct GdiSelection {
+	HDC hdc;
+	HGDIOBJ
+	previous;
+	HGDIOBJ
+	selected;
+} GdiSelection;
+BOOL Gdi_SelectObject(HDC hdc, HGDIOBJ obj, GdiSelection *sel);
+void Gdi_RestoreSelection(GdiSelection *sel);
+HPEN CreatePenAndSelect(HDC hdc, int style, int width, COLORREF color, HPEN *phOld);
 void RestorePen(HDC hdc, HPEN hOld);
 void Gdi_DeletePen(HPEN hPen);
-HBRUSH CreateBrushAndSelect(HDC hdc, COLORREF color, HBRUSH *phOld);
+HBRUSH
+CreateBrushAndSelect(HDC hdc, COLORREF color, HBRUSH *phOld);
 void RestoreBrush(HDC hdc, HBRUSH hOld);
 void Gdi_DeleteBrush(HBRUSH hBrush);
 void Gdi_DeleteFont(HFONT hFont);
-
 HDC GetCanvasBitmapDC(HBITMAP *phOld);
 void ReleaseCanvasBitmapDC(HDC hdc, HBITMAP hOld);
 HDC GetBitmapDC(HBITMAP hBmp, HBITMAP *phOld);
-
-
-HBITMAP CreateDibSection32(int width, int height, BYTE **outBits);
-HBITMAP CopyBitmapToDib32(HBITMAP hSrc, int w, int h, BYTE **outBits);
-
-
+HBITMAP
+CreateDibSection32(int width, int height, BYTE **outBits);
+HBITMAP
+CopyBitmapToDib32(HBITMAP hSrc, int w, int h, BYTE **outBits);
 #include "pixel_ops.h"
 #define Transform_Flip PixelOps_Flip
-
-
-HFONT CreateClearTypeFont(int size, int weight, BOOL bItalic,
-                          const char *faceName);
+HFONT CreateClearTypeFont(int size, int weight, BOOL bItalic, const char *faceName);
 HFONT CreateSegoiUIFont(int size, int weight);
 void SetupTextRender(HDC hdc, COLORREF color);
-
 #endif

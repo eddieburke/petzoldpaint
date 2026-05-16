@@ -1,0 +1,21 @@
+# PeztoldPaint — keep SortIncludes false (Windows / transitive headers).
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: ForIndentation
+ColumnLimit: 1000
+SortIncludes: false
+BreakBeforeBraces: Attach
+AllowShortFunctionsOnASingleLine: Inline
+PointerAlignment: Right
+AlignConsecutiveMacros: AcrossEmptyLines
+AlwaysBreakAfterReturnType: None
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackParameters: true
+BinPackArguments: true
+
+
+# Suppress empty lines everywhere except between top-level definitions
+MaxEmptyLinesToKeep: 0
+EmptyLineBeforeAccessModifier: Never
+SeparateDefinitionBlocks: Always
