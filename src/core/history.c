@@ -123,7 +123,7 @@ BOOL HistoryPush(const char *desc) {
 	return PushInternal(desc, FALSE);
 }
 void HistoryPushSession(const char *desc) {
-	PushInternal(desc, TRUE);
+	(void)PushInternal(desc, TRUE);
 }
 static BOOL ApplyNode(HistNode *n) {
 	if (!n)

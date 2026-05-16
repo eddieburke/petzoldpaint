@@ -5,6 +5,7 @@ BOOL Interaction_Begin(HWND hWnd, int x, int y, int nButton, int toolId);
 BOOL Interaction_BeginEx(HWND hWnd, int x, int y, int nButton, int toolId, BOOL captureMouse);
 void Interaction_UpdateLastPoint(int x, int y);
 void Interaction_MarkModified(void);
+void Interaction_MarkModifiedDirect(void);
 BOOL Interaction_IsActive(void);
 BOOL Interaction_IsModified(void);
 BOOL Interaction_Commit(const char *label);

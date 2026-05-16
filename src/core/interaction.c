@@ -87,6 +87,9 @@ void Interaction_MarkModified(void) {
 	ix.modified = TRUE;
 	LayersMarkDraftDirty();
 }
+void Interaction_MarkModifiedDirect(void) {
+	ix.modified = TRUE;
+}
 BOOL Interaction_IsActive(void) {
 	return ix.active;
 }
@@ -133,13 +136,15 @@ BOOL Interaction_Commit(const char *label) {
 void Interaction_Abort(void) {
 	if (!ix.active)
 		return;
+	BOOL hadChanges = ix.modified || LayersIsDraftDirty();
 	LayersClearDraft();
 	EndState();
 	if (s_strokeDirtyValid)
 		Canvas_InvalidateBitmapRect(&s_strokeDirty);
 	else
 		InvalidateRect(GetCanvasWindow(), NULL, FALSE);
-	Core_Notify(EV_PIXELS_CHANGED);
+	if (hadChanges)
+		Core_Notify(EV_PIXELS_CHANGED);
 }
 void Interaction_EndQuiet(void) {
 	if (!ix.active)

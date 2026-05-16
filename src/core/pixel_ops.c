@@ -5,8 +5,11 @@ void PixelOps_InvertColors(BYTE *bits, int width, int height) {
 	if (!bits || width <= 0 || height <= 0)
 		return;
 	DWORD *pixels = (DWORD *)bits;
-	int count = width * height;
-	for (int i = 0; i < count; i++) {
+	size_t count = (size_t)width * (size_t)height;
+	for (size_t i = 0; i < count; i++) {
+		// Skip fully transparent pixels to avoid stale RGB in alpha=0 regions.
+		if ((pixels[i] >> 24) == 0)
+			continue;
 		// XOR with 0x00FFFFFF flips B, G, R, but leaves Alpha intact.
 		pixels[i] ^= 0x00FFFFFF;
 	}
@@ -19,9 +22,9 @@ void PixelOps_Fill(BYTE *bits, int width, int height, COLORREF color, BYTE alpha
 	BYTE b = GetBValue(color);
 	// BGRA (little-endian: B, G, R, A)
 	DWORD pixel = (DWORD)(b | (g << 8) | (r << 16) | (alpha << 24));
-	int count = width * height;
+	size_t count = (size_t)width * (size_t)height;
 	DWORD *dst = (DWORD *)bits;
-	for (int i = 0; i < count; i++) {
+	for (size_t i = 0; i < count; i++) {
 		dst[i] = pixel;
 	}
 }

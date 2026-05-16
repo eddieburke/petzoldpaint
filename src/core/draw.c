@@ -264,7 +264,9 @@ void DrawEllipseAlpha(BYTE *bits, int width, int height, int x, int y, int w, in
 					iry = 0;
 				float irx2 = irx * irx;
 				float iry2 = iry * iry;
-				float distInner = (irx2 > 0 && iry2 > 0) ? ((dx * dx) / irx2 + (dy * dy) / iry2) : 999.0f;
+				float termX = (irx2 > 0) ? ((dx * dx) / irx2) : 2.0f;
+				float termY = (iry2 > 0) ? ((dy * dy) / iry2) : 2.0f;
+				float distInner = termX + termY;
 				if (dist <= 1.0f && distInner >= 1.0f) {
 					DrawPixelAlpha(bits, width, height, i, j, color, alpha, mode);
 				}

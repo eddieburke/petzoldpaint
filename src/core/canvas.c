@@ -36,7 +36,7 @@ static void CleanupViewBuffer(void) {
 	s_viewW = s_viewH = 0;
 }
 static BOOL EnsureViewBuffer(HDC hdc, int w, int h) {
-	if (s_hViewDC && s_viewW == w && s_viewH == h)
+	if (s_hViewDC && s_hViewBmp && s_viewW == w && s_viewH == h)
 		return TRUE;
 	if (w <= 0 || h <= 0)
 		return FALSE;

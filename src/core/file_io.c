@@ -65,12 +65,8 @@ static void EnsureExtensionForSave(wchar_t *path, size_t maxLen, const wchar_t *
 		}
 	}
 }
-static void ShowWicError(HRESULT hr, const char *operation) {
-	char msg[512];
-	char hrMsg[256] = "";
-	FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, hr, 0, hrMsg, sizeof(hrMsg), NULL);
-	StringCchPrintfA(msg, sizeof(msg), "%s failed.\nHRESULT: 0x%08lX\n%s", operation, hr, hrMsg);
-	MessageBoxA(hMainWnd, msg, "Image Error", MB_ICONERROR);
+static void ReportImageFailure(const char *line) {
+	MessageBoxA(hMainWnd, line, "Image", MB_ICONERROR);
 }
 static BOOL LoadWicPixels(IWICFormatConverter *converter, UINT width, UINT height) {
 	if (width > (UINT)INT_MAX || height > (UINT)INT_MAX)
@@ -112,11 +108,8 @@ static BOOL LoadWicImage(const wchar_t *szPath) {
 	if (SUCCEEDED(hr))
 		hr = frame->lpVtbl->GetSize(frame, &width, &height);
 	BOOL ok = FALSE;
-	if (SUCCEEDED(hr)) {
+	if (SUCCEEDED(hr))
 		ok = LoadWicPixels(converter, width, height);
-		if (!ok && hr == S_OK)
-			hr = E_FAIL;
-	}
 	if (converter)
 		converter->lpVtbl->Release(converter);
 	if (frame)
@@ -124,7 +117,7 @@ static BOOL LoadWicImage(const wchar_t *szPath) {
 	if (decoder)
 		decoder->lpVtbl->Release(decoder);
 	if (!ok)
-		ShowWicError(hr, "Load image");
+		ReportImageFailure("Could not load the image.");
 	return ok;
 }
 INT_PTR CALLBACK JpegOptionsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -269,8 +262,8 @@ cleanup:
 		encoder->lpVtbl->Release(encoder);
 	if (stream)
 		stream->lpVtbl->Release(stream);
-	if (!ok)
-		ShowWicError(hr, "Save image");
+	if (!ok && lpszFileName && lpszFileName[0])
+		ReportImageFailure("Could not save the image.");
 	DeleteObject(hBmp);
 	return ok;
 }
