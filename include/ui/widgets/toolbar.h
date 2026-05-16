@@ -1,7 +1,6 @@
 #ifndef TOOLBAR_H
 #define TOOLBAR_H
 #include <windows.h>
-
 #define TOOLBAR_WIDTH 56
 void CreateToolbar(HWND hParent);
 void ToolbarOnPaint(HWND hWnd);

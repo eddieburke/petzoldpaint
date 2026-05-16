@@ -5,7 +5,7 @@
 BOOL FileLoad(HWND hWnd);
 BOOL FileSave(HWND hWnd);
 BOOL FileSaveAs(HWND hWnd);
-BOOL LoadBitmapFromFile(const wchar_t* szPath);
-IWICImagingFactory* FileIO_GetWicFactory(void);
+BOOL LoadBitmapFromFile(const wchar_t *szPath);
+IWICImagingFactory *FileIO_GetWicFactory(void);
 void FileIO_ShutdownCom(void);
 #endif

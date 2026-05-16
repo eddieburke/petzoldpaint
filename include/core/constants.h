@@ -1,14 +1,10 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
-
-typedef enum ToolCancelReason {
-  TOOL_CANCEL_ABORT,
-  TOOL_CANCEL_INTERRUPT
-} ToolCancelReason;
-
+typedef enum ToolCancelReason { TOOL_CANCEL_ABORT, TOOL_CANCEL_INTERRUPT } ToolCancelReason;
 #define MIN_ZOOM_PERCENT   12.5
 #define MAX_ZOOM_PERCENT   3200.0
+#define CANVAS_MIN_DIM     1
+#define CANVAS_MAX_DIM     16384
 #define SNAP_ANGLE_DEG     45
 #define DEFAULT_BRUSH_SIZE 1
-
 #endif
