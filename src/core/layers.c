@@ -98,7 +98,7 @@ BOOL LayersInit(int ww, int hh) {
 		cap = 0;
 		return FALSE;
 	}
-	memset(lyr[0].bits, 0, ww * hh * 4);
+	memset(lyr[0].bits, 0, (size_t)ww * (size_t)hh * 4);
 	lyr[0].opacity = 255;
 	lyr[0].blend = 0;
 	lyr[0].visible = TRUE;
@@ -218,7 +218,7 @@ BOOL LayersAddLayer(const char *name) {
 	lyr[lc].bmp = CreateLayerBmp(ww, hh, &lyr[lc].bits);
 	if (!lyr[lc].bmp)
 		return FALSE;
-	memset(lyr[lc].bits, 0, (size_t)ww * hh * 4);
+	memset(lyr[lc].bits, 0, (size_t)ww * (size_t)hh * 4);
 	lyr[lc].opacity = 255;
 	lyr[lc].blend = 0;
 	lyr[lc].visible = TRUE;
@@ -474,7 +474,7 @@ LayersFlattenToBitmapWithAlpha(BYTE **out) {
 	BYTE *bits;
 	HBITMAP bmp = CreateLayerBmp(ww, hh, &bits);
 	if (bmp) {
-		memset(bits, 0, ww * hh * 4);
+		memset(bits, 0, (size_t)ww * (size_t)hh * 4);
 		for (int i = 0; i < lc; i++)
 			if (lyr[i].visible && lyr[i].opacity)
 				for (int y = 0; y < hh; y++)
@@ -597,13 +597,6 @@ BOOL LayersLoadFromBitmap(HBITMAP hBmp) {
 		LogLastError("LayersLoadFromBitmap failed - GetObject returned 0");
 		return FALSE;
 	}
-	// Overflow check for pixel count
-	if (bm.bmWidth > 0 && bm.bmHeight > 0) {
-		if (bm.bmWidth > 32767 || bm.bmHeight > 32767) { // Heuristic sanity check
-			OutputDebugStringA("LayersLoadFromBitmap: dimensions too large\n");
-			return FALSE;
-		}
-	}
 	LayersDestroy();
 	cap = 4;
 	lyr = calloc(cap, sizeof(Layer));
@@ -667,15 +660,23 @@ BOOL LayersApplyRawTransformToAll(int nw, int nh, RawBitmapTransformFunc fn, voi
 	if (!fn || lc <= 0)
 		return FALSE;
 	int ow = Canvas_GetWidth(), oh = Canvas_GetHeight();
+	HBITMAP newBmp[MAX_LAYERS];
+	BYTE *newBits[MAX_LAYERS];
+	for (int i = 0; i < lc; i++) {
+		newBmp[i] = CreateLayerBmp(nw, nh, &newBits[i]);
+		if (!newBmp[i]) {
+			for (int j = 0; j < i; j++)
+				DeleteObject(newBmp[j]);
+			return FALSE;
+		}
+	}
 	for (int i = 0; i < lc; i++) {
 		BYTE *obits = lyr[i].bits;
 		HBITMAP obmp = lyr[i].bmp;
-		HBITMAP nb = CreateLayerBmp(nw, nh, &lyr[i].bits);
-		fn(obits, ow, oh, lyr[i].bits, nw, nh, pUserData);
-		BYTE *nbits = lyr[i].bits;
+		fn(obits, ow, oh, newBits[i], nw, nh, pUserData);
 		DeleteObject(obmp);
-		lyr[i].bmp = nb;
-		lyr[i].bits = nbits;
+		lyr[i].bmp = newBmp[i];
+		lyr[i].bits = newBits[i];
 	}
 	Canvas_SetWidth(nw);
 	Canvas_SetHeight(nh);
@@ -702,7 +703,7 @@ void LayersEnsureDraft(void) {
 	draftW = ww;
 	draftH = hh;
 	if (draftBits)
-		memset(draftBits, 0, ww * hh * 4);
+		memset(draftBits, 0, (size_t)ww * (size_t)hh * 4);
 }
 void LayersBeginStroke(void) {
 	LayersEnsureDraft();

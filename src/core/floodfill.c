@@ -54,6 +54,12 @@ BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor, BYTE fillAlpha)
 	BOOL hasSelection = IsSelectionActive();
 	if (hasSelection && !IsPointInSelection(startX, startY))
 		return FALSE;
+	/* Back up the layer so we can restore on OOM during stack growth. */
+	size_t bufSize = (size_t)w * (size_t)h * 4;
+	BYTE *backup = (BYTE *)malloc(bufSize);
+	if (!backup)
+		return FALSE;
+	memcpy(backup, bits, bufSize);
 	free(s_stack);
 	s_stack = NULL;
 	s_stackCount = 0;
@@ -100,9 +106,13 @@ BOOL FloodFillCanvas(int startX, int startY, COLORREF fillColor, BYTE fillAlpha)
 	s_stack = NULL;
 	s_stackCount = 0;
 	s_stackCap = 0;
+	free(backup);
 	LayersMarkDirty();
 	return TRUE;
 cleanup_fail:
+	/* Restore the layer to its pre-fill state on partial failure. */
+	memcpy(bits, backup, bufSize);
+	free(backup);
 	free(s_stack);
 	s_stack = NULL;
 	s_stackCount = 0;

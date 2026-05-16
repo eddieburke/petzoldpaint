@@ -21,6 +21,7 @@ typedef struct {
 	COLORREF (*color)(int btn);
 	BYTE (*alpha)(int btn);
 	int (*pad)(void);
+	BOOL directWrite;
 } Policy;
 static void PencilPt(BYTE *b, int w, int h, int x, int y, COLORREF c, BYTE a, int s) {
 	(void)s;
@@ -82,10 +83,10 @@ static int SprayPad(void) {
 	return DrawPrim_GetSprayRadius(nSprayRadius) + 2;
 }
 static const Policy policies[] = {
-    {TOOL_PENCIL, PencilPt, PencilLn, OneSize, PrimaryColor, NormalAlpha, PencilPad},
-    {TOOL_BRUSH, BrushPt, BrushLn, BrushSize, PrimaryColor, NormalAlpha, BrushPad},
-    {TOOL_ERASER, EraserPt, NULL, BrushSize, IgnoredColor, IgnoredAlpha, EraserPad},
-    {TOOL_AIRBRUSH, SprayPt, NULL, SpraySize, PrimaryColor, NormalAlpha, SprayPad},
+    {TOOL_PENCIL, PencilPt, PencilLn, OneSize, PrimaryColor, NormalAlpha, PencilPad, FALSE},
+    {TOOL_BRUSH, BrushPt, BrushLn, BrushSize, PrimaryColor, NormalAlpha, BrushPad, FALSE},
+    {TOOL_ERASER, EraserPt, NULL, BrushSize, IgnoredColor, IgnoredAlpha, EraserPad, TRUE},
+    {TOOL_AIRBRUSH, SprayPt, NULL, SpraySize, PrimaryColor, NormalAlpha, SprayPad, FALSE},
 };
 static const Policy *GetPol(int tool) {
 	for (int i = 0; i < (int)(sizeof(policies) / sizeof(policies[0])); i++)
@@ -121,13 +122,16 @@ static void FreehandTool_HandleMouseDown(HWND hWnd, int x, int y, int btn) {
 	}
 	if (!Interaction_Begin(hWnd, x, y, btn, tool))
 		return;
-	BYTE *b = LayersGetStrokeBits();
+	BYTE *b = p->directWrite ? Layers_BeginWrite() : LayersGetStrokeBits();
 	if (!b) {
 		Interaction_Abort();
 		return;
 	}
 	p->pt(b, Canvas_GetWidth(), Canvas_GetHeight(), x, y, p->color(btn), p->alpha(btn), p->size());
-	Interaction_MarkModified();
+	if (p->directWrite)
+		Interaction_MarkModifiedDirect();
+	else
+		Interaction_MarkModified();
 	Interaction_NoteStrokeSegment(x, y, x, y, p->pad());
 	Interaction_FlushStrokeRedraw();
 }
@@ -138,7 +142,7 @@ static void FreehandTool_HandleMouseMove(HWND hWnd, int x, int y, int btn) {
 	const Policy *p = ActivePolicy();
 	if (!p || !p->pt)
 		return;
-	BYTE *b = LayersGetStrokeBits();
+	BYTE *b = p->directWrite ? Layers_BeginWrite() : LayersGetStrokeBits();
 	if (!b)
 		return;
 	POINT
@@ -146,7 +150,10 @@ static void FreehandTool_HandleMouseMove(HWND hWnd, int x, int y, int btn) {
 	Interaction_GetLastPoint(&lp);
 	int cbtn = Interaction_GetDrawButton();
 	DrawInterp(b, Canvas_GetWidth(), Canvas_GetHeight(), p, lp.x, lp.y, x, y, p->color(cbtn), p->alpha(cbtn));
-	Interaction_MarkModified();
+	if (p->directWrite)
+		Interaction_MarkModifiedDirect();
+	else
+		Interaction_MarkModified();
 	Interaction_NoteStrokeSegment(lp.x, lp.y, x, y, p->pad());
 	Interaction_UpdateLastPoint(x, y);
 }
@@ -199,7 +206,7 @@ void FreehandTool_OnTimerTick(void) {
 	const Policy *p = ActivePolicy();
 	if (!p || Interaction_GetActiveToolId() != TOOL_AIRBRUSH)
 		return;
-	BYTE *b = LayersGetStrokeBits();
+	BYTE *b = p->directWrite ? Layers_BeginWrite() : LayersGetStrokeBits();
 	if (!b)
 		return;
 	POINT
@@ -207,7 +214,10 @@ void FreehandTool_OnTimerTick(void) {
 	Interaction_GetLastPoint(&lp);
 	int btn = Interaction_GetDrawButton();
 	p->pt(b, Canvas_GetWidth(), Canvas_GetHeight(), lp.x, lp.y, p->color(btn), p->alpha(btn), p->size());
-	Interaction_MarkModified();
+	if (p->directWrite)
+		Interaction_MarkModifiedDirect();
+	else
+		Interaction_MarkModified();
 	Interaction_NoteStrokeSegment(lp.x, lp.y, lp.x, lp.y, p->pad());
 	Interaction_FlushStrokeRedraw();
 }
