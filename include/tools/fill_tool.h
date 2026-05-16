@@ -3,6 +3,6 @@
 
 #include <windows.h>
 
-void FillToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
+void FillTool_OnMouseDown(HWND hWnd, int x, int y, int nButton);
 
 #endif

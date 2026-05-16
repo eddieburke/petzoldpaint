@@ -1174,4 +1174,3 @@ void UpdateToolOptions(int nNewTool) {
   if (hOptionsWnd) InvalidateRect(hOptionsWnd, NULL, FALSE);
 }
 
-int GetToolOptionsHeight(void) { return TOOL_OPTIONS_HEIGHT; }

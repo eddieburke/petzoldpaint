@@ -36,6 +36,33 @@ void PixelOps_Fill(BYTE *bits, int width, int height, COLORREF color,
 }
 
 
+void PixelOps_FillRect(BYTE *bits, int width, int height, COLORREF color,
+                     BYTE alpha, int startX, int startY, int endX, int endY) {
+  if (!bits || width <= 0 || height <= 0)
+    return;
+  if (startX < 0)
+    startX = 0;
+  if (startY < 0)
+    startY = 0;
+  if (endX > width)
+    endX = width;
+  if (endY > height)
+    endY = height;
+  if (startX >= endX || startY >= endY)
+    return;
+
+  BYTE r = GetRValue(color);
+  BYTE g = GetGValue(color);
+  BYTE b = GetBValue(color);
+  DWORD pixel = (DWORD)(b | (g << 8) | (r << 16) | (alpha << 24));
+
+  for (int y = startY; y < endY; y++) {
+    DWORD *row = (DWORD *)(bits + y * width * 4);
+    for (int x = startX; x < endX; x++)
+      row[x] = pixel;
+  }
+}
+
 void PixelOps_FillCheckerboard(BYTE *bits, int width, int height) {
   PixelOps_FillCheckerboardRect(bits, width, height, 0, 0, width, height);
 }

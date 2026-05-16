@@ -12,6 +12,7 @@
 #include "poly_store.h"
 #include "file_io.h"
 #include "palette.h"
+#include "pixel_ops.h"
 #include "tools.h"
 #include <math.h>
 #include <stdio.h>
@@ -24,6 +25,7 @@
 #endif
 
 #define HANDLE_SZ 6
+#define PASTE_MAX_DIM 16384
 
 typedef enum { SEL_NONE, SEL_REGION_ONLY, SEL_FLOATING } SelectionMode;
 
@@ -51,6 +53,7 @@ static SelectionMode s_modeAtDragStart = SEL_NONE;
 static BOOL s_dragMoved = FALSE;
 
 static void UpdateDraft(void);
+static void InvalidateSelectionDraft(void);
 static void RestoreCanvas(void);
 static void SampleRotated(const BYTE *src, int sw, int sh, BYTE *dst, double angle, double cx, double cy, int sx, int sy, int ex, int ey, int cw, int ch);
 static void DeleteInternal(BOOL pushHist, const char *label);
@@ -60,6 +63,9 @@ static void StartRotationDrag(HWND hWnd, int x, int y, int rot);
 static void StartResizeDrag(HWND hWnd, int x, int y, int handle);
 static void StartMoveDrag(HWND hWnd, int x, int y);
 static void StartNewSelection(HWND hWnd, int x, int y);
+static void GetRotatedExtents(int *dw, int *dh, double *cx, double *cy, int *sx,
+                              int *sy, int *ex, int *ey, POINT *corners);
+static void SelBmpToLocal(int bx, int by, double *lx, double *ly);
 
 void SelectionClearState(void) {
     if (s_sel.hRegion) DeleteObject(s_sel.hRegion);
@@ -153,11 +159,12 @@ static void RestoreCanvas(void) {
     }
 }
 
-static void GetRotatedExtents(int *dw, int *dh, double *cx, double *cy, int *sx, int *sy, int *ex, int *ey) {
+static void GetRotatedExtents(int *dw, int *dh, double *cx, double *cy, int *sx,
+                              int *sy, int *ex, int *ey, POINT *corners) {
     int w = s_sel.rcBounds.right - s_sel.rcBounds.left;
     int h = s_sel.rcBounds.bottom - s_sel.rcBounds.top;
-    *dw = w;
-    *dh = h;
+    if (dw) *dw = w;
+    if (dh) *dh = h;
     double cxLocal = s_sel.rcBounds.left + w / 2.0;
     double cyLocal = s_sel.rcBounds.top + h / 2.0;
     if (cx) *cx = cxLocal;
@@ -180,6 +187,10 @@ static void GetRotatedExtents(int *dw, int *dh, double *cx, double *cy, int *sx,
     for (int i = 0; i < 4; i++) {
         double rx = pts[i][0] * c - pts[i][1] * s;
         double ry = pts[i][0] * s + pts[i][1] * c;
+        if (corners) {
+            corners[i].x = (int)floor(cxLocal + rx + 0.5);
+            corners[i].y = (int)floor(cyLocal + ry + 0.5);
+        }
         if (i == 0 || rx < mnX) mnX = rx;
         if (i == 0 || rx > mxX) mxX = rx;
         if (i == 0 || ry < mnY) mnY = ry;
@@ -199,7 +210,7 @@ void CommitSelection(void) {
         if (bits) {
             int dw, dh, sx, sy, ex, ey;
             double cx, cy;
-            GetRotatedExtents(&dw, &dh, &cx, &cy, &sx, &sy, &ex, &ey);
+            GetRotatedExtents(&dw, &dh, &cx, &cy, &sx, &sy, &ex, &ey, NULL);
             if (dw > 0 && dh > 0) {
                 SampleRotated(s_sel.pFloatBits, s_sel.nFloatW, s_sel.nFloatH, bits,
                               s_sel.fAngle, cx, cy, sx, sy, ex, ey,
@@ -286,7 +297,7 @@ void Selection_DestroySnapshot(SelectionSnapshot* s) {
     free(s);
 }
 
-void Selection_ApplySnapshot(SelectionSnapshot* s) {
+void Selection_ApplySnapshot(const SelectionSnapshot* s) {
     SelectionClearState();
     if (!s) {
         InvalidateRect(GetCanvasWindow(), NULL, FALSE);
@@ -362,23 +373,81 @@ void SelectionRotate(int deg) {
     HistoryPushSession("Adjust Selection");
 }
 
+static void InvalidateSelectionDraft(void) {
+    if (s_sel.mode != SEL_FLOATING) {
+        InvalidateRect(GetCanvasWindow(), NULL, FALSE);
+        return;
+    }
+    int sx, sy, ex, ey;
+    GetRotatedExtents(NULL, NULL, NULL, NULL, &sx, &sy, &ex, &ey, NULL);
+    if (ex <= sx || ey <= sy) {
+        InvalidateRect(GetCanvasWindow(), NULL, FALSE);
+        return;
+    }
+    RECT rc = {sx, sy, ex, ey};
+    Canvas_InvalidateBitmapRect(&rc);
+}
+
+static void BlitFloatAxisAlignedToDraft(void) {
+    BYTE *draft;
+    int ww, hh, fw, fh, left, top, right, bottom;
+
+    if (!s_sel.pFloatBits)
+        return;
+    LayersClearDraft();
+    draft = LayersGetDraftBits();
+    if (!draft)
+        return;
+    ww = Canvas_GetWidth();
+    hh = Canvas_GetHeight();
+    fw = s_sel.nFloatW;
+    fh = s_sel.nFloatH;
+    left = s_sel.rcBounds.left;
+    top = s_sel.rcBounds.top;
+    right = s_sel.rcBounds.right;
+    bottom = s_sel.rcBounds.bottom;
+    for (int y = top; y < bottom; y++) {
+        for (int x = left; x < right; x++) {
+            int fx = x - left, fy = y - top;
+            if (fx < 0 || fy < 0 || fx >= fw || fy >= fh)
+                continue;
+            BYTE *sp = s_sel.pFloatBits + (fy * fw + fx) * 4;
+            if (sp[3] == 0)
+                continue;
+            BYTE *dp = draft + (y * ww + x) * 4;
+            PixelOps_BlendPixel(sp[2], sp[1], sp[0], sp[3], dp, 0);
+        }
+    }
+    LayersMarkDraftDirty();
+    LayersMarkDirtyRect(left, top, right, bottom);
+}
+
 static void UpdateDraft(void) {
+    int dw, dh, sx, sy, ex, ey;
+    double cx, cy;
+    BYTE *draft;
+
     if (s_sel.mode != SEL_FLOATING || !s_sel.pFloatBits) {
         LayersClearDraft();
         return;
     }
-    BYTE *draft = LayersGetDraftBits();
-    if (!draft) return;
+    if (fabs(s_sel.fAngle) < 0.01) {
+        BlitFloatAxisAlignedToDraft();
+        return;
+    }
     LayersClearDraft();
-    int dw, dh, sx, sy, ex, ey;
-    double cx, cy;
-    GetRotatedExtents(&dw, &dh, &cx, &cy, &sx, &sy, &ex, &ey);
+    draft = LayersGetDraftBits();
+    if (!draft)
+        return;
+    GetRotatedExtents(&dw, &dh, &cx, &cy, &sx, &sy, &ex, &ey, NULL);
     if (dw > 0 && dh > 0) {
         SampleRotated(s_sel.pFloatBits, s_sel.nFloatW, s_sel.nFloatH, draft,
                       s_sel.fAngle, cx, cy, sx, sy, ex, ey, Canvas_GetWidth(),
                       Canvas_GetHeight());
     }
-    LayersMarkDirty();
+    LayersMarkDraftDirty();
+    if (ex > sx && ey > sy)
+        LayersMarkDirtyRect(sx, sy, ex, ey);
 }
 
 static HGLOBAL ExportPNG(void) {
@@ -454,10 +523,15 @@ void SelectionCut(void) {
     (void)HistoryPush("Cut");
 }
 
+static BOOL PasteDimsOk(int w, int h) {
+    return w > 0 && h > 0 && w <= PASTE_MAX_DIM && h <= PASTE_MAX_DIM;
+}
+
 void SelectionPaste(HWND hWnd) {
     SelectionClearState();
     if (!OpenClipboard(hWnd)) return;
     HGLOBAL hDat = NULL;
+    HBITMAP hBmp = NULL;
     int w = 0;
     int h = 0;
     UINT uPng = RegisterClipboardFormat("PNG");
@@ -474,12 +548,16 @@ void SelectionPaste(HWND hWnd) {
                         if (SUCCEEDED(conv->lpVtbl->Initialize(conv, (IWICBitmapSource*)fr, &GUID_WICPixelFormat32bppBGRA, WICBitmapDitherTypeNone, NULL, 0.0, WICBitmapPaletteTypeCustom))) {
                             UINT uw, uh;
                             conv->lpVtbl->GetSize(conv, &uw, &uh);
-                            s_sel.hFloatBmp = CreateDibSection32(uw, uh, &s_sel.pFloatBits);
-                            if (s_sel.hFloatBmp) {
-                                conv->lpVtbl->CopyPixels(conv, NULL, uw * 4, uw * uh * 4,
-                                                         s_sel.pFloatBits);
-                                w = uw;
-                                h = uh;
+                            if (PasteDimsOk((int)uw, (int)uh)) {
+                                s_sel.hFloatBmp =
+                                    CreateDibSection32(uw, uh, &s_sel.pFloatBits);
+                                if (s_sel.hFloatBmp) {
+                                    conv->lpVtbl->CopyPixels(
+                                        conv, NULL, uw * 4, uw * uh * 4,
+                                        s_sel.pFloatBits);
+                                    w = (int)uw;
+                                    h = (int)uh;
+                                }
                             }
                         }
                     }
@@ -503,6 +581,54 @@ void SelectionPaste(HWND hWnd) {
                     if (v5->bV5AlphaMask == 0) {
                         for (int i = 0; i < w * h; i++) {
                             s_sel.pFloatBits[i * 4 + 3] = 255;
+                        }
+                    }
+                }
+            }
+            GlobalUnlock(hDat);
+        }
+    } else if ((hBmp = (HBITMAP)GetClipboardData(CF_BITMAP))) {
+        BITMAP bm;
+        if (GetObject(hBmp, sizeof(bm), &bm)) {
+            w = bm.bmWidth;
+            h = abs(bm.bmHeight);
+            if (PasteDimsOk(w, h))
+                s_sel.hFloatBmp = CopyBitmapToDib32(hBmp, w, h, &s_sel.pFloatBits);
+        }
+    } else if ((hDat = GetClipboardData(CF_DIB))) {
+        BYTE *p = (BYTE *)GlobalLock(hDat);
+        if (p) {
+            BITMAPINFOHEADER *bih = (BITMAPINFOHEADER *)p;
+            w = bih->biWidth;
+            h = abs(bih->biHeight);
+            if (PasteDimsOk(w, h) && bih->biBitCount == 32) {
+                int paletteBytes = 0;
+                if (bih->biBitCount <= 8) {
+                    int colors = bih->biClrUsed ? (int)bih->biClrUsed : (1 << bih->biBitCount);
+                    paletteBytes = colors * sizeof(RGBQUAD);
+                }
+                BYTE *src = p + bih->biSize + paletteBytes;
+                DWORD rowBytes = ((w * bih->biBitCount + 31) / 32) * 4;
+                s_sel.hFloatBmp = CreateDibSection32(w, h, &s_sel.pFloatBits);
+                if (s_sel.hFloatBmp) {
+                    for (int y = 0; y < h; y++) {
+                        memcpy(s_sel.pFloatBits + y * w * 4, src + y * rowBytes, w * 4);
+                    }
+                }
+            } else if (PasteDimsOk(w, h) && bih->biBitCount == 24) {
+                int paletteBytes = 0;
+                BYTE *src = p + bih->biSize + paletteBytes;
+                DWORD rowBytes = ((w * 24 + 31) / 32) * 4;
+                s_sel.hFloatBmp = CreateDibSection32(w, h, &s_sel.pFloatBits);
+                if (s_sel.hFloatBmp) {
+                    for (int row = 0; row < h; row++) {
+                        BYTE *dst = s_sel.pFloatBits + row * w * 4;
+                        BYTE *srow = src + row * rowBytes;
+                        for (int col = 0; col < w; col++) {
+                            dst[col * 4 + 0] = srow[col * 3 + 0];
+                            dst[col * 4 + 1] = srow[col * 3 + 1];
+                            dst[col * 4 + 2] = srow[col * 3 + 2];
+                            dst[col * 4 + 3] = 255;
                         }
                     }
                 }
@@ -552,20 +678,36 @@ static void DeleteInternal(BOOL pushHist, const char *label) {
 
 void SelectionDelete(void) { DeleteInternal(TRUE, "Delete Selection"); }
 
-static int HitTestRotationHandles(const RECT *rc, int x, int y) {
-    double scale = GetZoomScale();
-    int tol = max(1, (int)(6.0 / scale));
-    int rotTol = (int)(20.0 / scale);
-    int L = rc->left, T = rc->top, R = rc->right > rc->left ? rc->right - 1 : L, B = rc->bottom > rc->top ? rc->bottom - 1 : T;
-    POINT c[4] = {{L,T},{R,T},{R,B},{L,B}};
-    int h[4] = {HT_ROTATE_TL, HT_ROTATE_TR, HT_ROTATE_BR, HT_ROTATE_BL};
+static void SelBmpToLocal(int bx, int by, double *lx, double *ly) {
+    double cx = (s_sel.rcBounds.left + s_sel.rcBounds.right) / 2.0;
+    double cy = (s_sel.rcBounds.top + s_sel.rcBounds.bottom) / 2.0;
+    double dx = bx - cx, dy = by - cy;
+    double rad = -s_sel.fAngle * M_PI / 180.0;
+    double c = cos(rad), s = sin(rad);
+    *lx = dx * c - dy * s;
+    *ly = dx * s + dy * c;
+}
+
+static int HitTestRotationHandles(int x, int y) {
+    if (s_sel.mode == SEL_NONE)
+        return HT_NONE;
+    POINT c[4];
+    GetRotatedExtents(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, c);
+    double cx = (s_sel.rcBounds.left + s_sel.rcBounds.right) / 2.0;
+    double cy = (s_sel.rcBounds.top + s_sel.rcBounds.bottom) / 2.0;
+    int hitTol = max(1, (int)(8.0 / GetZoomScale()));
+    int rotOff = max(2, (int)(18.0 / GetZoomScale()));
+    static const int ids[4] = {HT_ROTATE_TL, HT_ROTATE_TR, HT_ROTATE_BR, HT_ROTATE_BL};
     for (int i = 0; i < 4; i++) {
-        int dx = x - c[i].x;
-        int dy = y - c[i].y;
-        int d2 = dx*dx + dy*dy;
-        if (d2 > tol*tol && d2 <= rotTol*rotTol) {
-            if ((i==0 && (x<L || y<T)) || (i==1 && (x>R || y<T)) || (i==2 && (x>R || y>B)) || (i==3 && (x<L || y>B))) return h[i];
-        }
+        double vx = c[i].x - cx, vy = c[i].y - cy;
+        double len = sqrt(vx * vx + vy * vy);
+        if (len < 0.5)
+            continue;
+        int hx = (int)(c[i].x + vx / len * rotOff + 0.5);
+        int hy = (int)(c[i].y + vy / len * rotOff + 0.5);
+        int dx = x - hx, dy = y - hy;
+        if (dx * dx + dy * dy <= hitTol * hitTol)
+            return ids[i];
     }
     return HT_NONE;
 }
@@ -607,25 +749,26 @@ static void StartNewSelection(HWND hWnd, int x, int y) {
     SetCapture(hWnd);
 }
 
-void SelectionToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+void SelectionTool_OnMouseDown(HWND hWnd, int x, int y, int nButton) {
     if (nButton == MK_RBUTTON) return;
     s_modeAtDragStart = s_sel.mode;
     s_dragMoved = FALSE;
 
     if (s_sel.mode != SEL_NONE) {
-        RECT rcBar;
-        GetRotatedExtents(&rcBar.right, &rcBar.bottom, NULL, NULL, &rcBar.left, &rcBar.top, &rcBar.right, &rcBar.bottom);
+        int sx, sy, ex, ey;
+        GetRotatedExtents(NULL, NULL, NULL, NULL, &sx, &sy, &ex, &ey, NULL);
+        RECT rcBar = {sx, sy, ex, ey};
         COMMIT_BAR_HANDLE_CLICK(&rcBar, x, y, CommitSelection(), CancelSelection());
 
-        RECT rcFrame;
-        GetRotatedExtents(&rcFrame.right, &rcFrame.bottom, NULL, NULL, &rcFrame.left, &rcFrame.top, &rcFrame.right, &rcFrame.bottom);
-        int rot = HitTestRotationHandles(&rcFrame, x, y);
+        int rot = HitTestRotationHandles(x, y);
         if (rot != HT_NONE) {
             StartRotationDrag(hWnd, x, y, rot);
             return;
         }
 
-        int handle = Overlay_HitTestBoxHandles(&s_sel.rcBounds, x, y);
+        int handle = (fabs(s_sel.fAngle) < 0.01)
+                         ? Overlay_HitTestBoxHandles(&s_sel.rcBounds, x, y)
+                         : HT_NONE;
         if (handle != HT_NONE) {
             StartResizeDrag(hWnd, x, y, handle);
             return;
@@ -642,7 +785,7 @@ void SelectionToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
     StartNewSelection(hWnd, x, y);
 }
 
-void SelectionToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+void SelectionTool_OnMouseMove(HWND hWnd, int x, int y, int nButton) {
     if (GetCapture() != hWnd) return;
     if (s_sel.nDragMode >= HT_ROTATE_TL && s_sel.nDragMode <= HT_ROTATE_BL) {
         s_dragMoved = TRUE;
@@ -670,14 +813,15 @@ void SelectionToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
     } else if (s_sel.nDragMode != HT_NONE) {
         s_dragMoved = TRUE;
         s_sel.rcBounds = s_sel.rcDragOrig;
-        ResizeRect(&s_sel.rcBounds, s_sel.nDragMode, x - s_sel.ptDragStart.x, y - s_sel.ptDragStart.y, 2, IsShiftDown());
+        ResizeRect(&s_sel.rcBounds, s_sel.nDragMode, x - s_sel.ptDragStart.x,
+                   y - s_sel.ptDragStart.y, 2, IsShiftDown());
         NormalizeRect(&s_sel.rcBounds);
     }
     if (s_sel.mode == SEL_FLOATING) UpdateDraft();
-    InvalidateRect(GetCanvasWindow(), NULL, FALSE);
+    InvalidateSelectionDraft();
 }
 
-void SelectionToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+void SelectionTool_OnMouseUp(HWND hWnd, int x, int y, int nButton) {
     (void)x;
     (void)y;
     (void)nButton;
@@ -698,50 +842,89 @@ void SelectionToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
 }
 
 void SelectionTool_OnCaptureLost(void) {
+    int wasDragging = s_sel.nDragMode;
     s_sel.nDragMode = HT_NONE;
     s_dragMoved = FALSE;
     if (s_modeAtDragStart == SEL_NONE && s_sel.mode == SEL_REGION_ONLY) {
         SelectionClearState();
         LayersClearDraft();
         InvalidateRect(GetCanvasWindow(), NULL, FALSE);
+        return;
     }
+    if (wasDragging == HT_NONE) return;
+    if (wasDragging >= HT_ROTATE_TL && wasDragging <= HT_ROTATE_BL)
+        s_sel.fAngle = s_sel.fAngleBase;
+    else
+        s_sel.rcBounds = s_sel.rcDragOrig;
+    if (s_sel.mode == SEL_FLOATING) UpdateDraft();
+    InvalidateSelectionDraft();
 }
 
 int SelectionGetCursorId(int x, int y) {
     if (s_sel.mode == SEL_NONE) return HT_NONE;
-    RECT rcFrame;
-    GetRotatedExtents(&rcFrame.right, &rcFrame.bottom, NULL, NULL, &rcFrame.left,
-                      &rcFrame.top, &rcFrame.right, &rcFrame.bottom);
-    int rot = HitTestRotationHandles(&rcFrame, x, y);
+    if (s_sel.nDragMode != HT_NONE) return s_sel.nDragMode;
+    int rot = HitTestRotationHandles(x, y);
     if (rot != HT_NONE) return rot;
-    return Overlay_HitTestBoxHandles(&s_sel.rcBounds, x, y);
+    if (fabs(s_sel.fAngle) < 0.01)
+        return Overlay_HitTestBoxHandles(&s_sel.rcBounds, x, y);
+    return IsPointInSelection(x, y) ? HT_BODY : HT_NONE;
 }
 
 BOOL IsPointInSelection(int x, int y) {
     if (s_sel.mode == SEL_NONE) return FALSE;
     double fx = x, fy = y;
     if (fabs(s_sel.fAngle) > 0.01) {
-        double rad = -s_sel.fAngle * M_PI / 180.0, c = cos(rad), s = sin(rad);
-        double cx = (s_sel.rcBounds.left + s_sel.rcBounds.right) / 2.0, cy = (s_sel.rcBounds.top + s_sel.rcBounds.bottom) / 2.0;
-        double dx = x - cx, dy = y - cy;
-        fx = cx + dx * c - dy * s;
-        fy = cy + dx * s + dy * c;
+        double lx, ly;
+        double cx = (s_sel.rcBounds.left + s_sel.rcBounds.right) / 2.0;
+        double cy = (s_sel.rcBounds.top + s_sel.rcBounds.bottom) / 2.0;
+        SelBmpToLocal(x, y, &lx, &ly);
+        fx = cx + lx;
+        fy = cy + ly;
     }
     if (s_sel.hRegion) return PtInRegion(s_sel.hRegion, (int)floor(fx + 0.5), (int)floor(fy + 0.5));
     return PtInRect(&s_sel.rcBounds, (POINT){(int)floor(fx + 0.5), (int)floor(fy + 0.5)});
 }
 
-void SelectionToolDrawOverlay(HDC hdc, double scale, int dx, int dy) {
+static void DrawRotationHandles(const OverlayContext *ctx) {
+    POINT c[4];
+    GetRotatedExtents(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, c);
+    double cx = (s_sel.rcBounds.left + s_sel.rcBounds.right) / 2.0;
+    double cy = (s_sel.rcBounds.top + s_sel.rcBounds.bottom) / 2.0;
+    int rotOff = max(2, (int)(18.0 / GetZoomScale()));
+    for (int i = 0; i < 4; i++) {
+        double vx = c[i].x - cx, vy = c[i].y - cy;
+        double len = sqrt(vx * vx + vy * vy);
+        if (len < 0.5) continue;
+        int hx = (int)(c[i].x + vx / len * rotOff + 0.5);
+        int hy = (int)(c[i].y + vy / len * rotOff + 0.5);
+        Overlay_DrawHandle(ctx, hx, hy, OVERLAY_HANDLE_CIRCLE, FALSE);
+    }
+}
+
+void SelectionTool_DrawOverlay(HDC hdc, double scale, int dx, int dy) {
     if (s_sel.mode == SEL_NONE) return;
     OverlayContext ctx;
     Overlay_Init(&ctx, hdc, scale, dx, dy);
-    RECT rcFrame;
-    GetRotatedExtents(&rcFrame.right, &rcFrame.bottom, NULL, NULL, &rcFrame.left,
-                      &rcFrame.top, &rcFrame.right, &rcFrame.bottom);
-    Overlay_DrawSelectionFrame(&ctx, &rcFrame, s_sel.mode == SEL_FLOATING);
+    BOOL dotted = (s_sel.mode == SEL_FLOATING);
+    if (fabs(s_sel.fAngle) < 0.01) {
+        Overlay_DrawSelectionFrame(&ctx, &s_sel.rcBounds, dotted);
+        Overlay_DrawBoxHandles(&ctx, &s_sel.rcBounds);
+    } else {
+        POINT c[4], loop[5];
+        GetRotatedExtents(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, c);
+        loop[0] = c[0]; loop[1] = c[1]; loop[2] = c[2]; loop[3] = c[3]; loop[4] = c[0];
+        Overlay_DrawPolyline(&ctx, loop, 5, RGB(255, 255, 255), PS_SOLID);
+        Overlay_DrawPolyline(&ctx, loop, 5, RGB(0, 0, 0), dotted ? PS_DOT : PS_DASH);
+    }
+    DrawRotationHandles(&ctx);
     if (s_sel.mode == SEL_REGION_ONLY && s_sel.freeformPts.count > 1)
         Overlay_DrawPolyline(&ctx, s_sel.freeformPts.points, s_sel.freeformPts.count, RGB(0,0,0), PS_DOT);
-    CommitBar_Draw(&ctx, &rcFrame);
+    {
+        int sx, sy, ex, ey;
+        GetRotatedExtents(NULL, NULL, NULL, NULL, &sx, &sy, &ex, &ey, NULL);
+        RECT rcBar = {sx, sy, ex, ey};
+        CommitBar_Draw(&ctx, &rcBar);
+    }
 }
 
 void SelectionTool_Deactivate(void) { if (s_sel.mode != SEL_NONE) CommitSelection(); }
@@ -749,7 +932,7 @@ BOOL SelectionTool_Cancel(ToolCancelReason reason) {
     if (s_sel.mode == SEL_NONE && s_sel.nDragMode == HT_NONE) return FALSE;
 
     if (reason == TOOL_CANCEL_INTERRUPT && SelectionIsDragging()) {
-        SelectionToolOnMouseUp(GetCanvasWindow(), 0, 0, 0);
+        SelectionTool_OnMouseUp(GetCanvasWindow(), 0, 0, 0);
         return TRUE;
     }
 
@@ -850,6 +1033,5 @@ void SelectionMove(int dx, int dy) {
     if (s_sel.mode != SEL_FLOATING) return;
     OffsetRect(&s_sel.rcBounds, dx, dy);
     UpdateDraft();
-    InvalidateRect(GetCanvasWindow(), NULL, FALSE);
-    HistoryPushSession("Adjust Selection");
+    InvalidateSelectionDraft();
 }

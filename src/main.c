@@ -130,10 +130,6 @@ void ResizeLayout(HWND hwnd)
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    PAINTSTRUCT ps;
-    HDC hdc;
-
-
     switch (message) {
     case WM_CREATE:
         if (!CreateCanvas(800, 600)) {
@@ -149,7 +145,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         CreateStatusBar(hwnd);
         CreateCanvasWindow(hwnd);
         DragAcceptFiles(hwnd, TRUE);
-        SetMenu(hwnd, LoadMenu(hInst, MAKEINTRESOURCE(IDM_MAINMENU)));
         return 0;
 
     case WM_SIZE:
@@ -188,13 +183,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hwnd, message, wParam, lParam);
 
     case WM_ERASEBKGND:
-        return 1;  // Prevent flicker
+        return 1;
 
-    case WM_PAINT:
-        hdc = BeginPaint(hwnd, &ps);
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
         ClearClientRect(hdc, hwnd, GetSysColorBrush(COLOR_APPWORKSPACE));
         EndPaint(hwnd, &ps);
         return 0;
+    }
 
     case WM_DROPFILES:
         {

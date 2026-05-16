@@ -4,13 +4,13 @@
 #include "peztold_core.h"
 
 
-void PenToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void PenToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void PenToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
+void PenTool_OnMouseDown(HWND hWnd, int x, int y, int nButton);
+void PenTool_OnMouseMove(HWND hWnd, int x, int y, int nButton);
+void PenTool_OnMouseUp(HWND hWnd, int x, int y, int nButton);
 
 
 BOOL IsPenDrawing(void);
 void PenTool_Deactivate(void);
-BOOL CancelPenDrawing(void);
+BOOL PenTool_Cancel(void);
 
 #endif

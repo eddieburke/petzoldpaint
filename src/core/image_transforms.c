@@ -4,6 +4,7 @@
 #include "layers.h"
 #include "pixel_ops.h"
 #include "tools/selection_tool.h"
+#include "tools.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -54,8 +55,6 @@ static BOOL CALLBACK FlipRotateDlgProc(HWND hDlg, UINT message, WPARAM wParam,
 static void FlipRawTransform(BYTE *pSrc, int srcW, int srcH, BYTE *pDst,
                              int dstW, int dstH, void *pUserData) {
   BOOL bHorz = (BOOL)(INT_PTR)pUserData;
-  // For flip, dst bit set is initially empty or needs a copy if we flip in
-  // place. LayersApplyRawTransformToAll gives us a fresh pDst.
   memcpy(pDst, pSrc, srcW * srcH * 4);
   PixelOps_Flip(pDst, srcW, srcH, bHorz);
 }
@@ -70,7 +69,6 @@ static void DoFlip(BOOL bHorz) {
                                    (void *)(INT_PTR)bHorz)) {
     (void)HistoryPush(desc);
     SetDocumentDirty();
-    Core_Notify(EV_PIXELS_CHANGED);
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
   }
 }
@@ -118,7 +116,6 @@ static void DoRotate(int degrees) {
                                    (void *)(INT_PTR)degrees)) {
     (void)HistoryPush(desc);
     SetDocumentDirty();
-    Core_Notify(EV_PIXELS_CHANGED);
     SendMessage(hMainWnd, WM_SIZE, 0, 0);
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
   }
@@ -126,12 +123,15 @@ static void DoRotate(int degrees) {
 
 
 void ImageFlipRotate(HWND hWnd) {
+  BOOL hadSelection = IsSelectionActive();
+  if (!hadSelection)
+    Tool_FinalizeCurrentState();
   INT_PTR result = DialogBox(hInst, MAKEINTRESOURCE(IDD_FLIPROTATE), hWnd,
                              (DLGPROC)FlipRotateDlgProc);
   if (result <= 0)
     return;
 
-  if (IsSelectionActive()) {
+  if (hadSelection) {
     if (result == 1)
       SelectionFlip(TRUE);
     else if (result == 2)
@@ -244,6 +244,7 @@ static BOOL CALLBACK ResizeSkewDlgProc(HWND hDlg, UINT message, WPARAM wParam,
 
 
 void ImageResizeSkew(HWND hWnd) {
+  Tool_FinalizeCurrentState();
   TRANSFORM_PARAMS params;
   if (DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_RESIZESKEW), hWnd,
                      (DLGPROC)ResizeSkewDlgProc, (LPARAM)&params)) {
@@ -270,7 +271,6 @@ void ImageResizeSkew(HWND hWnd) {
                                      &skewParams)) {
       (void)HistoryPush(desc);
       SetDocumentDirty();
-      Core_Notify(EV_PIXELS_CHANGED);
       SendMessage(hMainWnd, WM_SIZE, 0, 0);
       InvalidateRect(GetCanvasWindow(), NULL, FALSE);
     }
@@ -314,6 +314,7 @@ static BOOL CALLBACK AttributesDlgProc(HWND hDlg, UINT message, WPARAM wParam,
 
 
 void ImageAttributes(HWND hWnd) {
+  Tool_FinalizeCurrentState();
   int oldW = Canvas_GetWidth();
   int oldH = Canvas_GetHeight();
   if (DialogBox(hInst, MAKEINTRESOURCE(IDD_ATTRIBUTES), hWnd,
@@ -340,6 +341,8 @@ void ImageInvertColors(HWND hWnd) {
     return;
   }
 
+  Tool_FinalizeCurrentState();
+
   if (!LayersGetActiveColorBitmap())
     return;
 
@@ -359,7 +362,16 @@ void ImageInvertColors(HWND hWnd) {
 
 
 void ImageClear(HWND hWnd) {
-  ClearCanvas(Palette_GetSecondaryColor());
+  (void)hWnd;
+  Tool_FinalizeCurrentState();
+  /* Clear to fully transparent — secondary palette color is a drawing color,
+     not a canvas background. The checkerboard composite shows the result. */
+  BYTE *bits = Layers_BeginWrite();
+  if (!bits)
+    return;
+  int ww = Canvas_GetWidth(), hh = Canvas_GetHeight();
+  memset(bits, 0, (size_t)ww * (size_t)hh * 4);
+  LayersMarkDirty();
   (void)HistoryPush("Clear Image");
   SetDocumentDirty();
   InvalidateRect(GetCanvasWindow(), NULL, FALSE);

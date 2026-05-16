@@ -90,7 +90,7 @@ static void OnTextFontChanged(void);
 static void TextEdit_Destroy(void);
 static char *TextTool_DuplicateCurrentText(void);
 
-void ApplyTextFont(void) {
+static void ApplyTextFont(void) {
     TextFont_Apply();
     if (s_text.hEdit) {
         if (s_text.hEditFont) DeleteObject(s_text.hEditFont);
@@ -144,7 +144,7 @@ void TextRender_ToActive(const char* txt, int len, int tw, int th, int dx, int d
     DeleteObject(hTmp);
 }
 
-void CommitText(HWND hParent) {
+static void CommitText(HWND hParent) {
     if (s_text.mode == TEXT_NONE || !s_text.hEdit) return;
     int len = GetWindowTextLengthA(s_text.hEdit);
     if (len > 0) {
@@ -182,7 +182,7 @@ void CommitText(HWND hParent) {
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-BOOL CancelText(void) {
+BOOL TextTool_Cancel(void) {
     if (s_text.mode == TEXT_NONE) return FALSE;
     LayersClearDraft();
     TextEdit_Destroy();
@@ -194,12 +194,22 @@ BOOL CancelText(void) {
 }
 
 BOOL IsTextEditing(void) { return s_text.mode != TEXT_NONE; }
+
+BOOL TextTool_TryEditUndo(void) {
+  if (s_text.mode != TEXT_EDITING || !s_text.hEdit)
+    return FALSE;
+  if (GetFocus() != s_text.hEdit)
+    return FALSE;
+  SendMessage(s_text.hEdit, EM_UNDO, 0, 0);
+  return TRUE;
+}
+
 void TextTool_Deactivate(void) { if (s_text.mode != TEXT_NONE) CommitText(NULL); }
 
 static LRESULT CALLBACK TextEditProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     if (msg == WM_KEYDOWN) {
         if (wp == VK_ESCAPE) {
-            CancelText();
+            TextTool_Cancel();
             return 0;
         }
         if (IsCtrlDown()) {
@@ -232,7 +242,7 @@ static LRESULT CALLBACK CanvasSubclassText(HWND hwnd, UINT msg, WPARAM wp, LPARA
         SetBkMode((HDC)wp, TRANSPARENT);
         return (LRESULT)GetStockObject(NULL_BRUSH);
     }
-    if (msg == WM_RBUTTONUP) CancelText();
+    if (msg == WM_RBUTTONUP) TextTool_Cancel();
     return DefSubclassProc(hwnd, msg, wp, lp);
 }
 
@@ -348,14 +358,14 @@ static void OnTextFontChanged(void) {
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-void TextToolOnMouseDown(HWND hwnd, int x, int y, int btn) {
+void TextTool_OnMouseDown(HWND hwnd, int x, int y, int btn) {
     if (s_text.mode == TEXT_NONE) {
         s_text.ptDragStart = (POINT){x, y};
         s_text.rcBox = (RECT){x, y, x, y};
         s_text.mode = TEXT_DRAWING;
         Interaction_Begin(hwnd, x, y, MK_LBUTTON, TOOL_TEXT);
     } else if (s_text.mode == TEXT_EDITING) {
-        COMMIT_BAR_HANDLE_CLICK(&s_text.rcBox, x, y, CommitText(hwnd), CancelText());
+        COMMIT_BAR_HANDLE_CLICK(&s_text.rcBox, x, y, CommitText(hwnd), TextTool_Cancel());
 
         int h = Overlay_HitTestBoxHandles(&s_text.rcBox, x, y);
         if (h >= 0) {
@@ -369,7 +379,7 @@ void TextToolOnMouseDown(HWND hwnd, int x, int y, int btn) {
     }
 }
 
-void TextToolOnMouseMove(HWND hwnd, int x, int y, int btn) {
+void TextTool_OnMouseMove(HWND hwnd, int x, int y, int btn) {
     if (GetCapture() != hwnd) return;
     if (s_text.mode == TEXT_DRAWING) { 
         s_text.rcBox.left = min(s_text.ptDragStart.x, x);
@@ -393,7 +403,7 @@ void TextToolOnMouseMove(HWND hwnd, int x, int y, int btn) {
     }
 }
 
-void TextToolOnMouseUp(HWND hwnd, int x, int y, int btn) {
+void TextTool_OnMouseUp(HWND hwnd, int x, int y, int btn) {
     if (GetCapture() == hwnd) ReleaseCapture();
     if (s_text.mode == TEXT_DRAWING) {
         s_text.rcBox.left = min(s_text.ptDragStart.x, x);
@@ -430,7 +440,7 @@ void TextToolOnMouseUp(HWND hwnd, int x, int y, int btn) {
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-void TextToolDrawOverlay(HDC hdc, double scale, int dx, int dy) {
+void TextTool_DrawOverlay(HDC hdc, double scale, int dx, int dy) {
     if (s_text.mode == TEXT_NONE) return;
     OverlayContext ctx;
     Overlay_Init(&ctx, hdc, scale, dx, dy);
@@ -440,7 +450,7 @@ void TextToolDrawOverlay(HDC hdc, double scale, int dx, int dy) {
         CommitBar_Draw(&ctx, &s_text.rcBox);
 }
 
-void TextToolOnViewportChanged(HWND hwnd) {
+void TextTool_OnViewportChanged(HWND hwnd) {
     (void)hwnd;
     if (s_text.mode == TEXT_EDITING || s_text.mode == TEXT_RESIZING) {
         ApplyTextFont();

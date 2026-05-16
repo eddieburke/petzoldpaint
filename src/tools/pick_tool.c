@@ -7,7 +7,7 @@
 
 
 static COLORREF SampleColorAtPoint(int x, int y) {
-  return LayersSampleCompositeColor(x, y, Palette_GetSecondaryColor());
+  return LayersSampleCompositeColor(x, y);
 }
 
 static void ApplyPickedColor(COLORREF color, int nButton) {
@@ -29,7 +29,7 @@ static void HandlePickInteraction(int x, int y, int nButton) {
 }
 
 
-void PickToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+void PickTool_OnMouseDown(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
 
   // Also handle cases where nButton might be passed as a specific ID instead of
@@ -37,7 +37,7 @@ void PickToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   HandlePickInteraction(x, y, nButton);
 }
 
-void PickToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+void PickTool_OnMouseMove(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
 
   if (!(nButton & (MK_LBUTTON | MK_RBUTTON)))

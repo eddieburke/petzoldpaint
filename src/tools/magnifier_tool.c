@@ -12,7 +12,7 @@ static int nMagnifierStartY = 0;
 static int nMagnifierEndX = 0;
 static int nMagnifierEndY = 0;
 
-void MagnifierToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+void MagnifierTool_OnMouseDown(HWND hWnd, int x, int y, int nButton) {
   if (nButton == MK_LBUTTON) {
     bMagnifierDragging = TRUE;
     nMagnifierStartX = x;
@@ -27,7 +27,7 @@ void MagnifierToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   }
 }
 
-void MagnifierToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+void MagnifierTool_OnMouseMove(HWND hWnd, int x, int y, int nButton) {
   if (bMagnifierDragging) {
     nMagnifierEndX = x;
     nMagnifierEndY = y;
@@ -35,7 +35,7 @@ void MagnifierToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
   }
 }
 
-void MagnifierToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+void MagnifierTool_OnMouseUp(HWND hWnd, int x, int y, int nButton) {
   if (!bMagnifierDragging)
     return;
 
@@ -76,7 +76,7 @@ void MagnifierToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-void MagnifierToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
+void MagnifierTool_DrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
   if (!bMagnifierDragging)
     return;
 
@@ -96,7 +96,7 @@ void MagnifierToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
   Gdi_DeletePen(hPen);
 }
 
-void MagnifierToolDeactivate(void) {
+void MagnifierTool_Deactivate(void) {
   if (bMagnifierDragging) {
     bMagnifierDragging = FALSE;
     ReleaseCapture();

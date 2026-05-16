@@ -4,13 +4,13 @@
 #include "peztold_core.h"
 
 
-void CrayonToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void CrayonToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void CrayonToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
+void CrayonTool_OnMouseDown(HWND hWnd, int x, int y, int nButton);
+void CrayonTool_OnMouseMove(HWND hWnd, int x, int y, int nButton);
+void CrayonTool_OnMouseUp(HWND hWnd, int x, int y, int nButton);
 
 BOOL IsCrayonDrawing(void);
 void CrayonTool_Deactivate(void);
-BOOL CancelCrayonDrawing(void);
+BOOL CrayonTool_Cancel(void);
 
 
 void CrayonOptions_Draw(HDC hdc, RECT *prc);

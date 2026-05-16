@@ -117,11 +117,6 @@ BOOL Preset_SaveCurrent(PresetCategory cat, int slot)
     return fn();
 }
 
-void Preset_SaveAll(void)
-{
-    /* TODO: persist to file */
-}
-
 void Preset_LoadAll(void)
 {
     /* TODO: load from file; must be called after all Preset_RegisterSlot. */

@@ -19,7 +19,6 @@ int         Doc_GetWidth(void);
 int         Doc_GetHeight(void);
 void        Doc_SetSize(int w, int h);
 BOOL        Doc_IsDirty(void);
-void        Doc_SetDirty(void);
 void        Doc_ClearDirty(void);
 void        SetDocumentDirty(void);
 const wchar_t* Doc_GetFile(void);

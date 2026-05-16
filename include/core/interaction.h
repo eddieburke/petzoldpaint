@@ -19,4 +19,8 @@ int Interaction_GetActiveToolId(void);
 int Interaction_GetDrawButton(void);
 void Interaction_GetLastPoint(POINT *outPt);
 
+/* Accumulate bitmap dirty rect during a stroke; one Invalidate per flush. */
+void Interaction_NoteStrokeSegment(int x1, int y1, int x2, int y2, int padBmp);
+void Interaction_FlushStrokeRedraw(void);
+
 #endif

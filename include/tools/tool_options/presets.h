@@ -37,7 +37,6 @@ int Preset_ShowPopupMenu(HWND hParent, PresetCategory cat, int slot, int x, int 
 
 BOOL Preset_SaveCurrent(PresetCategory cat, int slot);
 
-void Preset_SaveAll(void);
 void Preset_LoadAll(void);
 
 #endif

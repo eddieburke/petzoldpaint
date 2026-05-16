@@ -14,11 +14,11 @@ typedef struct BezierToolSnapshot {
   int drawButton;
 } BezierToolSnapshot;
 
-void BezierToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void BezierToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void BezierToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
+void BezierTool_OnMouseDown(HWND hWnd, int x, int y, int nButton);
+void BezierTool_OnMouseMove(HWND hWnd, int x, int y, int nButton);
+void BezierTool_OnMouseUp(HWND hWnd, int x, int y, int nButton);
 
-void BezierToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
+void BezierTool_DrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
 
 BOOL IsCurvePending(void);
 BOOL BezierTool_Cancel(void);

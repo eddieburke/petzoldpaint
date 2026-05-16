@@ -66,7 +66,7 @@ BOOL Poly_Copy(PolyStore *dst, const PolyStore *src) {
   return TRUE;
 }
 
-HRGN Poly_CreateRegionEx(PolyStore *p, int fillMode) {
+static HRGN Poly_CreateRegionEx(PolyStore *p, int fillMode) {
   if (!p || p->count < 3)
     return NULL;
   return CreatePolygonRgn(p->points, p->count, fillMode);

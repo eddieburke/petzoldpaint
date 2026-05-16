@@ -125,7 +125,7 @@ void BezierTool_Deactivate(void) {
 
 BOOL IsCurvePending(void) { return state != STATE_IDLE; }
 
-void BezierToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+void BezierTool_OnMouseDown(HWND hWnd, int x, int y, int nButton) {
   if (nButton == MK_RBUTTON) {
     if (state != STATE_IDLE) BezierTool_Cancel();
     return;
@@ -175,7 +175,7 @@ void BezierToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-void BezierToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+void BezierTool_OnMouseMove(HWND hWnd, int x, int y, int nButton) {
   if (GetCapture() != hWnd) return;
   switch (state) {
   case STATE_DRAWING_LINE:
@@ -209,7 +209,7 @@ void BezierToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
   InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-void BezierToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+void BezierTool_OnMouseUp(HWND hWnd, int x, int y, int nButton) {
   if (GetCapture() != hWnd) return;
   bSuspendingCapture = TRUE;
   ReleaseCapture();
@@ -253,7 +253,7 @@ void BezierToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-void BezierToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
+void BezierTool_DrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
   if (state == STATE_IDLE) return;
   OverlayContext ctx;
   Overlay_Init(&ctx, hdc, dScale, nDestX, nDestY);

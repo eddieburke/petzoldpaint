@@ -74,14 +74,10 @@ int Overlay_HitTestBoxHandles(const RECT *rcBmp, int xBmp, int yBmp) {
 
 void Overlay_DrawSelectionFrame(const OverlayContext *ctx, const RECT *rcBitmap,
                                 BOOL bDotted) {
-  // Convert bitmap rectangle to screen coordinates
   RECT rcScreen;
   Viewport_RectBmpToScr(&ctx->vp, rcBitmap, &rcScreen);
-
-  // Use helper function from helpers.c
   DrawSelectionFrame(ctx->hdc, &rcScreen, bDotted);
 }
-
 
 void Overlay_DrawLine(const OverlayContext *ctx, int x1Bmp, int y1Bmp,
                       int x2Bmp, int y2Bmp, COLORREF color, int penStyle) {

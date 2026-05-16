@@ -15,7 +15,6 @@
 #define LAYERS_PANEL_MIN_W 200
 #define LAYERS_PANEL_MIN_H 250
 
-// Control IDs
 #define IDC_LAYER_LIST 1001
 #define IDC_BTN_ADD 1002
 #define IDC_BTN_DELETE 1003
@@ -162,7 +161,7 @@ static void HandleLayerSelection(void) {
   if (listIdx == LB_ERR)
     return;
   int idx = ListIndexToLayerIndex(listIdx);
-  CommitSelection();
+  Tool_FinalizeCurrentState();
   if (LayersSetActiveIndex(idx)) {
     UpdateControlsFromLayer();
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
@@ -175,8 +174,7 @@ static void HandleAddLayer(void) {
   char name[64];
   StringCchPrintf(name, sizeof(name), "Layer %d", count + 1);
   if (LayersAddLayer(name)) {
-    HistoryPush("Add Layer");
-    RefreshLayerList();
+    if (!HistoryPush("Add Layer")) RefreshLayerList();
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
     SetDocumentDirty();
   }
@@ -189,10 +187,7 @@ static void HandleDeleteLayer(void) {
   Tool_FinalizeCurrentState();
   int idx = ListIndexToLayerIndex(listIdx);
   if (LayersDeleteLayer(idx)) {
-    BOOL historyRecorded = HistoryPush("Delete Layer");
-    if (!historyRecorded) {
-      RefreshLayerList();
-    }
+    if (!HistoryPush("Delete Layer")) RefreshLayerList();
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
     SetDocumentDirty();
   }
@@ -210,8 +205,7 @@ static void HandleMoveLayer(int delta) {
   int to = ListIndexToLayerIndex(toList);
 
   if (LayersMoveLayer(idx, to)) {
-    HistoryPush("Move Layer");
-    RefreshLayerList();
+    if (!HistoryPush("Move Layer")) RefreshLayerList();
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
     SetDocumentDirty();
   }
@@ -227,17 +221,12 @@ static void HandleOpacityChange(BOOL bPushHistory) {
   if (newPercent > 100)
     newPercent = 100;
 
-  // Get old opacity before changing
-  int oldPercent = ((int)LayersGetOpacity(idx) * 100) / 255;
-
-  // Change the canvas real-time
   UpdateOpacityLabel(newPercent);
   BYTE opacity = (BYTE)((newPercent * 255) / 100);
-  LayersSetOpacity(idx, opacity);
-  InvalidateRect(GetCanvasWindow(), NULL, FALSE);
-  SetDocumentDirty();
- 
-  // Only push history when drag ends and value changed
+  if (LayersSetOpacity(idx, opacity)) {
+    InvalidateRect(GetCanvasWindow(), NULL, FALSE);
+    SetDocumentDirty();
+  }
   if (bPushHistory && s_startPercent != newPercent) {
     HistoryPush("Layer Opacity");
     s_startPercent = newPercent;
@@ -252,12 +241,7 @@ static void HandleBlendChange(void) {
   if (newMode == CB_ERR)
     return;
 
-  // Get old blend mode before changing
-  int oldMode = LayersGetBlendMode(idx);
-
-  // Only push history if actually changed
-  if (oldMode != newMode) {
-    LayersSetBlendMode(idx, newMode);
+  if (LayersSetBlendMode(idx, newMode)) {
     HistoryPush("Layer Blend Mode");
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
     SetDocumentDirty();
@@ -271,12 +255,7 @@ static void HandleVisibleToggle(void) {
   BOOL newVisible =
       (SendMessage(hChkVisible, BM_GETCHECK, 0, 0) == BST_CHECKED);
 
-  // Get old visibility before changing
-  BOOL oldVisible = LayersGetVisible(idx);
-
-  // Only push history if actually changed
-  if (oldVisible != newVisible) {
-    LayersSetVisible(idx, newVisible);
+  if (LayersSetVisible(idx, newVisible)) {
     HistoryPush("Layer Visibility");
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
     SetDocumentDirty();
@@ -381,20 +360,15 @@ static LRESULT CALLBACK LayersPanelWndProc(HWND hwnd, UINT message,
       HandleDeleteLayer();
       break;
     case IDC_BTN_UP:
-      // Move layer up in z-order: moving UP in list = higher layer index
       HandleMoveLayer(-1);
       break;
     case IDC_BTN_DOWN:
-      // Move layer down in z-order: moving DOWN in list = lower layer index
       HandleMoveLayer(1);
       break;
     case IDC_BTN_MERGE:
       Tool_FinalizeCurrentState();
       if (LayersMergeDown(LayersGetActiveIndex())) {
-        BOOL historyRecorded = HistoryPush("Merge Layer");
-        if (!historyRecorded) {
-          RefreshLayerList();
-        }
+        if (!HistoryPush("Merge Layer")) RefreshLayerList();
         InvalidateRect(GetCanvasWindow(), NULL, FALSE);
         SetDocumentDirty();
       }

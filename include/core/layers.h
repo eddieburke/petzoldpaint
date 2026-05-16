@@ -21,28 +21,33 @@ BOOL LayersMoveLayer(int f, int t);
 BOOL LayersMergeDown(int i);
 
 BOOL LayersGetVisible(int i);
-void LayersSetVisible(int i, BOOL v);
+BOOL LayersSetVisible(int i, BOOL v);
 BYTE LayersGetOpacity(int i);
-void LayersSetOpacity(int i, BYTE o);
+BOOL LayersSetOpacity(int i, BYTE o);
 int LayersGetBlendMode(int i);
-void LayersSetBlendMode(int i, int b);
+BOOL LayersSetBlendMode(int i, int b);
 void LayersGetName(int i, char *out, int sz);
-
-void GetLayerDisplayName(int i, char *out, int sz);
 
 HBITMAP LayersGetActiveColorBitmap(void);
 BYTE *LayersGetActiveColorBits(void);
 BYTE *Layers_BeginWrite(void);
 
-HBITMAP LayersGetCompositeBitmap(BOOL check);
+HBITMAP LayersGetCompositeBitmap(void);
 HBITMAP LayersFlattenToBitmap(COLORREF bg);
 HBITMAP LayersFlattenToBitmapWithAlpha(BYTE **out);
-COLORREF LayersSampleCompositeColor(int x, int y, COLORREF bg);
+COLORREF LayersSampleCompositeColor(int x, int y);
 void LayersMarkDirty(void);
+void LayersMarkDirtyRect(int left, int top, int right, int bottom);
+
+/* Shared draft buffer: strokes (Interaction) and shape/selection previews. */
+void LayersBeginStroke(void);
+BYTE *LayersGetStrokeBits(void);
+void LayersMarkDraftDirty(void);
 
 BYTE *LayersGetDraftBits(void);
 void LayersClearDraft(void);
 void LayersMergeDraftToActive(void);
+void LayersMergeDraftRect(const RECT *bmpBounds);
 BOOL LayersIsDraftDirty(void);
 void LayersEnsureDraft(void);
 

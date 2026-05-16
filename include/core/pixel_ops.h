@@ -9,6 +9,8 @@ void PixelOps_InvertColors(BYTE *bits, int width, int height);
 
 void PixelOps_Fill(BYTE *bits, int width, int height, COLORREF color,
                    BYTE alpha);
+void PixelOps_FillRect(BYTE *bits, int width, int height, COLORREF color,
+                       BYTE alpha, int startX, int startY, int endX, int endY);
 
 
 static inline BYTE PixelOps_ApplyBlendMultiply(BYTE s, BYTE d) {

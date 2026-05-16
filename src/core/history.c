@@ -5,11 +5,11 @@
 #include "canvas.h"
 #include "helpers.h"
 #include "history.h"
+#include "interaction.h"
 #include "layers.h"
 #include "peztold_core.h"
 #include "tool_session.h"
-
-#define MAX_HISTORY 100
+#include "tools.h"
 
 typedef struct HistNode {
     LayerSnapshot *layers;
@@ -31,7 +31,7 @@ static void FreeNode(HistNode *n) {
 
 /* After dropping the oldest node, logical indices shift; keep pos in range. */
 static void EvictHeadIfOverLimit(void) {
-    if (count <= MAX_HISTORY || !head)
+    if (count <= HISTORY_MAX_ENTRIES || !head)
         return;
     HistNode *old = head;
     head = head->next;
@@ -67,7 +67,7 @@ void HistoryDestroy(void) {
     count = 0; pos = -1;
 }
 
-void HistoryReportPushFailure(const char *ctx) {
+static void HistoryReportPushFailure(const char *ctx) {
     char msg[256];
     snprintf(msg, sizeof(msg), "History push failed: %s\n", ctx ? ctx : "unknown");
     OutputDebugStringA(msg);
@@ -112,10 +112,12 @@ void HistoryPushSession(const char *desc) {
 static BOOL ApplyNode(HistNode *n) {
     if (!n)
         return FALSE;
+    ToolCancel(TOOL_CANCEL_INTERRUPT, FALSE);
     if (!n->layers || !LayersApplySnapshot(n->layers))
         return FALSE;
-    if (n->tool)
-        ToolSession_Apply(n->tool);
+    if (Interaction_IsActive())
+        Interaction_Abort();
+    ToolSession_Apply(n->tool);
     InvalidateRect(GetCanvasWindow(), NULL, FALSE);
     Core_Notify(EV_PIXELS_CHANGED);
     Core_Notify(EV_LAYER_CONFIG);
@@ -124,14 +126,30 @@ static BOOL ApplyNode(HistNode *n) {
 
 BOOL HistoryUndo(void) {
     if (!curr || !curr->prev) return FALSE;
-    curr = curr->prev; pos--;
-    return ApplyNode(curr);
+    HistNode *oldCurr = curr;
+    int oldPos = pos;
+    curr = curr->prev;
+    pos--;
+    if (!ApplyNode(curr)) {
+        curr = oldCurr;
+        pos = oldPos;
+        return FALSE;
+    }
+    return TRUE;
 }
 
 BOOL HistoryRedo(void) {
     if (!curr || !curr->next) return FALSE;
-    curr = curr->next; pos++;
-    return ApplyNode(curr);
+    HistNode *oldCurr = curr;
+    int oldPos = pos;
+    curr = curr->next;
+    pos++;
+    if (!ApplyNode(curr)) {
+        curr = oldCurr;
+        pos = oldPos;
+        return FALSE;
+    }
+    return TRUE;
 }
 
 void HistoryClear(void) { HistoryDestroy(); HistoryInit(); Core_Notify(EV_DOC_RESET); }
@@ -141,14 +159,22 @@ BOOL HistoryJumpTo(int idx) {
     HistNode *n = head;
     for (int i = 0; i < idx && n; i++) n = n->next;
     if (!n) return FALSE;
-    curr = n; pos = idx;
-    return ApplyNode(curr);
+    HistNode *oldCurr = curr;
+    int oldPos = pos;
+    curr = n;
+    pos = idx;
+    if (!ApplyNode(curr)) {
+        curr = oldCurr;
+        pos = oldPos;
+        return FALSE;
+    }
+    return TRUE;
 }
 
 int HistoryGetPosition(void) { return pos; }
 int HistoryGetCount(void) { return count; }
 
-const char *HistoryGetDescription(int idx) {
+static const char *HistoryGetDescription(int idx) {
     HistNode *n = head;
     for (int i = 0; i < idx && n; i++) n = n->next;
     return n ? n->desc : NULL;

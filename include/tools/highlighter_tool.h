@@ -4,13 +4,13 @@
 #include "peztold_core.h"
 
 
-void HighlighterToolOnMouseDown(HWND hWnd, int x, int y, int nButton);
-void HighlighterToolOnMouseMove(HWND hWnd, int x, int y, int nButton);
-void HighlighterToolOnMouseUp(HWND hWnd, int x, int y, int nButton);
+void HighlighterTool_OnMouseDown(HWND hWnd, int x, int y, int nButton);
+void HighlighterTool_OnMouseMove(HWND hWnd, int x, int y, int nButton);
+void HighlighterTool_OnMouseUp(HWND hWnd, int x, int y, int nButton);
 
 BOOL IsHighlighterDrawing(void);
 void HighlighterTool_Deactivate(void);
-BOOL CancelHighlighterDrawing(void);
+BOOL HighlighterTool_Cancel(void);
 
 void HighlighterTool_RegisterPresets(void);
 

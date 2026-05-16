@@ -28,8 +28,7 @@ void ToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY);
 void SetCurrentTool(int nTool);
 int Tool_GetCurrent(void);
 void Tool_FinalizeCurrentState(void);
+BOOL Tool_IsCurrentBusy(void);
 void InitializeTools(void);
-void CommitCurrentSelection(void);
-void ClearSelection(void);
 void ResetToolStateForNewDocument(void);
 #endif

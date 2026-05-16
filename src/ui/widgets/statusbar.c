@@ -12,7 +12,7 @@ static HWND hTrackbar = NULL;
 static BOOL bVisible = TRUE;
 static int nCurrentX = 0;
 static int nCurrentY = 0;
-static COLORREF crCurrent = RGB(0, 0, 0);
+static COLORREF crCurrent = CLR_INVALID;
 static double currentZoom = 100.0;
 LRESULT CALLBACK StatusBarWndProc(HWND hwnd, UINT message, WPARAM wParam,
                                   LPARAM lParam) {
@@ -45,17 +45,29 @@ LRESULT CALLBACK StatusBarWndProc(HWND hwnd, UINT message, WPARAM wParam,
     HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
 
     StringCchPrintf(szBuffer, sizeof(szBuffer), "  Pos: %d, %d", nCurrentX, nCurrentY);
+    TextOut(hdc, 4, 4, szBuffer, (int)strlen(szBuffer));
 
-    StringCchPrintf(szBuffer, sizeof(szBuffer), "  Color: #%02X%02X%02X  RGB(%d, %d, %d)",
-            GetRValue(crCurrent), GetGValue(crCurrent), GetBValue(crCurrent),
-            GetRValue(crCurrent), GetGValue(crCurrent), GetBValue(crCurrent));
+    if (crCurrent == CLR_INVALID) {
+      StringCchCopy(szBuffer, sizeof(szBuffer),
+                    "  Color: (transparent)                       ");
+    } else {
+      StringCchPrintf(szBuffer, sizeof(szBuffer),
+                      "  Color: #%02X%02X%02X  RGB(%d, %d, %d)",
+                      GetRValue(crCurrent), GetGValue(crCurrent),
+                      GetBValue(crCurrent), GetRValue(crCurrent),
+                      GetGValue(crCurrent), GetBValue(crCurrent));
+    }
     TextOut(hdc, 140, 4, szBuffer, (int)strlen(szBuffer));
 
     RECT rcSwatch = {140 + 260, 4, 140 + 280, 18};
-    HBRUSH hSwatchBr = CreateSolidBrush(crCurrent);
-    if (hSwatchBr) {
-      FillRect(hdc, &rcSwatch, hSwatchBr);
-      DeleteObject(hSwatchBr);
+    if (crCurrent == CLR_INVALID) {
+      /* No fill — frame only signals transparency. */
+    } else {
+      HBRUSH hSwatchBr = CreateSolidBrush(crCurrent);
+      if (hSwatchBr) {
+        FillRect(hdc, &rcSwatch, hSwatchBr);
+        DeleteObject(hSwatchBr);
+      }
     }
     FrameRect(hdc, &rcSwatch, GetStockObject(BLACK_BRUSH));
 
@@ -101,7 +113,7 @@ void CreateStatusBar(HWND hParent) {
   static char szClassName[] = "PeztoldStatusBar";
 
   ZeroMemory(&wc, sizeof(wc));
-  wc.style = 0; // Removed CS_HREDRAW | CS_VREDRAW to reduce flicker
+  wc.style = 0;
   wc.lpfnWndProc = StatusBarWndProc;
   wc.hInstance = hInst;
   wc.hCursor = LoadCursor(NULL, IDC_ARROW);
@@ -158,7 +170,7 @@ void StatusBarUpdateZoom(double z) {
     if (hStatusWnd && bVisible) {
       RECT rcClient;
       GetClientRect(hStatusWnd, &rcClient);
-      rcClient.left = rcClient.right - 200; // Invalidate right part 
+      rcClient.left = rcClient.right - 200;
       InvalidateRect(hStatusWnd, &rcClient, FALSE);
     }
   }

@@ -15,12 +15,13 @@
 
 
 typedef enum {
-  SHAPE_STATE_IDLE = 0, // No active shape
-  SHAPE_STATE_CREATING, // User dragging to create shape
-  SHAPE_STATE_EDITING,  // Created and waiting for commit
-  SHAPE_STATE_RESIZING  // Dragging handles/body
+  SHAPE_STATE_IDLE = 0,
+  SHAPE_STATE_CREATING,
+  SHAPE_STATE_EDITING,
+  SHAPE_STATE_RESIZING
 } ShapeState;
 
+#define ROUNDRECT_RADIUS 16
 
 static struct {
   ShapeState state;
@@ -34,73 +35,48 @@ static struct {
   POINT ptEndOrig;
 } s_Shape = {SHAPE_STATE_IDLE, 0, {0, 0}, {0, 0}, 0};
 
+static void SnapEndpointIfShift(int *x, int *y) {
+  if (!IsShiftDown()) return;
+  if (s_Shape.activeToolId == TOOL_LINE)
+    SnapToAngle(s_Shape.ptStart.x, s_Shape.ptStart.y, x, y, 45);
+  else
+    SnapToSquare(s_Shape.ptStart.x, s_Shape.ptStart.y, x, y);
+}
 
 static void DrawShapeToBits(BYTE *bits, int width, int height) {
   COLORREF fg = GetColorForButton(s_Shape.drawButton);
-  COLORREF bg = (s_Shape.drawButton == MK_RBUTTON) ? Palette_GetPrimaryColor() : Palette_GetSecondaryColor();
-  BYTE fgAlpha = GetOpacityForButton(s_Shape.drawButton);
-  BYTE bgAlpha = (s_Shape.drawButton == MK_RBUTTON) ? Palette_GetPrimaryOpacity() : Palette_GetSecondaryOpacity();
-  int w = (nBrushWidth > 0 ? nBrushWidth : 1);
+  BYTE fgA   = GetOpacityForButton(s_Shape.drawButton);
+  COLORREF bg = (s_Shape.drawButton == MK_RBUTTON) ? Palette_GetPrimaryColor()   : Palette_GetSecondaryColor();
+  BYTE bgA   = (s_Shape.drawButton == MK_RBUTTON) ? Palette_GetPrimaryOpacity() : Palette_GetSecondaryOpacity();
+  int thick = nBrushWidth > 0 ? nBrushWidth : 1;
+
+  if (s_Shape.activeToolId == TOOL_LINE) {
+    DrawLineAlpha(bits, width, height, s_Shape.ptStart.x, s_Shape.ptStart.y,
+                  s_Shape.ptEnd.x, s_Shape.ptEnd.y, thick, fg, fgA, LAYER_BLEND_NORMAL);
+    return;
+  }
+
+  RECT rc = GetRectFromPoints(s_Shape.ptStart.x, s_Shape.ptStart.y,
+                              s_Shape.ptEnd.x, s_Shape.ptEnd.y);
+  int rw = rc.right - rc.left, rh = rc.bottom - rc.top;
+  BOOL drawFill    = (nShapeDrawType == 1 || nShapeDrawType == 2);
+  BOOL drawOutline = (nShapeDrawType == 0 || nShapeDrawType == 2);
+  COLORREF fillCol = (nShapeDrawType == 1) ? fg : bg;
+  BYTE     fillA   = (nShapeDrawType == 1) ? fgA : bgA;
 
   switch (s_Shape.activeToolId) {
-  case TOOL_LINE: {
-    int lineW = (nBrushWidth > 0 ? nBrushWidth : 1);
-    DrawLineAlpha(bits, width, height, s_Shape.ptStart.x, s_Shape.ptStart.y,
-                  s_Shape.ptEnd.x, s_Shape.ptEnd.y, lineW, fg, fgAlpha,
-                  LAYER_BLEND_NORMAL);
+  case TOOL_RECT:
+    if (drawFill)    DrawRectAlpha(bits, width, height, rc.left, rc.top, rw, rh, fillCol, fillA, LAYER_BLEND_NORMAL);
+    if (drawOutline) DrawRectOutlineAlpha(bits, width, height, rc.left, rc.top, rw, rh, fg, fgA, thick, LAYER_BLEND_NORMAL);
     break;
-  }
- 
-  case TOOL_RECT: {
-    RECT rc = GetRectFromPoints(s_Shape.ptStart.x, s_Shape.ptStart.y,
-                                s_Shape.ptEnd.x, s_Shape.ptEnd.y);
-    int rw = rc.right - rc.left;
-    int rh = rc.bottom - rc.top;
-    if (nShapeDrawType == 1 || nShapeDrawType == 2) {
-      COLORREF fill = (nShapeDrawType == 1) ? fg : bg;
-      BYTE fillAlpha = (nShapeDrawType == 1) ? fgAlpha : bgAlpha;
-      DrawRectAlpha(bits, width, height, rc.left, rc.top, rw, rh, fill, fillAlpha, LAYER_BLEND_NORMAL);
-    }
-    if (nShapeDrawType == 0 || nShapeDrawType == 2)
-      DrawRectOutlineAlpha(bits, width, height, rc.left, rc.top, rw, rh, fg,
-                           fgAlpha, w, LAYER_BLEND_NORMAL);
+  case TOOL_ELLIPSE:
+    if (drawFill)    DrawEllipseAlpha(bits, width, height, rc.left, rc.top, rw, rh, fillCol, fillA, TRUE, 0, LAYER_BLEND_NORMAL);
+    if (drawOutline) DrawEllipseAlpha(bits, width, height, rc.left, rc.top, rw, rh, fg, fgA, FALSE, thick, LAYER_BLEND_NORMAL);
     break;
-  }
- 
-  case TOOL_ELLIPSE: {
-    RECT rc = GetRectFromPoints(s_Shape.ptStart.x, s_Shape.ptStart.y,
-                                s_Shape.ptEnd.x, s_Shape.ptEnd.y);
-    int rw = rc.right - rc.left;
-    int rh = rc.bottom - rc.top;
-    if (nShapeDrawType == 1 || nShapeDrawType == 2) {
-      COLORREF fill = (nShapeDrawType == 1) ? fg : bg;
-      BYTE fillAlpha = (nShapeDrawType == 1) ? fgAlpha : bgAlpha;
-      DrawEllipseAlpha(bits, width, height, rc.left, rc.top, rw, rh, fill,
-                       fillAlpha, TRUE, 0, LAYER_BLEND_NORMAL);
-    }
-    if (nShapeDrawType == 0 || nShapeDrawType == 2)
-      DrawEllipseAlpha(bits, width, height, rc.left, rc.top, rw, rh, fg, fgAlpha,
-                       FALSE, w, LAYER_BLEND_NORMAL);
+  case TOOL_ROUNDRECT:
+    if (drawFill)    DrawRoundedRectAlpha(bits, width, height, rc.left, rc.top, rw, rh, ROUNDRECT_RADIUS, fillCol, fillA, TRUE, 0, LAYER_BLEND_NORMAL);
+    if (drawOutline) DrawRoundedRectAlpha(bits, width, height, rc.left, rc.top, rw, rh, ROUNDRECT_RADIUS, fg, fgA, FALSE, thick, LAYER_BLEND_NORMAL);
     break;
-  }
- 
-  case TOOL_ROUNDRECT: {
-    RECT rc = GetRectFromPoints(s_Shape.ptStart.x, s_Shape.ptStart.y,
-                                s_Shape.ptEnd.x, s_Shape.ptEnd.y);
-    int rw = rc.right - rc.left;
-    int rh = rc.bottom - rc.top;
-    int radius = 16;
-    if (nShapeDrawType == 1 || nShapeDrawType == 2) {
-      COLORREF fill = (nShapeDrawType == 1) ? fg : bg;
-      BYTE fillAlpha = (nShapeDrawType == 1) ? fgAlpha : bgAlpha;
-      DrawRoundedRectAlpha(bits, width, height, rc.left, rc.top, rw, rh, radius,
-                           fill, fillAlpha, TRUE, 0, LAYER_BLEND_NORMAL);
-    }
-    if (nShapeDrawType == 0 || nShapeDrawType == 2)
-      DrawRoundedRectAlpha(bits, width, height, rc.left, rc.top, rw, rh, radius,
-                           fg, fgAlpha, FALSE, w, LAYER_BLEND_NORMAL);
-    break;
-  }
   }
 }
 
@@ -126,50 +102,37 @@ static void ResetShapeState(void) {
   s_Shape.nHandle = HT_NONE;
 }
 
-static void CommitShapeAction(const char *actionName) {
-  Interaction_Commit(actionName ? actionName : "Draw Shape");
+BOOL IsShapePending(void) { return s_Shape.state != SHAPE_STATE_IDLE; }
+
+void ShapeTool_Deactivate(void) {
+  if (s_Shape.state == SHAPE_STATE_IDLE) return;
+  LayersClearDraft();
+  Interaction_Abort();
   ResetShapeState();
   InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-/* Called when tool is deactivated (tool switch, layer op, etc.) */
-static void ShapeTool_OnDeactivate(void) {
-  if (s_Shape.state != SHAPE_STATE_IDLE) {
-    LayersClearDraft();
-    Interaction_Abort();
-    ResetShapeState();
-    InvalidateRect(GetCanvasWindow(), NULL, FALSE);
-  }
-}
-
-/* Called on explicit cancel (Escape key, right-click cancel) */
-static BOOL ShapeTool_OnCancel(void) {
-  if (s_Shape.state == SHAPE_STATE_IDLE)
-    return FALSE;
-  ShapeTool_OnDeactivate();
+BOOL ShapeTool_Cancel(void) {
+  if (s_Shape.state == SHAPE_STATE_IDLE) return FALSE;
+  ShapeTool_Deactivate();
   return TRUE;
 }
 
-BOOL IsShapeDrawing(void) { return s_Shape.state == SHAPE_STATE_CREATING; }
-BOOL IsShapePending(void) { return s_Shape.state != SHAPE_STATE_IDLE; }
-
-BOOL ShapeTool_IsBusy(void) {
-  return IsShapeDrawing() || IsShapePending();
-}
-
-void CancelShapeDrawing(void) { ShapeTool_OnCancel(); }
 void ShapeTool_CommitPending(void) {
-  if (s_Shape.state == SHAPE_STATE_IDLE)
-    return;
+  if (s_Shape.state == SHAPE_STATE_IDLE) return;
   UpdateDraftLayer();
   Interaction_MarkModified();
-  CommitShapeAction("Draw Shape");
+  Interaction_Commit("Draw Shape");
+  ResetShapeState();
+  InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
 
-void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
+void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton) {
+  int toolId = Tool_GetCurrent();
+
   if (nButton == MK_RBUTTON && s_Shape.state != SHAPE_STATE_IDLE) {
-    ShapeTool_OnCancel();
+    ShapeTool_Cancel();
     return;
   }
 
@@ -193,7 +156,7 @@ void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
     RECT rcBounds = GetRectFromPoints(s_Shape.ptStart.x, s_Shape.ptStart.y,
                                       s_Shape.ptEnd.x, s_Shape.ptEnd.y);
     COMMIT_BAR_HANDLE_CLICK(&rcBounds, x, y, ShapeTool_CommitPending(),
-                            ShapeTool_OnCancel());
+                            ShapeTool_Cancel());
 
     int hit = Overlay_HitTestBoxHandles(&rcBounds, x, y);
     if (hit != HT_NONE) {
@@ -212,20 +175,15 @@ void ShapeTool_OnMouseDown(HWND hWnd, int x, int y, int nButton, int toolId) {
   }
 }
 
-void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
+void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   (void)nButton;
-  if (s_Shape.state == SHAPE_STATE_IDLE || s_Shape.activeToolId != toolId)
+  if (s_Shape.state == SHAPE_STATE_IDLE)
     return;
 
   if (s_Shape.state == SHAPE_STATE_CREATING) {
     int endX = x, endY = y;
-    if (IsShiftDown()) {
-      if (toolId == TOOL_LINE)
-        SnapToAngle(s_Shape.ptStart.x, s_Shape.ptStart.y, &endX, &endY, 45);
-      else
-        SnapToSquare(s_Shape.ptStart.x, s_Shape.ptStart.y, &endX, &endY);
-    }
+    SnapEndpointIfShift(&endX, &endY);
 
     if (s_Shape.ptEnd.x != endX || s_Shape.ptEnd.y != endY) {
       s_Shape.ptEnd.x = endX;
@@ -259,19 +217,14 @@ void ShapeTool_OnMouseMove(HWND hWnd, int x, int y, int nButton, int toolId) {
   }
 }
 
-void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
+void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   (void)nButton;
   if (s_Shape.state == SHAPE_STATE_IDLE)
     return;
-  if (s_Shape.state == SHAPE_STATE_CREATING && s_Shape.activeToolId == toolId) {
+  if (s_Shape.state == SHAPE_STATE_CREATING) {
     int endX = x, endY = y;
-    if (IsShiftDown()) {
-      if (toolId == TOOL_LINE)
-        SnapToAngle(s_Shape.ptStart.x, s_Shape.ptStart.y, &endX, &endY, 45);
-      else
-        SnapToSquare(s_Shape.ptStart.x, s_Shape.ptStart.y, &endX, &endY);
-    }
+    SnapEndpointIfShift(&endX, &endY);
     s_Shape.ptEnd.x = endX;
     s_Shape.ptEnd.y = endY;
     UpdateDraftLayer();
@@ -281,7 +234,7 @@ void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
     return;
   }
 
-  if (s_Shape.state == SHAPE_STATE_RESIZING && s_Shape.activeToolId == toolId) {
+  if (s_Shape.state == SHAPE_STATE_RESIZING) {
     if (GetCapture() == hWnd)
       ReleaseCapture();
     s_Shape.state = SHAPE_STATE_EDITING;
@@ -293,7 +246,7 @@ void ShapeTool_OnMouseUp(HWND hWnd, int x, int y, int nButton, int toolId) {
 }
 
 
-void ShapeToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
+void ShapeTool_DrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
   if (s_Shape.state == SHAPE_STATE_IDLE)
     return;
 
@@ -315,10 +268,6 @@ void ShapeToolDrawOverlay(HDC hdc, double dScale, int nDestX, int nDestY) {
     CommitBar_Draw(&ctx, &rc);
   }
 }
-
-/* Lifecycle hooks — wired into ToolVTable in tools.c */
-void ShapeTool_Deactivate(void) { ShapeTool_OnDeactivate(); }
-BOOL ShapeTool_Cancel(void) { return ShapeTool_OnCancel(); }
 
 ShapeToolSnapshot *ShapeTool_CreateSnapshot(void) {
   if (s_Shape.state == SHAPE_STATE_IDLE)

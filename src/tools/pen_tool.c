@@ -44,10 +44,10 @@ static void DrawPenLine(BYTE *bits, int width, int height, int x1, int y1,
                 LAYER_BLEND_NORMAL);
 }
 
-void PenToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
+void PenTool_OnMouseDown(HWND hWnd, int x, int y, int nButton) {
   Interaction_Begin(hWnd, x, y, nButton, TOOL_PEN);
 
-  BYTE *bits = LayersGetActiveColorBits();
+  BYTE *bits = LayersGetStrokeBits();
   if (!bits) {
     Interaction_Abort();
     return;
@@ -55,31 +55,33 @@ void PenToolOnMouseDown(HWND hWnd, int x, int y, int nButton) {
   BYTE alpha = GetOpacityForButton(nButton);
   DrawPenPoint(bits, Canvas_GetWidth(), Canvas_GetHeight(), x, y,
                GetColorForButton(nButton), alpha);
-  LayersMarkDirty();
   Interaction_MarkModified();
-  InvalidateRect(GetCanvasWindow(), NULL, FALSE);
+  {
+    int pad = GetPenSize() + 2;
+    Interaction_NoteStrokeSegment(x, y, x, y, pad);
+    Interaction_FlushStrokeRedraw();
+  }
 }
 
-void PenToolOnMouseMove(HWND hWnd, int x, int y, int nButton) {
+void PenTool_OnMouseMove(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   if (!Interaction_IsActive() || !Interaction_IsActiveButton(nButton))
     return;
 
-  BYTE *bits = LayersGetActiveColorBits();
+  BYTE *bits = LayersGetStrokeBits();
   if (bits) {
     POINT lp;
     Interaction_GetLastPoint(&lp);
     BYTE alpha = GetOpacityForButton(Interaction_GetDrawButton());
     DrawPenLine(bits, Canvas_GetWidth(), Canvas_GetHeight(), lp.x, lp.y, x, y,
                 GetColorForButton(Interaction_GetDrawButton()), alpha);
-    LayersMarkDirty();
     Interaction_MarkModified();
+    Interaction_NoteStrokeSegment(lp.x, lp.y, x, y, GetPenSize() + 2);
   }
   Interaction_UpdateLastPoint(x, y);
-  InvalidateRect(GetCanvasWindow(), NULL, FALSE);
 }
 
-void PenToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
+void PenTool_OnMouseUp(HWND hWnd, int x, int y, int nButton) {
   (void)hWnd;
   (void)x;
   (void)y;
@@ -87,12 +89,17 @@ void PenToolOnMouseUp(HWND hWnd, int x, int y, int nButton) {
   Interaction_Commit("Draw");
 }
 
-BOOL IsPenDrawing(void) { return Interaction_IsActive(); }
+BOOL IsPenDrawing(void) {
+  return Interaction_IsActive() && Interaction_GetActiveToolId() == TOOL_PEN;
+}
 
-void PenTool_Deactivate(void) { Interaction_EndQuiet(); }
+void PenTool_Deactivate(void) {
+  if (Interaction_IsActive() && Interaction_GetActiveToolId() == TOOL_PEN)
+    Interaction_EndQuiet();
+}
 
-BOOL CancelPenDrawing(void) {
-  if (!Interaction_IsActive())
+BOOL PenTool_Cancel(void) {
+  if (!Interaction_IsActive() || Interaction_GetActiveToolId() != TOOL_PEN)
     return FALSE;
   Interaction_Abort();
   return TRUE;
